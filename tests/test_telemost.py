@@ -143,3 +143,27 @@ def test_start_key_still_matches_when_observed_title_changes(agent):
     service.sessions[key]['title']='Название из Телемоста'
     repeated=agent.post('/sessions',json=body)
     assert repeated.status_code==202 and repeated.json()['title']=='Название из Телемоста'
+
+
+@pytest.mark.parametrize('failure', ['visibility', 'leave', 'close'])
+def test_saved_recording_imports_even_when_meeting_cleanup_fails(tmp_path, monkeypatch, failure):
+    sid='00000000-0000-0000-0000-000000000009'
+    monkeypatch.setattr(service,'DATA',tmp_path)
+    monkeypatch.setattr(service,'sessions',{sid:{'status':'saved'}})
+    calls=[]
+    class Leave:
+        async def is_visible(self):
+            if failure=='visibility':raise RuntimeError('page closed')
+            return True
+        async def evaluate(self, script):
+            if failure=='leave':raise RuntimeError('meeting removed')
+    class Browser:
+        async def close(self):
+            if failure=='close':raise RuntimeError('browser disconnected')
+    async def imported(sid, file, complete):
+        calls.append((sid,file,complete))
+    monkeypatch.setattr(service,'import_recording',imported)
+    file=tmp_path/'recording.webm'
+    asyncio.run(service.cleanup_and_import(sid,file,False,Leave(),Browser()))
+    assert calls==[(sid,file,False)]
+    assert service.sessions[sid]['cleanup_error_code'] in {'leave_after_save_failed','browser_close_after_save_failed'}

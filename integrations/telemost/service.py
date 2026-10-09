@@ -211,6 +211,21 @@ def recover_partial(sid, reason):
         persist(sid, status='failed', error_code=reason, retryable=reason in {'browser_crash', 'agent_interrupted', 'waiting_room_timeout'} or reason.startswith('ui_timeout_'))
 
 
+async def cleanup_and_import(sid, file, complete, leave, browser):
+    # A removed meeting/page can make UI cleanup fail after the file is saved.
+    # Cleanup is best effort; it must never prevent importing the durable file.
+    try:
+        if await leave.is_visible():
+            await leave.evaluate('(button) => button.click()')
+    except Exception:
+        persist(sid, cleanup_error_code='leave_after_save_failed')
+    try:
+        await browser.close()
+    except Exception:
+        persist(sid, cleanup_error_code='browser_close_after_save_failed')
+    await import_recording(sid, file, complete=complete)
+
+
 async def import_recording(sid, file, complete=True):
     state = sessions[sid]
     persist(sid, status='uploading', recording_complete=complete, recording_file=file.name)
@@ -484,11 +499,10 @@ async def run(sid):
         if not file.is_file() or not file.stat().st_size:
             raise AgentError('empty_recording_file')
         persist(sid, status='saved', recording_file='recording.webm', recording_complete=end_reason not in {'meeting_ended_or_removed', 'native_recording_stopped'}, bytes=file.stat().st_size)
-        if await leave.is_visible():
-            await leave.evaluate('(button) => button.click()')
-        await browser.close()
+        await cleanup_and_import(sid, file,
+                                 end_reason not in {'meeting_ended_or_removed', 'native_recording_stopped'},
+                                 leave, browser)
         browser = None
-        await import_recording(sid, file, complete=end_reason not in {'meeting_ended_or_removed', 'native_recording_stopped'})
     except AgentError as e:
         if str(e) == 'cancelled_before_join':
             persist(sid, status='cancelled', error_code=str(e), retryable=False)
