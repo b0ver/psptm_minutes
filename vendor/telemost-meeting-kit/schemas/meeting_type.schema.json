@@ -1,0 +1,23 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "meeting_type": {
+      "type": "string"
+    },
+    "reasoning": {
+      "type": "string"
+    },
+    "templates": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "meeting_type",
+    "reasoning",
+    "templates"
+  ]
+}

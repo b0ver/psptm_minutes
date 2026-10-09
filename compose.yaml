@@ -1,0 +1,144 @@
+name: psptm-minutes
+
+x-app: &app
+  image: psptm-minutes:local
+  build:
+    context: .
+    target: runtime
+  environment: &env
+    DB_HOST: db
+    DB_PASSWORD_FILE: /run/secrets/db_password
+  secrets:
+    - db_password
+  security_opt:
+    - no-new-privileges:true
+  cap_drop: [ALL]
+  read_only: true
+  tmpfs: ["/tmp:size=600m,mode=1777"]
+
+services:
+  ollama-check:
+    image: psptm-minutes:local
+    profiles: [diagnostics]
+    command: [python, -m, app.check_ollama]
+    environment:
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:9b}
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    networks: [ai]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+
+  db:
+    image: postgres:16.10-alpine@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297
+    environment:
+      POSTGRES_DB: minutes
+      POSTGRES_USER: minutes
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets: [db_password]
+    volumes: [database:/var/lib/postgresql/data]
+    networks: [database]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U minutes -d minutes]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  init:
+    <<: *app
+    command: [python, -m, app.db]
+    networks: [database]
+    depends_on:
+      db: {condition: service_healthy}
+
+  api:
+    <<: *app
+    environment:
+      <<: *env
+      TMPDIR: /data/upload-tmp
+    secrets: [db_password]
+    volumes: [recordings:/data]
+    ports: ["127.0.0.1:${APP_PORT:-18190}:8080"]
+    networks: [database, frontend]
+    depends_on:
+      init: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    restart: unless-stopped
+
+  worker:
+    <<: *app
+    profiles: [ai]
+    command: [python, -m, app.worker]
+    environment:
+      <<: *env
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:9b}
+      STT_MODEL_PATH: ${STT_MODEL_PATH:-/models/whisper}
+      STT_DEVICE: ${STT_DEVICE:-cpu}
+      STT_COMPUTE_TYPE: ${STT_COMPUTE_TYPE:-int8}
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    volumes:
+      - recordings:/data
+      - type: bind
+        source: ${STT_MODEL_DIR:-./models/whisper}
+        target: /models/whisper
+        read_only: true
+        bind: {create_host_path: false}
+    networks: [database, ai]
+    depends_on:
+      init: {condition: service_completed_successfully}
+    restart: unless-stopped
+
+  analysis-worker:
+    <<: *app
+    profiles: [ai]
+    command: [python, -m, app.analysis_worker]
+    environment:
+      <<: *env
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:9b}
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    networks: [database, ai]
+    depends_on:
+      init: {condition: service_completed_successfully}
+    restart: unless-stopped
+
+  telegram:
+    <<: *app
+    profiles: [telegram]
+    command: [python, -m, app.telegram]
+    environment:
+      <<: *env
+      TELEGRAM_ENABLED: ${TELEGRAM_ENABLED:-0}
+      TELEGRAM_ALLOW_ALL: ${TELEGRAM_ALLOW_ALL:-0}
+      TELEGRAM_STATS_CHAT_ID: ${TELEGRAM_STATS_CHAT_ID:-}
+      TELEGRAM_TOKEN: ${TELEGRAM_TOKEN:-}
+      MINUTES_API_URL: http://api:8080
+      TELEGRAM_TOKEN_FILE: /run/secrets/telegram_token
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+      TELEGRAM_ALLOWED_USERS: ${TELEGRAM_ALLOWED_USERS:-}
+    secrets: [db_password, telegram_token]
+    networks: [database, frontend, telegram]
+    restart: unless-stopped
+    depends_on:
+      init: {condition: service_completed_successfully}
+
+networks:
+  database: {internal: true}
+  frontend: {}
+  ai: {}
+  telegram: {}
+
+volumes:
+  database:
+  recordings:
+
+secrets:
+  db_password: {file: ./secrets/db_password}
+  telegram_token: {file: ./secrets/telegram_token}

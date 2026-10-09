@@ -1,0 +1,26 @@
+name: psptm-minutes-tests
+services:
+  db:
+    image: postgres:16.10-alpine@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297
+    environment:
+      POSTGRES_DB: minutes
+      POSTGRES_USER: minutes
+      POSTGRES_PASSWORD: test-only
+    tmpfs: [/var/lib/postgresql/data]
+    networks: [test]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U minutes -d minutes]
+      interval: 1s
+      timeout: 2s
+      retries: 30
+  tests:
+    build: {context: ., target: test}
+    environment:
+      DB_HOST: db
+      DB_PASSWORD_FILE: /app/tests/db-password
+      DATA_DIR: /tmp/minutes-data
+    networks: [test]
+    depends_on:
+      db: {condition: service_healthy}
+networks:
+  test: {internal: true}

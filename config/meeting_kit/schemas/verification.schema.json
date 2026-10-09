@@ -1,0 +1,35 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "подтверждено",
+        "исправить",
+        "не подтверждено"
+      ]
+    },
+    "reason": {
+      "type": "string"
+    },
+    "corrected": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "evidence": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "verdict",
+    "reason",
+    "corrected",
+    "evidence"
+  ]
+}

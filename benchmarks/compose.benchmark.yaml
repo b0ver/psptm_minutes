@@ -1,0 +1,19 @@
+services:
+  runner:
+    image: psptm-minutes:local
+    pull_policy: never
+    network_mode: host
+    working_dir: /bench
+    user: '${BENCH_UID:-1000}:${BENCH_GID:-1000}'
+    entrypoint: [python, -u, runner.py]
+    volumes:
+      - .:/bench
+    environment:
+      PYTHONDONTWRITEBYTECODE: '1'
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    cpus: 2
+    mem_limit: 4g
+    pids_limit: 128
+    restart: on-failure

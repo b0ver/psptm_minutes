@@ -1,0 +1,32 @@
+[
+  {
+    "id": "R01",
+    "sha256": "57e355c8a92c7cec04103a5cb2b1fc427b1653b94ee351c15fd49f74fef27245",
+    "segments": 235,
+    "characters": 8050
+  },
+  {
+    "id": "R02",
+    "sha256": "b78769dc54ea84c8518b2076cc6698a17d5420dfe245e1c598a99e84c85bba9b",
+    "segments": 625,
+    "characters": 29463
+  },
+  {
+    "id": "R03",
+    "sha256": "2197c82c950f129704332dcff1ffd38b41b1012eef321336a9b80c91b58c4fdd",
+    "segments": 1109,
+    "characters": 62757
+  },
+  {
+    "id": "R04",
+    "sha256": "821f8feaa89da52c3ffc336878e47a69fa859751a83b2d925f2a5055fe0c4470",
+    "segments": 345,
+    "characters": 23640
+  },
+  {
+    "id": "R05",
+    "sha256": "6a014c6bc29095f951654f183ed103cfbfc4e8de94a701ca0089f9c7834f2b92",
+    "segments": 1572,
+    "characters": 39436
+  }
+]

@@ -1,0 +1,7 @@
+{
+  "ollama": {
+    "version": "0.33.3"
+  },
+  "gpu": "NVIDIA GeForce RTX 4090, 580.178.04, 24564 MiB",
+  "image": "sha256:b5de64c86cb9e853dae27c4ddf76af036fa18fea57c880ee121abe78ff2ac081"
+}

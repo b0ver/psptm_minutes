@@ -1,0 +1,14 @@
+.git
+.env
+secrets
+data
+models
+backups
+__pycache__
+**/__pycache__
+.pytest_cache
+docs/reports
+*.log
+source.tar.gz
+docs/previews
+vendor

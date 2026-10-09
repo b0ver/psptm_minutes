@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Протоколы · Поручения</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <header><div class="brand">П<span>·</span></div><div><strong>Протоколы</strong><small>Встречи и поручения</small></div><span class="local">Обработка на вашем сервере</span></header>
+  <main>
+    <p class="eyebrow">ЛОКАЛЬНАЯ ОБРАБОТКА ЗАПИСЕЙ</p><h1>Загрузите запись встречи</h1>
+    <div class="intake">
+      <form id="upload" class="panel">
+        <h2>Новая встреча</h2>
+        <label>Аудио или видео встречи<input id="recording" name="recording" type="file" accept=".wav,.mp3,.m4a,.mp4,.ogg,.flac,.webm" required></label>
+        <label>Название встречи<input name="title" maxlength="200" placeholder="Например, планёрка отдела" required></label>
+        <details class="type-picker"><summary id="upload-types-summary">Типы разборов</summary><div id="upload-types" class="type-options"></div></details>
+        <details><summary>Дата и участники встречи (необязательно)</summary><label>Дата встречи<input name="meeting_date" type="date"></label><label>Участники<input name="participants" maxlength="2000" placeholder="Имена через запятую, если известны"></label></details>
+        <p class="muted">WAV, MP3, M4A, MP4, OGG, FLAC, WEBM. После загрузки появятся транскрипт, протокол и черновики поручений.</p>
+        <p class="muted">Запись и AI-обработка остаются на вашем сервере.</p>
+        <button id="upload-button" type="submit">Загрузить и обработать</button>
+        <div id="upload-progress" class="upload-progress" hidden>
+          <label for="upload-meter" id="upload-status" role="status" aria-live="polite">Подготовка загрузки…</label>
+          <progress id="upload-meter" max="100" aria-labelledby="upload-status"></progress>
+          <p id="upload-bytes" class="muted"></p>
+        </div>
+      </form>
+    </div>
+    <details class="panel intake" id="telemost-box">
+      <summary>Подключить ассистента к Телемосту</summary>
+      <form id="telemost-form">
+        <p class="muted">Видимый участник «Ассистент протокола · запись», с выключенными камерой и микрофоном. Запись сохранится на сервере, затем начнутся транскрибация и разборы.</p>
+        <label>Ссылка на встречу<input name="url" type="url" placeholder="https://telemost.yandex.ru/j/…" required></label>
+        <label>Название встречи<input name="title" maxlength="200" value="Встреча в Телемосте" required></label>
+        <label>Максимальная длительность записи, минут<input name="duration_minutes" type="number" min="1" max="120" value="15" required></label>
+        <label class="type-choice"><input name="recording_authorized" type="checkbox" required>Организатор и участники разрешили запись</label>
+        <p class="muted">Готовятся пять универсальных разборов. Другие типы можно добавить в карточке встречи.</p>
+        <button id="telemost-start" type="submit">Подключить и записывать</button>
+      </form>
+      <div id="telemost-sessions" aria-live="polite"></div>
+    </details>
+    <section id="workspace">
+      <div class="heading"><div><p class="eyebrow">ВАШЕ ПРОСТРАНСТВО</p><h1>Встречи и поручения</h1></div></div>
+      <nav><button id="meetings-tab" class="active">Встречи</button><button id="registry-tab" class="secondary">Реестр поручений</button></nav>
+      <section id="meetings-view" class="layout">
+        <aside><h2>Загруженные встречи</h2><div id="meeting-list" class="list"></div></aside>
+        <article id="detail" class="panel empty"><h2>Выберите встречу</h2><p>Здесь появятся протокол, фрагменты записи и черновики поручений.</p></article>
+      </section>
+      <section id="registry-view" hidden><div id="registry"></div><h2>Доставка в Telegram</h2><div id="delivery" class="panel"></div></section>
+    </section>
+    <div id="notice" role="status" hidden></div>
+  </main>
+  <footer>Записи и AI — локально · В Telegram — только утверждённые поручения</footer>
+</body>
+</html>

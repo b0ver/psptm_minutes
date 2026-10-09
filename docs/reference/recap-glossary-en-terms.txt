@@ -1,0 +1,55 @@
+# Термины, которые в выводе пишутся латиницей (одна строка — один термин; после «|» — как их обычно распознаёт ASR)
+Docker | докер
+Docker Compose | докер компоуз, компоуз
+Ollama | оллама, олама
+Telegram | телеграм, телега
+Obsidian | обсидиан
+MCP | эм си пи, мцп
+LLM | эл эл эм, ллм
+GPU | джи пи ю, гпу
+VRAM | ви рам
+API | апи, эй пи ай
+webhook | вебхук
+pipeline | пайплайн
+deploy | деплой
+release | релиз
+pull request | пул реквест, пиар
+merge | мерж
+commit | коммит
+roadmap | роадмап
+backlog | бэклог
+benchmark | бенчмарк, бенч
+fine-tune | файнтюн, дообучение
+embedding | эмбеддинг
+prompt | промпт
+agent | агент
+RAG | раг
+STT | эс ти ти
+Whisper | виспер
+GigaAM | гига а эм, гигаам
+Qwen | квен, кьюэн
+Gemma | джемма
+CUDA | куда
+Python | питон, пайтон
+FastAPI | фаст апи
+SQLite | эс кью лайт, склайт
+Redis | редис
+Cloudflare | клаудфлэр
+Synology | синолоджи
+NAS | нас
+Claude | клод
+Claude Code | клод код
+ChatGPT | чат джи пи ти
+OpenAI | опен эй ай
+Notion | ноушен
+Todoist | тудуист
+Google Calendar | гугл календарь
+Gmail | джимейл
+edtech | эдтех
+L&D | эл энд ди
+LMS | эл эм эс
+MVP | эм ви пи
+onboarding | онбординг
+standup | стендап
+sprint | спринт
+ASAP | асап

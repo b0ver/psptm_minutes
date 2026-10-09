@@ -1,0 +1,66 @@
+{
+  "status": "reference_only_not_applied_to_running_worker",
+  "date": "2026-10-08",
+  "source_directory": "/Users/evgenypopov/Documents/Recap/recap-bender",
+  "source_sha256": {
+    "recap/stt/whisper.py": "06a85a11c9a45fb02392a1f5866c462a6fe2eea563bca39291a3f97a7a5f02b0",
+    "recap/stt/postprocess.py": "dc5d1b43262637d62f5c69ef4342db45e2cac233ed26616173460416324e3e91",
+    "recap/audio.py": "39b59236d84b2b488f36f02d0ec1784c3a4ae01dd1c8f48893f5ade0ffc66f81",
+    "Scripts/mac/transcribe_metal.py": "f8bd3b74656bab9c55904240b3323e504700a0294f4922f74adb4956333c977f",
+    "prompts/glossary_en_terms.txt": "d60743a780b913f36cc8f6f13677d968e54e52aa42e9cd5f167e9047810bb579",
+    "prompts/standard/v1.md": "31dc30e177699795db671fa39150807c473636b939d97e482907692e25f0c0fa",
+    "prompts/tasks/v1.md": "339ee6632fe368a53ddfd545cc4053da819dd7cc12df256e877541a1d26f6aff",
+    "prompts/insights/v1.md": "b2fe654cf80df06099d0e3c5673c1bb3d4b8cff5cafa70926fd40e77984c5d0c"
+  },
+  "model": {
+    "family": "Whisper large-v3",
+    "repository": "Systran/faster-whisper-large-v3",
+    "device": "cuda",
+    "compute_type": "float16",
+    "local_files_only": true,
+    "server_snapshot": "edaa852ec7e145841d8ffdb056a99866b5f0a478",
+    "weight_bytes": 3087284237,
+    "weight_content_sha256_verified": false
+  },
+  "audio": {
+    "sample_rate": 16000,
+    "channels": 1,
+    "pcm": "s16le",
+    "loudness_normalization": false
+  },
+  "transcribe": {
+    "language": "ru",
+    "beam_size": 5,
+    "vad_filter": true,
+    "vad_parameters": {
+      "min_silence_duration_ms": 2000,
+      "min_speech_duration_ms": 250,
+      "speech_pad_ms": 400
+    },
+    "condition_on_previous_text": false,
+    "temperature": [
+      0.0,
+      0.2,
+      0.4,
+      0.6,
+      0.8,
+      1.0
+    ],
+    "hotwords": "Docker, Docker Compose, Ollama, Telegram, Obsidian, MCP, LLM, GPU, VRAM, API, webhook, pipeline, deploy, release, pull request, merge, commit, roadmap, backlog, benchmark, fine-tune, embedding, prompt, agent, RAG, STT, Whisper, GigaAM, Qwen, Gemma, CUDA, Python, FastAPI, SQLite, Redis, Cloudflare, Synology, NAS, Claude, Claude Code, ChatGPT, OpenAI, Notion, Todoist, Google Calendar, Gmail, edtech, L&D, LMS, MVP, onboarding, standup, sprint, ASAP"
+  },
+  "recap_postprocess": {
+    "max_identical_segment_run": 3,
+    "identical_sentence_min_run": 4,
+    "identical_sentence_keep": 2,
+    "drop_empty": true,
+    "transfer_requirement": "Preserve raw transcript and timestamps; evaluate legitimate repetitions before destructive cleanup."
+  },
+  "llm_rules_to_adapt": [
+    "Only explicit actions; exclude completed, cancelled, hypothetical actions.",
+    "Last spoken correction wins.",
+    "Owners and deadlines must have explicit source support.",
+    "Evidence remains verbatim; glossary formatting must not rewrite evidence.",
+    "Adapt personal-note rules to meeting participants; do not assume one narrator.",
+    "Check cancellations and corrections across chunk boundaries."
+  ]
+}

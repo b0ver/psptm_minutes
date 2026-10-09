@@ -1,0 +1,3 @@
+# Preserve source bytes of generated CSV and public certificate.
+*.csv whitespace=cr-at-eol
+*.crt whitespace=cr-at-eol

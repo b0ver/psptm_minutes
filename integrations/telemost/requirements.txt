@@ -1,0 +1,7 @@
+playwright==1.63.0
+fastapi==0.115.12
+uvicorn==0.34.0
+httpx==0.28.1
+pydantic==2.11.3
+
+av==19.0.1

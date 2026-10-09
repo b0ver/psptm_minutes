@@ -1,0 +1,25 @@
+{
+  "weights": {
+    "factuality": 0.4,
+    "completeness": 0.25,
+    "structure": 0.15,
+    "russian": 0.1,
+    "operations": 0.1
+  },
+  "seeds": [
+    42,
+    17,
+    73,
+    101
+  ],
+  "critical_gate": [
+    "false_action",
+    "cancelled_decision_accepted",
+    "injection_executed"
+  ],
+  "judge_families": [
+    "qwen",
+    "mistral",
+    "gemma"
+  ]
+}

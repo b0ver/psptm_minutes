@@ -1,0 +1,9 @@
+{
+  "frozen_at": 1791476053.1237755,
+  "base_manifest_sha256": "e45b9c58129db874dd40a8d3a9b6bd88838a2684ef75b065b3e0bb98a3492b13",
+  "files": {
+    "summarize.py": "4cb4b0966f0e2df232b8f2a8b4e857caa0be98d4042956f332b14fd6ffc22584",
+    "render_diagnostics.py": "e1d361807c59b035acc9a5aab362b521814f672d2cdae08f0a301e81deffe051",
+    "telemetry.py": "54212cdf4e4ebe20af02aa0242196b5da082bd5d2ab5645c81cf43d6e5f17ea8"
+  }
+}

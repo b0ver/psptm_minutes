@@ -1,0 +1,56 @@
+# Конфигурация пайплайна разбора встреч
+
+llm:
+  # Любой OpenAI-совместимый сервер:
+  #   Ollama     → http://localhost:11434/v1   (ВАЖНО: поднимите контекст, см. README, раздел «Ollama и контекст»)
+  #   llama.cpp  → http://localhost:8080/v1    (llama-server -c 32768 …)
+  #   vLLM / SGLang / LM Studio — свои адреса
+  #   mock       → прогон пайплайна без модели (проверка установки)
+  base_url: http://localhost:11434/v1
+  model: qwen3:14b            # варианты — в README, раздел «Какую модель взять»
+  api_key: local
+  temperature: 0.2            # для извлечения фактов держите 0.1–0.3
+  max_tokens: 4096
+  timeout: 900
+  structured_output: json_schema   # json_schema | json_object | none
+  user_suffix: ""             # для Qwen3/T-pro можно "/no_think" — быстрее, но извлечение чуть хуже
+  extra_body: {}              # доп. параметры сервера, напр. {"top_p": 0.9}
+
+asr:
+  backend: gigaam             # gigaam (лучше для русского) | whisper
+  gigaam_revision: e2e_rnnt   # e2e_* — сразу с пунктуацией; rnnt точнее ctc
+  whisper_model: large-v3     # или large-v3-turbo — быстрее
+  language: ru
+  device: cuda                # cuda | cpu | mps
+  initial_prompt: null        # для whisper: строка с именами и терминами
+
+diarization:
+  enabled: true
+  model: pyannote/speaker-diarization-community-1   # нужен HF_TOKEN и принятые условия на huggingface
+  num_speakers: null          # если знаете точно — укажите, точность заметно выше
+  min_speakers: null
+  max_speakers: null
+
+chunking:
+  chunk_tokens: 6000          # фрагмент для извлечения фактов; при контексте 32k можно 10000–12000
+  overlap_lines: 4            # перекрытие фрагментов в репликах
+  cleanup_chunk_tokens: 2500
+  speaker_id_tokens: 5000
+  max_line_chars: 900         # склейка подряд идущих сегментов одного спикера
+
+steps:
+  asr_cleanup: false          # включайте, если есть глоссарий и много терминов
+  speaker_id: true            # работает, только если передан --participants
+  verify: true
+
+verify:
+  quote_match_threshold: 0.78 # сходство цитаты-основания с транскриптом (0..1)
+  llm_check: true             # непрошедшие пункты перепроверяет модель
+
+templates:
+  always: [tldr, action_items]
+  auto_classify: true         # модель сама добавит 1–3 подходящих шаблона
+  default_extra: [meeting_notes, key_meanings]   # если auto_classify: false
+
+render:
+  with_transcript_max_tokens: 12000   # короткие встречи: при рендере даём модели ещё и полный транскрипт

@@ -1,0 +1,27 @@
+services:
+  telemost-agent:
+    image: psptm-minutes:telemost
+    build:
+      context: .
+      dockerfile: integrations/telemost/Dockerfile
+    profiles: [telemost]
+    environment:
+      MINUTES_API_URL: http://api:8080
+      AGENT_DATA_DIR: /data/telemost
+    volumes: [recordings:/data]
+    networks: [frontend]
+    init: true
+    read_only: true
+    tmpfs: ["/tmp:size=1g,mode=1777", "/home/recorder/.pki:size=10m,uid=10001,gid=10001,mode=0700"]
+    shm_size: 1gb
+    mem_limit: 3g
+    cpus: 2
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8090/healthz', timeout=3)"]
+      interval: 5s
+      timeout: 4s
+      retries: 6
+    stop_grace_period: 60s
+    restart: unless-stopped

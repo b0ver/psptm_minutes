@@ -1,0 +1,498 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "summary": {
+      "type": "string",
+      "description": "Сводка фрагмента (map) или всей встречи"
+    },
+    "topics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "start": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ЧЧ:ММ:СС"
+          },
+          "end": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ЧЧ:ММ:СС"
+          },
+          "speakers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "title",
+          "summary",
+          "start",
+          "end",
+          "speakers"
+        ]
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "принято",
+              "предложено"
+            ]
+          },
+          "rationale": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "owner": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ЧЧ:ММ:СС"
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "text",
+          "status",
+          "rationale",
+          "owner",
+          "evidence",
+          "timestamp",
+          "confidence",
+          "note"
+        ]
+      }
+    },
+    "action_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "task": {
+            "type": "string"
+          },
+          "assignee": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "assigned_by": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "due_raw": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "due_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "YYYY-MM-DD"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "назначено",
+              "взято_на_себя",
+              "предложено"
+            ]
+          },
+          "priority": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "высокий",
+              "средний",
+              "низкий",
+              null
+            ]
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ЧЧ:ММ:СС"
+          },
+          "confidence": {
+            "type": "string",
+            "enum": [
+              "high",
+              "medium",
+              "low"
+            ]
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "task",
+          "assignee",
+          "assigned_by",
+          "due_raw",
+          "due_date",
+          "kind",
+          "priority",
+          "evidence",
+          "timestamp",
+          "confidence",
+          "note"
+        ]
+      }
+    },
+    "open_questions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "question": {
+            "type": "string"
+          },
+          "asked_by": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "who_should_answer": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "timestamp": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ЧЧ:ММ:СС"
+          }
+        },
+        "required": [
+          "question",
+          "asked_by",
+          "who_should_answer",
+          "timestamp"
+        ]
+      }
+    },
+    "risks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "raised_by": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "mitigation": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "timestamp": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ЧЧ:ММ:СС"
+          }
+        },
+        "required": [
+          "text",
+          "raised_by",
+          "mitigation",
+          "timestamp"
+        ]
+      }
+    },
+    "numbers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "value": {
+            "type": "string"
+          },
+          "context": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ЧЧ:ММ:СС"
+          }
+        },
+        "required": [
+          "value",
+          "context",
+          "timestamp"
+        ]
+      }
+    },
+    "quotes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "quote": {
+            "type": "string"
+          },
+          "speaker": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "timestamp": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ЧЧ:ММ:СС"
+          },
+          "why": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "quote",
+          "speaker",
+          "timestamp",
+          "why"
+        ]
+      }
+    },
+    "ideas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "idea": {
+            "type": "string"
+          },
+          "author": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "timestamp": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ЧЧ:ММ:СС"
+          }
+        },
+        "required": [
+          "idea",
+          "author",
+          "timestamp"
+        ]
+      }
+    },
+    "disagreements": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "subject": {
+            "type": "string"
+          },
+          "positions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "who": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "position": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "who",
+                "position"
+              ]
+            }
+          },
+          "outcome": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "timestamp": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ЧЧ:ММ:СС"
+          }
+        },
+        "required": [
+          "subject",
+          "positions",
+          "outcome",
+          "timestamp"
+        ]
+      }
+    },
+    "mentions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "человек",
+              "компания",
+              "продукт",
+              "документ",
+              "инструмент",
+              "проект",
+              "другое"
+            ]
+          },
+          "timestamp": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ЧЧ:ММ:СС"
+          }
+        },
+        "required": [
+          "name",
+          "type",
+          "timestamp"
+        ]
+      }
+    },
+    "meeting_summary": {
+      "type": "string"
+    },
+    "meeting_goal": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "main_idea": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "required": [
+    "summary",
+    "topics",
+    "decisions",
+    "action_items",
+    "open_questions",
+    "risks",
+    "numbers",
+    "quotes",
+    "ideas",
+    "disagreements",
+    "mentions",
+    "meeting_summary",
+    "meeting_goal",
+    "main_idea"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MergedMeetingFacts"
+}

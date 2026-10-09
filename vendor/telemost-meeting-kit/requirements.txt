@@ -1,0 +1,12 @@
+# Ядро (обработка готового транскрипта)
+requests>=2.31
+pyyaml>=6.0
+
+# Распознавание речи и диаризация — ставьте, если подаёте на вход аудио/видео.
+# Системно нужен ffmpeg.
+# GigaAM-v3 (рекомендованные версии с карточки модели):
+#   torch==2.8.0 torchaudio==2.8.0 transformers==4.57.1 pyannote-audio==4.0.0 torchcodec==0.7.0 hydra-core omegaconf sentencepiece
+# или Whisper:
+#   faster-whisper>=1.1
+# Диаризация:
+#   pyannote.audio>=4.0
