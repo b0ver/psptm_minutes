@@ -211,19 +211,23 @@ def recover_partial(sid, reason):
         persist(sid, status='failed', error_code=reason, retryable=reason in {'browser_crash', 'agent_interrupted', 'waiting_room_timeout'} or reason.startswith('ui_timeout_'))
 
 
-async def cleanup_and_import(sid, file, complete, leave, browser):
-    # A removed meeting/page can make UI cleanup fail after the file is saved.
-    # Cleanup is best effort; it must never prevent importing the durable file.
-    try:
-        if await leave.is_visible():
-            await leave.evaluate('(button) => button.click()')
-    except Exception:
-        persist(sid, cleanup_error_code='leave_after_save_failed')
+async def cleanup_and_import(sid, file, complete, browser):
+    # Closing our isolated browser disconnects only this guest. Do not click
+    # departure controls: Telemost may replace them as the meeting ends.
     try:
         await browser.close()
     except Exception:
         persist(sid, cleanup_error_code='browser_close_after_save_failed')
     await import_recording(sid, file, complete=complete)
+
+
+async def stop_native_recording(frame, leave, end_reason):
+    # Once removed, never interact with controls in the ended/replaced room.
+    if end_reason in {'meeting_ended_or_removed', 'native_recording_stopped'}:
+        return
+    if await leave.is_visible():
+        await frame.locator('button[aria-label="Ещё"]').last.evaluate('(button) => button.click()')
+        await frame.get_by_text(CONTROLS['stop_recording'], exact=True).evaluate('(element) => element.click()')
 
 
 async def import_recording(sid, file, complete=True):
@@ -483,9 +487,7 @@ async def run(sid):
             if observed.get('source')=='telemost_ui':persist(sid,meeting_context=observed)
         except Exception:pass
         persist(sid, status='finishing', end_reason=end_reason)
-        if await leave.is_visible():
-            await frame.locator('button[aria-label="Ещё"]').last.evaluate('(button) => button.click()')
-            await frame.get_by_text(CONTROLS['stop_recording'], exact=True).evaluate('(element) => element.click()')
+        await stop_native_recording(frame, leave, end_reason)
         try:
             capture_scope = capture_frame or frame
             await capture_scope.evaluate('() => window.__agentFinalizeCheckpoint?.()')
@@ -501,7 +503,7 @@ async def run(sid):
         persist(sid, status='saved', recording_file='recording.webm', recording_complete=end_reason not in {'meeting_ended_or_removed', 'native_recording_stopped'}, bytes=file.stat().st_size)
         await cleanup_and_import(sid, file,
                                  end_reason not in {'meeting_ended_or_removed', 'native_recording_stopped'},
-                                 leave, browser)
+                                 browser)
         browser = None
     except AgentError as e:
         if str(e) == 'cancelled_before_join':

@@ -145,25 +145,23 @@ def test_start_key_still_matches_when_observed_title_changes(agent):
     assert repeated.status_code==202 and repeated.json()['title']=='Название из Телемоста'
 
 
-@pytest.mark.parametrize('failure', ['visibility', 'leave', 'close'])
-def test_saved_recording_imports_even_when_meeting_cleanup_fails(tmp_path, monkeypatch, failure):
+def test_saved_recording_imports_even_when_browser_cleanup_fails(tmp_path, monkeypatch):
     sid='00000000-0000-0000-0000-000000000009'
     monkeypatch.setattr(service,'DATA',tmp_path)
     monkeypatch.setattr(service,'sessions',{sid:{'status':'saved'}})
     calls=[]
-    class Leave:
-        async def is_visible(self):
-            if failure=='visibility':raise RuntimeError('page closed')
-            return True
-        async def evaluate(self, script):
-            if failure=='leave':raise RuntimeError('meeting removed')
     class Browser:
-        async def close(self):
-            if failure=='close':raise RuntimeError('browser disconnected')
-    async def imported(sid, file, complete):
-        calls.append((sid,file,complete))
+        async def close(self):raise RuntimeError('browser disconnected')
+    async def imported(sid, file, complete):calls.append((sid,file,complete))
     monkeypatch.setattr(service,'import_recording',imported)
     file=tmp_path/'recording.webm'
-    asyncio.run(service.cleanup_and_import(sid,file,False,Leave(),Browser()))
+    asyncio.run(service.cleanup_and_import(sid,file,False,Browser()))
     assert calls==[(sid,file,False)]
-    assert service.sessions[sid]['cleanup_error_code'] in {'leave_after_save_failed','browser_close_after_save_failed'}
+    assert service.sessions[sid]['cleanup_error_code']=='browser_close_after_save_failed'
+
+
+@pytest.mark.parametrize('reason', ['meeting_ended_or_removed', 'native_recording_stopped'])
+def test_removed_assistant_never_touches_meeting_controls(reason):
+    class Forbidden:
+        def __getattr__(self, name):raise AssertionError('No UI access after removal')
+    asyncio.run(service.stop_native_recording(Forbidden(),Forbidden(),reason))
