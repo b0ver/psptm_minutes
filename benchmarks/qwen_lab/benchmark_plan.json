@@ -1,0 +1,1043 @@
+{
+  "revision": "qwen-quality-v1",
+  "model": "qwen3.6:27b",
+  "real_data_policy": "local_only",
+  "frontier_reference_status": "not_available_not_claimed",
+  "cases_per_template": 10,
+  "templates": [
+    {
+      "id": "action_items",
+      "name": "Поручения и задачи",
+      "required_sections": [
+        "Задачи",
+        "По исполнителям",
+        "Требуют уточнения"
+      ],
+      "checks": [
+        {
+          "id": "faithfulness",
+          "criterion": "Имена, числа и формулировки подтверждены источником",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "coverage",
+          "criterion": "Сохранены важные факты начала, середины и конца",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "action_status",
+          "criterion": "Поручение, предложение, отмена и обязательство различаются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "unknowns",
+          "criterion": "Неизвестные исполнитель, срок и должность не выдумываются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "corrections",
+          "criterion": "Итоговое уточнение преобладает над устаревшим фактом",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "cross_chunk",
+          "criterion": "Связанные факты по обе стороны границы части сохраняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "asr_noise",
+          "criterion": "Ошибки ASR и неоднозначность не превращаются в уверенные факты",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "injection",
+          "criterion": "Инструкции внутри транскрипта не исполняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "genre_absence",
+          "criterion": "Отсутствующие сведения честно отмечены; жанр не порождает выдумки",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "usability",
+          "criterion": "Отчёт читаем, без повторов и пригоден для конкретного сценария",
+          "gold_status": "requires_source_review"
+        }
+      ]
+    },
+    {
+      "id": "brainstorm",
+      "name": "Брейншторм",
+      "required_sections": [
+        "Вопрос сессии",
+        "Все идеи по группам",
+        "Отобранные идеи",
+        "Отклонённые идеи",
+        "Задачи"
+      ],
+      "checks": [
+        {
+          "id": "faithfulness",
+          "criterion": "Имена, числа и формулировки подтверждены источником",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "coverage",
+          "criterion": "Сохранены важные факты начала, середины и конца",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "action_status",
+          "criterion": "Поручение, предложение, отмена и обязательство различаются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "unknowns",
+          "criterion": "Неизвестные исполнитель, срок и должность не выдумываются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "corrections",
+          "criterion": "Итоговое уточнение преобладает над устаревшим фактом",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "cross_chunk",
+          "criterion": "Связанные факты по обе стороны границы части сохраняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "asr_noise",
+          "criterion": "Ошибки ASR и неоднозначность не превращаются в уверенные факты",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "injection",
+          "criterion": "Инструкции внутри транскрипта не исполняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "genre_absence",
+          "criterion": "Отсутствующие сведения честно отмечены; жанр не порождает выдумки",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "usability",
+          "criterion": "Отчёт читаем, без повторов и пригоден для конкретного сценария",
+          "gold_status": "requires_source_review"
+        }
+      ]
+    },
+    {
+      "id": "chapters",
+      "name": "Оглавление записи",
+      "required_sections": [
+        "Главы",
+        "Ключевые моменты"
+      ],
+      "checks": [
+        {
+          "id": "faithfulness",
+          "criterion": "Имена, числа и формулировки подтверждены источником",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "coverage",
+          "criterion": "Сохранены важные факты начала, середины и конца",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "action_status",
+          "criterion": "Поручение, предложение, отмена и обязательство различаются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "unknowns",
+          "criterion": "Неизвестные исполнитель, срок и должность не выдумываются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "corrections",
+          "criterion": "Итоговое уточнение преобладает над устаревшим фактом",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "cross_chunk",
+          "criterion": "Связанные факты по обе стороны границы части сохраняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "asr_noise",
+          "criterion": "Ошибки ASR и неоднозначность не превращаются в уверенные факты",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "injection",
+          "criterion": "Инструкции внутри транскрипта не исполняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "genre_absence",
+          "criterion": "Отсутствующие сведения честно отмечены; жанр не порождает выдумки",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "usability",
+          "criterion": "Отчёт читаем, без повторов и пригоден для конкретного сценария",
+          "gold_status": "requires_source_review"
+        }
+      ]
+    },
+    {
+      "id": "customer_interview",
+      "name": "Интервью с пользователем",
+      "required_sections": [
+        "Респондент",
+        "Контекст и задача (Job)",
+        "Боли",
+        "Текущие решения и обходные пути",
+        "Цитаты",
+        "Инсайты",
+        "Гипотезы к проверке",
+        "Позитивное и негативное"
+      ],
+      "checks": [
+        {
+          "id": "faithfulness",
+          "criterion": "Имена, числа и формулировки подтверждены источником",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "coverage",
+          "criterion": "Сохранены важные факты начала, середины и конца",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "action_status",
+          "criterion": "Поручение, предложение, отмена и обязательство различаются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "unknowns",
+          "criterion": "Неизвестные исполнитель, срок и должность не выдумываются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "corrections",
+          "criterion": "Итоговое уточнение преобладает над устаревшим фактом",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "cross_chunk",
+          "criterion": "Связанные факты по обе стороны границы части сохраняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "asr_noise",
+          "criterion": "Ошибки ASR и неоднозначность не превращаются в уверенные факты",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "injection",
+          "criterion": "Инструкции внутри транскрипта не исполняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "genre_absence",
+          "criterion": "Отсутствующие сведения честно отмечены; жанр не порождает выдумки",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "usability",
+          "criterion": "Отчёт читаем, без повторов и пригоден для конкретного сценария",
+          "gold_status": "requires_source_review"
+        }
+      ]
+    },
+    {
+      "id": "followup_email",
+      "name": "Письмо по итогам",
+      "required_sections": [
+        "Тема письма",
+        "Текст письма"
+      ],
+      "checks": [
+        {
+          "id": "faithfulness",
+          "criterion": "Имена, числа и формулировки подтверждены источником",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "coverage",
+          "criterion": "Сохранены важные факты начала, середины и конца",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "action_status",
+          "criterion": "Поручение, предложение, отмена и обязательство различаются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "unknowns",
+          "criterion": "Неизвестные исполнитель, срок и должность не выдумываются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "corrections",
+          "criterion": "Итоговое уточнение преобладает над устаревшим фактом",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "cross_chunk",
+          "criterion": "Связанные факты по обе стороны границы части сохраняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "asr_noise",
+          "criterion": "Ошибки ASR и неоднозначность не превращаются в уверенные факты",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "injection",
+          "criterion": "Инструкции внутри транскрипта не исполняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "genre_absence",
+          "criterion": "Отсутствующие сведения честно отмечены; жанр не порождает выдумки",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "usability",
+          "criterion": "Отчёт читаем, без повторов и пригоден для конкретного сценария",
+          "gold_status": "requires_source_review"
+        }
+      ]
+    },
+    {
+      "id": "hr_interview",
+      "name": "Собеседование",
+      "required_sections": [
+        "Кандидат",
+        "Опыт и проекты",
+        "Навыки",
+        "Ответы на ключевые вопросы",
+        "Ожидания кандидата",
+        "Вопросы кандидата",
+        "Сильные стороны и зоны внимания",
+        "Следующие шаги"
+      ],
+      "checks": [
+        {
+          "id": "faithfulness",
+          "criterion": "Имена, числа и формулировки подтверждены источником",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "coverage",
+          "criterion": "Сохранены важные факты начала, середины и конца",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "action_status",
+          "criterion": "Поручение, предложение, отмена и обязательство различаются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "unknowns",
+          "criterion": "Неизвестные исполнитель, срок и должность не выдумываются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "corrections",
+          "criterion": "Итоговое уточнение преобладает над устаревшим фактом",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "cross_chunk",
+          "criterion": "Связанные факты по обе стороны границы части сохраняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "asr_noise",
+          "criterion": "Ошибки ASR и неоднозначность не превращаются в уверенные факты",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "injection",
+          "criterion": "Инструкции внутри транскрипта не исполняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "genre_absence",
+          "criterion": "Отсутствующие сведения честно отмечены; жанр не порождает выдумки",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "usability",
+          "criterion": "Отчёт читаем, без повторов и пригоден для конкретного сценария",
+          "gold_status": "requires_source_review"
+        }
+      ]
+    },
+    {
+      "id": "key_meanings",
+      "name": "Основные смыслы",
+      "required_sections": [
+        "Главная мысль",
+        "Ключевые смыслы",
+        "Инсайты и неочевидное",
+        "Позиции и разногласия",
+        "Идеи на потом",
+        "Цитаты",
+        "Цифры и факты"
+      ],
+      "checks": [
+        {
+          "id": "faithfulness",
+          "criterion": "Имена, числа и формулировки подтверждены источником",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "coverage",
+          "criterion": "Сохранены важные факты начала, середины и конца",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "action_status",
+          "criterion": "Поручение, предложение, отмена и обязательство различаются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "unknowns",
+          "criterion": "Неизвестные исполнитель, срок и должность не выдумываются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "corrections",
+          "criterion": "Итоговое уточнение преобладает над устаревшим фактом",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "cross_chunk",
+          "criterion": "Связанные факты по обе стороны границы части сохраняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "asr_noise",
+          "criterion": "Ошибки ASR и неоднозначность не превращаются в уверенные факты",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "injection",
+          "criterion": "Инструкции внутри транскрипта не исполняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "genre_absence",
+          "criterion": "Отсутствующие сведения честно отмечены; жанр не порождает выдумки",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "usability",
+          "criterion": "Отчёт читаем, без повторов и пригоден для конкретного сценария",
+          "gold_status": "requires_source_review"
+        }
+      ]
+    },
+    {
+      "id": "lecture_notes",
+      "name": "Конспект выступления",
+      "required_sections": [
+        "О чём",
+        "Конспект по разделам",
+        "Термины",
+        "Практические рекомендации",
+        "Ссылки и материалы",
+        "Вопросы из зала"
+      ],
+      "checks": [
+        {
+          "id": "faithfulness",
+          "criterion": "Имена, числа и формулировки подтверждены источником",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "coverage",
+          "criterion": "Сохранены важные факты начала, середины и конца",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "action_status",
+          "criterion": "Поручение, предложение, отмена и обязательство различаются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "unknowns",
+          "criterion": "Неизвестные исполнитель, срок и должность не выдумываются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "corrections",
+          "criterion": "Итоговое уточнение преобладает над устаревшим фактом",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "cross_chunk",
+          "criterion": "Связанные факты по обе стороны границы части сохраняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "asr_noise",
+          "criterion": "Ошибки ASR и неоднозначность не превращаются в уверенные факты",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "injection",
+          "criterion": "Инструкции внутри транскрипта не исполняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "genre_absence",
+          "criterion": "Отсутствующие сведения честно отмечены; жанр не порождает выдумки",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "usability",
+          "criterion": "Отчёт читаем, без повторов и пригоден для конкретного сценария",
+          "gold_status": "requires_source_review"
+        }
+      ]
+    },
+    {
+      "id": "meeting_notes",
+      "name": "Конспект встречи",
+      "required_sections": [
+        "Краткое содержание",
+        "Саммари по темам",
+        "Решения",
+        "Задачи",
+        "Открытые вопросы и риски"
+      ],
+      "checks": [
+        {
+          "id": "faithfulness",
+          "criterion": "Имена, числа и формулировки подтверждены источником",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "coverage",
+          "criterion": "Сохранены важные факты начала, середины и конца",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "action_status",
+          "criterion": "Поручение, предложение, отмена и обязательство различаются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "unknowns",
+          "criterion": "Неизвестные исполнитель, срок и должность не выдумываются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "corrections",
+          "criterion": "Итоговое уточнение преобладает над устаревшим фактом",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "cross_chunk",
+          "criterion": "Связанные факты по обе стороны границы части сохраняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "asr_noise",
+          "criterion": "Ошибки ASR и неоднозначность не превращаются в уверенные факты",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "injection",
+          "criterion": "Инструкции внутри транскрипта не исполняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "genre_absence",
+          "criterion": "Отсутствующие сведения честно отмечены; жанр не порождает выдумки",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "usability",
+          "criterion": "Отчёт читаем, без повторов и пригоден для конкретного сценария",
+          "gold_status": "requires_source_review"
+        }
+      ]
+    },
+    {
+      "id": "one_on_one",
+      "name": "Встреча один-на-один",
+      "required_sections": [
+        "Темы встречи",
+        "Состояние и загрузка",
+        "Обратная связь",
+        "Развитие и цели",
+        "Договорённости",
+        "К следующей встрече"
+      ],
+      "checks": [
+        {
+          "id": "faithfulness",
+          "criterion": "Имена, числа и формулировки подтверждены источником",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "coverage",
+          "criterion": "Сохранены важные факты начала, середины и конца",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "action_status",
+          "criterion": "Поручение, предложение, отмена и обязательство различаются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "unknowns",
+          "criterion": "Неизвестные исполнитель, срок и должность не выдумываются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "corrections",
+          "criterion": "Итоговое уточнение преобладает над устаревшим фактом",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "cross_chunk",
+          "criterion": "Связанные факты по обе стороны границы части сохраняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "asr_noise",
+          "criterion": "Ошибки ASR и неоднозначность не превращаются в уверенные факты",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "injection",
+          "criterion": "Инструкции внутри транскрипта не исполняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "genre_absence",
+          "criterion": "Отсутствующие сведения честно отмечены; жанр не порождает выдумки",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "usability",
+          "criterion": "Отчёт читаем, без повторов и пригоден для конкретного сценария",
+          "gold_status": "requires_source_review"
+        }
+      ]
+    },
+    {
+      "id": "project_sync",
+      "name": "Статус проекта",
+      "required_sections": [
+        "Сводка прогресса",
+        "Статус по направлениям",
+        "Риски и блокеры",
+        "Решения",
+        "Задачи",
+        "Вопросы к следующей встрече"
+      ],
+      "checks": [
+        {
+          "id": "faithfulness",
+          "criterion": "Имена, числа и формулировки подтверждены источником",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "coverage",
+          "criterion": "Сохранены важные факты начала, середины и конца",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "action_status",
+          "criterion": "Поручение, предложение, отмена и обязательство различаются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "unknowns",
+          "criterion": "Неизвестные исполнитель, срок и должность не выдумываются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "corrections",
+          "criterion": "Итоговое уточнение преобладает над устаревшим фактом",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "cross_chunk",
+          "criterion": "Связанные факты по обе стороны границы части сохраняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "asr_noise",
+          "criterion": "Ошибки ASR и неоднозначность не превращаются в уверенные факты",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "injection",
+          "criterion": "Инструкции внутри транскрипта не исполняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "genre_absence",
+          "criterion": "Отсутствующие сведения честно отмечены; жанр не порождает выдумки",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "usability",
+          "criterion": "Отчёт читаем, без повторов и пригоден для конкретного сценария",
+          "gold_status": "requires_source_review"
+        }
+      ]
+    },
+    {
+      "id": "protocol",
+      "name": "Протокол совещания",
+      "required_sections": [
+        "Реквизиты",
+        "Присутствовали",
+        "Повестка",
+        "Ход обсуждения",
+        "Поручения",
+        "Открытые вопросы"
+      ],
+      "checks": [
+        {
+          "id": "faithfulness",
+          "criterion": "Имена, числа и формулировки подтверждены источником",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "coverage",
+          "criterion": "Сохранены важные факты начала, середины и конца",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "action_status",
+          "criterion": "Поручение, предложение, отмена и обязательство различаются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "unknowns",
+          "criterion": "Неизвестные исполнитель, срок и должность не выдумываются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "corrections",
+          "criterion": "Итоговое уточнение преобладает над устаревшим фактом",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "cross_chunk",
+          "criterion": "Связанные факты по обе стороны границы части сохраняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "asr_noise",
+          "criterion": "Ошибки ASR и неоднозначность не превращаются в уверенные факты",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "injection",
+          "criterion": "Инструкции внутри транскрипта не исполняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "genre_absence",
+          "criterion": "Отсутствующие сведения честно отмечены; жанр не порождает выдумки",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "usability",
+          "criterion": "Отчёт читаем, без повторов и пригоден для конкретного сценария",
+          "gold_status": "requires_source_review"
+        }
+      ]
+    },
+    {
+      "id": "retro",
+      "name": "Ретроспектива",
+      "required_sections": [
+        "Что получилось",
+        "Что не получилось",
+        "Причины",
+        "Что меняем",
+        "Нерешённое"
+      ],
+      "checks": [
+        {
+          "id": "faithfulness",
+          "criterion": "Имена, числа и формулировки подтверждены источником",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "coverage",
+          "criterion": "Сохранены важные факты начала, середины и конца",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "action_status",
+          "criterion": "Поручение, предложение, отмена и обязательство различаются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "unknowns",
+          "criterion": "Неизвестные исполнитель, срок и должность не выдумываются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "corrections",
+          "criterion": "Итоговое уточнение преобладает над устаревшим фактом",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "cross_chunk",
+          "criterion": "Связанные факты по обе стороны границы части сохраняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "asr_noise",
+          "criterion": "Ошибки ASR и неоднозначность не превращаются в уверенные факты",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "injection",
+          "criterion": "Инструкции внутри транскрипта не исполняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "genre_absence",
+          "criterion": "Отсутствующие сведения честно отмечены; жанр не порождает выдумки",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "usability",
+          "criterion": "Отчёт читаем, без повторов и пригоден для конкретного сценария",
+          "gold_status": "requires_source_review"
+        }
+      ]
+    },
+    {
+      "id": "sales_call",
+      "name": "Встреча с клиентом (продажа)",
+      "required_sections": [
+        "Клиент и контекст",
+        "Боли и задачи клиента",
+        "Критерии успеха (Metrics)",
+        "Принятие решения",
+        "Возражения и сомнения",
+        "Договорённости и следующие шаги",
+        "Пробелы квалификации",
+        "Разбор работы продавца"
+      ],
+      "checks": [
+        {
+          "id": "faithfulness",
+          "criterion": "Имена, числа и формулировки подтверждены источником",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "coverage",
+          "criterion": "Сохранены важные факты начала, середины и конца",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "action_status",
+          "criterion": "Поручение, предложение, отмена и обязательство различаются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "unknowns",
+          "criterion": "Неизвестные исполнитель, срок и должность не выдумываются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "corrections",
+          "criterion": "Итоговое уточнение преобладает над устаревшим фактом",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "cross_chunk",
+          "criterion": "Связанные факты по обе стороны границы части сохраняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "asr_noise",
+          "criterion": "Ошибки ASR и неоднозначность не превращаются в уверенные факты",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "injection",
+          "criterion": "Инструкции внутри транскрипта не исполняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "genre_absence",
+          "criterion": "Отсутствующие сведения честно отмечены; жанр не порождает выдумки",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "usability",
+          "criterion": "Отчёт читаем, без повторов и пригоден для конкретного сценария",
+          "gold_status": "requires_source_review"
+        }
+      ]
+    },
+    {
+      "id": "standup",
+      "name": "Стендап / дейли",
+      "required_sections": [
+        "По участникам",
+        "Блокеры, требующие помощи",
+        "Договорённости после синка"
+      ],
+      "checks": [
+        {
+          "id": "faithfulness",
+          "criterion": "Имена, числа и формулировки подтверждены источником",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "coverage",
+          "criterion": "Сохранены важные факты начала, середины и конца",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "action_status",
+          "criterion": "Поручение, предложение, отмена и обязательство различаются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "unknowns",
+          "criterion": "Неизвестные исполнитель, срок и должность не выдумываются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "corrections",
+          "criterion": "Итоговое уточнение преобладает над устаревшим фактом",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "cross_chunk",
+          "criterion": "Связанные факты по обе стороны границы части сохраняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "asr_noise",
+          "criterion": "Ошибки ASR и неоднозначность не превращаются в уверенные факты",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "injection",
+          "criterion": "Инструкции внутри транскрипта не исполняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "genre_absence",
+          "criterion": "Отсутствующие сведения честно отмечены; жанр не порождает выдумки",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "usability",
+          "criterion": "Отчёт читаем, без повторов и пригоден для конкретного сценария",
+          "gold_status": "requires_source_review"
+        }
+      ]
+    },
+    {
+      "id": "tldr",
+      "name": "Коротко о встрече",
+      "required_sections": [
+        "В двух словах",
+        "Главное",
+        "Что дальше",
+        "Что осталось открытым"
+      ],
+      "checks": [
+        {
+          "id": "faithfulness",
+          "criterion": "Имена, числа и формулировки подтверждены источником",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "coverage",
+          "criterion": "Сохранены важные факты начала, середины и конца",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "action_status",
+          "criterion": "Поручение, предложение, отмена и обязательство различаются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "unknowns",
+          "criterion": "Неизвестные исполнитель, срок и должность не выдумываются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "corrections",
+          "criterion": "Итоговое уточнение преобладает над устаревшим фактом",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "cross_chunk",
+          "criterion": "Связанные факты по обе стороны границы части сохраняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "asr_noise",
+          "criterion": "Ошибки ASR и неоднозначность не превращаются в уверенные факты",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "injection",
+          "criterion": "Инструкции внутри транскрипта не исполняются",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "genre_absence",
+          "criterion": "Отсутствующие сведения честно отмечены; жанр не порождает выдумки",
+          "gold_status": "requires_source_review"
+        },
+        {
+          "id": "usability",
+          "criterion": "Отчёт читаем, без повторов и пригоден для конкретного сценария",
+          "gold_status": "requires_source_review"
+        }
+      ]
+    }
+  ],
+  "layers": [
+    "existing_synthetic_160_regression",
+    "development_real",
+    "metamorphic_real_local",
+    "blind_holdout",
+    "future_meeting_canary"
+  ],
+  "promotion": {
+    "critical_errors": 0,
+    "minimum_precision": 0.95,
+    "minimum_recall": 0.9,
+    "minimum_human_quality_score": 4,
+    "requires_adjudicated_gold": true,
+    "requires_exact_source_spans": true,
+    "repeat_seeds": [
+      42,
+      43,
+      44
+    ],
+    "unit_of_comparison": "whole_meeting",
+    "stop_rule": "3_iterations_without_reliable_gain_then_reassess_data_and_training"
+  }
+}

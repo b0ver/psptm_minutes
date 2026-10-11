@@ -31,3 +31,7 @@ benchmarks/gate.json
 benchmarks/results.jsonl
 benchmarks/call-metrics.jsonl
 benchmarks/judgments.jsonl
+
+# Private Qwen experiment snapshots and generated outputs
+benchmarks/qwen_lab/run*/
+*.pid
