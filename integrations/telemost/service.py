@@ -17,10 +17,12 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, field_validator
 
 try:
+    from .recording_controls import start_native_recording, stop_native_recording
     from .devices import mute_devices
     from .checkpoints import Checkpoints, CheckpointError, atomic
     from .states import Status, TERMINAL, CONTROLS
 except ImportError:
+    from recording_controls import start_native_recording, stop_native_recording
     from devices import mute_devices
     from checkpoints import Checkpoints, CheckpointError, atomic
     from states import Status, TERMINAL, CONTROLS
@@ -221,15 +223,6 @@ async def cleanup_and_import(sid, file, complete, browser):
     await import_recording(sid, file, complete=complete)
 
 
-async def stop_native_recording(frame, leave, end_reason):
-    # Once removed, never interact with controls in the ended/replaced room.
-    if end_reason in {'meeting_ended_or_removed', 'native_recording_stopped'}:
-        return
-    if await leave.is_visible():
-        await frame.locator('button[aria-label="Ещё"]').last.evaluate('(button) => button.click()')
-        await frame.get_by_text(CONTROLS['stop_recording'], exact=True).evaluate('(element) => element.click()')
-
-
 async def import_recording(sid, file, complete=True):
     state = sessions[sid]
     persist(sid, status='uploading', recording_complete=complete, recording_file=file.name)
@@ -422,16 +415,7 @@ async def run(sid):
                 room_title='Телемост · '+state['url'].rsplit('/',1)[-1]
             persist(sid,title=room_title[:200],title_source='telemost' if named else 'meeting_link')
         phase = 'record_start'
-        await frame.locator('button[aria-label="Ещё"]').last.evaluate('(button) => button.click()')
-        record = frame.get_by_text(CONTROLS['start_recording'], exact=True)
-        await record.wait_for(state='visible', timeout=15000)
-        for scope in page.frames:
-            await scope.evaluate('() => {window.__agentCheckpointArmed = true}')
-        await record.evaluate('(element) => element.click()')
-        # Verify Telemost switched to the native stop command, not just that click succeeded.
-        await frame.locator('button[aria-label="Ещё"]').last.evaluate('(button) => button.click()')
-        await frame.get_by_text(CONTROLS['stop_recording'], exact=True).wait_for(timeout=20000)
-        await page.keyboard.press('Escape')
+        await start_native_recording(page, frame)
         started = time.time()
         origins=[await scope.evaluate('()=>window.__agentRecordingStartedAt || null') for scope in page.frames]
         native_start=next((value for value in origins if value),None)
