@@ -21,6 +21,13 @@ def test_local_access_without_key(client):
     assert client.get('/api/outbox').status_code == 200
 
 
+@pytest.mark.parametrize('value,expected', [('true', 201), ('false', 422), ('invalid', 422)])
+def test_explicit_upload_completeness_preserves_api_semantics(client, value, expected):
+    response = client.post('/api/meetings', files={'recording': ('test.wav', b'synthetic')},
+                           data={'title': 'Synthetic', 'recording_complete': value})
+    assert response.status_code == expected
+
+
 @pytest.mark.parametrize('headers', [
     {'Origin':'https://foreign.example'},
     {'Origin':'null'},

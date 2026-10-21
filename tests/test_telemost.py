@@ -165,3 +165,19 @@ def test_removed_assistant_never_touches_meeting_controls(reason):
     class Forbidden:
         def __getattr__(self, name):raise AssertionError('No UI access after removal')
     asyncio.run(service.stop_native_recording(Forbidden(),Forbidden(),reason))
+
+
+def test_scheduled_deadline_expires_without_creating_a_session(agent):
+    result = agent.post('/sessions', json={'url':'https://telemost.yandex.ru/j/1234567890',
+        'recording_authorized':True, 'admission_deadline':1})
+    assert result.status_code == 422 and not service.sessions
+
+
+def test_scheduled_repeat_still_reconciles_after_deadline(agent, monkeypatch):
+    key='00000000-0000-0000-0000-000000000077'
+    monkeypatch.setattr(service.time, 'time', lambda: 10)
+    body={'url':'https://telemost.yandex.ru/j/1234567890','recording_authorized':True,
+        'command_key':key,'admission_deadline':20,'recording_deadline':30}
+    assert agent.post('/sessions',json=body).status_code==202
+    monkeypatch.setattr(service.time, 'time', lambda: 21)
+    assert agent.post('/sessions',json=body).json()['id']==key

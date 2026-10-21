@@ -1,0 +1,102 @@
+name: Release alpha
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: alpha-release
+  cancel-in-progress: false
+jobs:
+  build:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      runtime: ${{ steps.images.outputs.runtime }}
+      gpu: ${{ steps.images.outputs.gpu }}
+      telemost: ${{ steps.images.outputs.telemost }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Test exact release source
+        run: |
+          docker compose -f compose.test.yaml up --build --abort-on-container-exit --exit-code-from tests
+          python3 -m unittest discover -s benchmarks/tests -v
+          bash -n scripts/ops/deploy.sh
+          bash -n scripts/ops/restore-drill.sh
+          bash scripts/ops/restore-drill.sh
+          docker run --rm -v "$PWD:/repo:ro" -w /repo \
+            rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+      - name: Security gate
+        run: |
+          docker run --rm --user root --entrypoint sh psptm-minutes-tests-tests -c \
+            'pip install --quiet pip-audit==2.9.0 && pip-audit --no-deps --disable-pip -r /app/requirements.lock && pip-audit --no-deps --disable-pip -r /app/integrations/telemost/requirements.lock'
+      - name: Authenticate registry
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: printf '%s' "$GH_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+      - name: Build and publish three images
+        id: images
+        env:
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          base="ghcr.io/${REPOSITORY,,}"
+          for kind in runtime gpu telemost; do
+            ref="$base-$kind:$GITHUB_SHA"
+            if [ "$kind" = telemost ]; then
+              docker build --label "org.opencontainers.image.revision=$GITHUB_SHA" -f integrations/telemost/Dockerfile -t "$ref" .
+            else
+              docker build --label "org.opencontainers.image.revision=$GITHUB_SHA" --target "$kind" -t "$ref" .
+            fi
+            if [ "$kind" = telemost ]; then
+              docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges "$ref" python recording_controls_probe.py
+              docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges "$ref" python probe.py
+            fi
+            docker push "$ref"
+            digest=$(docker image inspect --format '{{index .RepoDigests 0}}' "$ref")
+            echo "$kind=$digest" >> "$GITHUB_OUTPUT"
+          done
+      - name: Cleanup
+        if: always()
+        run: |
+          docker logout ghcr.io
+          docker compose -f compose.test.yaml down --volumes
+  staging:
+    needs: build
+    runs-on: [self-hosted, linux, x64, minutes-staging]
+    environment: alpha-staging
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Deploy exact digests to staging
+        env:
+          DEPLOY_ROOT: ${{ vars.DEPLOY_ROOT }}
+          RELEASE_RUNTIME: ${{ needs.build.outputs.runtime }}
+          RELEASE_GPU: ${{ needs.build.outputs.gpu }}
+          RELEASE_TELEMOST: ${{ needs.build.outputs.telemost }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: bash scripts/ops/deploy.sh "$DEPLOY_ROOT" psptm-minutes-staging
+  production:
+    needs: [build, staging]
+    runs-on: [self-hosted, linux, x64, minutes-production]
+    environment: alpha-production
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Promote the same digests after acceptance
+        env:
+          DEPLOY_ROOT: ${{ vars.DEPLOY_ROOT }}
+          RELEASE_RUNTIME: ${{ needs.build.outputs.runtime }}
+          RELEASE_GPU: ${{ needs.build.outputs.gpu }}
+          RELEASE_TELEMOST: ${{ needs.build.outputs.telemost }}
+          RELEASE_SHA: ${{ github.sha }}
+        run: bash scripts/ops/deploy.sh "$DEPLOY_ROOT" psptm-minutes

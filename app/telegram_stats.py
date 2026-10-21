@@ -88,7 +88,7 @@ def render(s,period):
 
 
 def dispatch(bot):
-    from app.telegram import DeliveryError
+    from app.telegram_errors import DeliveryError
     cid=group_id()
     if not cid:return False
     with Session.begin() as s:

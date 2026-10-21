@@ -50,6 +50,8 @@ class Start(BaseModel):
     title: str = Field(default='Тест Телемоста', min_length=1, max_length=200)
     title_from_telemost: bool = True
     duration_minutes: int = Field(default=15, ge=1, le=120)
+    admission_deadline: float | None = Field(default=None, gt=0, allow_inf_nan=False)
+    recording_deadline: float | None = Field(default=None, gt=0, allow_inf_nan=False)
     recording_authorized: bool = False
     analysis_types: list[str] = Field(default_factory=lambda: ['tldr', 'meeting_notes', 'action_items', 'key_meanings', 'chapters'])
 
@@ -138,6 +140,8 @@ async def start(body: Start):
         if any(prior.get(k) != v for k, v in body.model_dump().items()):
             raise HTTPException(409, 'Ключ запуска использован с другими параметрами')
         return public(body.command_key)
+    if body.admission_deadline is not None and body.admission_deadline <= time.time():
+        raise HTTPException(422, 'Время подключения истекло')
     if any(s['status'] not in TERMINAL for s in sessions.values()):
         raise HTTPException(409, 'Агент уже занят встречей. Сначала завершите её.')
     async with httpx.AsyncClient(timeout=10, trust_env=False) as client:
@@ -156,6 +160,8 @@ async def start(body: Start):
         return public(body.command_key)
     if any(s['status'] not in TERMINAL for s in sessions.values()):
         raise HTTPException(409, 'Агент уже занят встречей')
+    if body.admission_deadline is not None and body.admission_deadline <= time.time():
+        raise HTTPException(422, 'Время подключения истекло')
     sid = body.command_key or str(uuid4())
     sessions[sid] = {'id': sid, **body.model_dump(), 'start_request':body.model_dump(), 'created_at': time.time()}
     persist(sid, status='starting', error_code=None, bytes=0, has_preview=False, recording_complete=True, capture_health='not_started')
@@ -390,7 +396,8 @@ async def run(sid):
         await capture_preview(page, sid)
         leave = frame.get_by_role('button', name=CONTROLS['leave'], exact=True)
         phase = 'admission'
-        await leave.wait_for(timeout=180000)
+        admission_ms = 180000 if state.get('admission_deadline') is None else max(1, int((state['admission_deadline'] - time.time()) * 1000))
+        await leave.wait_for(timeout=admission_ms)
         await mute_devices([frame],require_camera=True)
         persist(sid, status='joined')
         # Cloud summarization onboarding may cover the call controls briefly.
@@ -415,6 +422,8 @@ async def run(sid):
                 room_title='Телемост · '+state['url'].rsplit('/',1)[-1]
             persist(sid,title=room_title[:200],title_source='telemost' if named else 'meeting_link')
         phase = 'record_start'
+        if state.get('recording_deadline') is not None and time.time() >= state['recording_deadline']:
+            raise AgentError('scheduled_recording_deadline_passed')
         await start_native_recording(page, frame)
         started = time.time()
         origins=[await scope.evaluate('()=>window.__agentRecordingStartedAt || null') for scope in page.frames]
@@ -427,6 +436,9 @@ async def run(sid):
         end_reason = 'max_duration'
         alone_since = None
         while not stop.is_set() and time.time() - started < state['duration_minutes'] * 60:
+            if state.get('recording_deadline') is not None and time.time() >= state['recording_deadline']:
+                end_reason = 'calendar_end'
+                break
             try:
                 await asyncio.wait_for(stop.wait(), timeout=3)
                 end_reason = 'user_stop'

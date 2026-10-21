@@ -15,6 +15,7 @@ USER root
 COPY requirements-test.txt ./
 RUN pip install --no-cache-dir -r requirements-test.txt
 COPY tests ./tests
+COPY scripts/ops ./scripts/ops
 COPY integrations/telemost ./integrations/telemost
 USER minutes
 CMD ["python", "-m", "pytest", "-q", "-p", "no:cacheprovider"]

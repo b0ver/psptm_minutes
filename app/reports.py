@@ -10,6 +10,7 @@ from sqlalchemy import select, func
 from app.ai import ProcessingError, normalize, validate_endpoint, verify_model
 from app.db import Session, Meeting, MeetingAnalysis, MeetingReport, now
 from app.settings import OLLAMA_URL, OLLAMA_MODEL, model_policy
+from app.llm_retry import inference_call
 
 KIT = Path(__file__).resolve().parents[1] / 'config' / 'meeting_kit'
 CATALOG = json.loads((KIT / 'templates.json').read_text())
@@ -123,14 +124,18 @@ class LocalLLM:
     def chat(self, system, user, spec=None):
         if len(system) + len(user) > 45000:
             raise ProcessingError('analysis_context_too_large')
-        verify_model(self.client, OLLAMA_MODEL, self.policy)
         payload = {'model': OLLAMA_MODEL, 'stream': False, 'think': False,
                    'options': {'num_ctx': 32768, 'num_predict': 12000 if spec else 6000, 'temperature': 0},
                    'messages': [{'role': 'system', 'content': system}, {'role': 'user', 'content': user}]}
         if spec:
             payload['format'] = {k: v for k, v in spec.items() if k not in ('$schema', '$id', 'title')}
-        response = self.client.post('/api/chat', json=payload)
-        response.raise_for_status()
+        def request():
+            # Recheck locality/digest on each attempt; generation has no external side effects.
+            verify_model(self.client, OLLAMA_MODEL, self.policy)
+            response = self.client.post('/api/chat', json=payload)
+            response.raise_for_status()
+            return response
+        response = inference_call(request)
         data = response.json()
         if not data.get('done') or data.get('done_reason') == 'length':
             raise ProcessingError('analysis_output_incomplete')
@@ -340,7 +345,16 @@ def process_analysis_one(llm_factory=LocalLLM):
                 r.status, r.content, r.error_code, r.updated_at = 'ready', content, None, now()
             done += 1
     except Exception as e:
-        code = e.code if isinstance(e, ProcessingError) else 'analysis_ollama_http_error' if isinstance(e, httpx.HTTPStatusError) else 'analysis_failed'
+        if isinstance(e, ProcessingError):
+            code = e.code
+        elif isinstance(e, httpx.TimeoutException):
+            code = 'analysis_ollama_timeout'
+        elif isinstance(e, httpx.ConnectError):
+            code = 'analysis_ollama_unavailable'
+        elif isinstance(e, httpx.HTTPStatusError):
+            code = 'analysis_ollama_rate_limited' if e.response.status_code == 429 else 'analysis_ollama_http_error'
+        else:
+            code = 'analysis_failed'
         with Session.begin() as s:
             j = s.get(MeetingAnalysis, meeting_id)
             j.status, j.error_code = 'failed', code

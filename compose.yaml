@@ -58,7 +58,8 @@ services:
     environment:
       <<: *env
       TMPDIR: /data/upload-tmp
-    secrets: [db_password]
+      CALENDAR_KEY_FILE: /run/secrets/calendar_key
+    secrets: [db_password, calendar_key]
     volumes: [recordings:/data]
     ports: ["127.0.0.1:${APP_PORT:-18190}:8080"]
     networks: [database, frontend]
@@ -69,6 +70,19 @@ services:
       interval: 10s
       timeout: 5s
       retries: 6
+    restart: unless-stopped
+
+  calendar-scheduler:
+    <<: *app
+    profiles: [calendar]
+    command: [python, -m, app.calendar_service]
+    environment:
+      <<: *env
+      CALENDAR_KEY_FILE: /run/secrets/calendar_key
+    secrets: [db_password, calendar_key]
+    networks: [database, frontend]
+    depends_on:
+      init: {condition: service_completed_successfully}
     restart: unless-stopped
 
   worker:
@@ -142,3 +156,4 @@ volumes:
 secrets:
   db_password: {file: ./secrets/db_password}
   telegram_token: {file: ./secrets/telegram_token}
+  calendar_key: {file: ./secrets/calendar_key}

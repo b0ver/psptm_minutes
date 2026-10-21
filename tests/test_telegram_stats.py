@@ -84,3 +84,29 @@ def test_group_callback_is_scoped_to_its_chat(client,monkeypatch):
     u=update(chat=-100999);u['callback_query']={'id':'cb','from':{'id':101},'message':u.pop('message'),'data':'stats:today'}
     bot=Bot([u]);poll_interface(bot,True,set());assert not stats.dispatch(bot)
     assert 'Группа пока не подключена' in bot.calls[-1][1]['text']
+
+
+def test_stats_handles_error_from_separately_loaded_bot_entrypoint(client, monkeypatch):
+    import runpy
+    from pathlib import Path
+    entrypoint = runpy.run_path(str(Path(__file__).parents[1] / 'app/telegram.py'),
+                               run_name='telegram_entrypoint_regression')
+    monkeypatch.setenv('TELEGRAM_STATS_CHAT_ID', '-100123')
+    poll_interface(Bot([update()]), True, set())
+    class FailedDelivery:
+        def call(self, *args):
+            raise entrypoint['DeliveryError']('telegram_unavailable')
+    assert stats.dispatch(FailedDelivery())
+    with Session() as s:
+        row = s.get(TelegramStatsReply, 1)
+        assert row.attempts == 1 and row.status == 'pending'
+        assert row.next_attempt > stats.now()
+    # A permanent rejection must also settle instead of blocking the background loop.
+    with Session.begin() as s:
+        s.get(TelegramStatsReply, 1).next_attempt = stats.now()
+    class BlockedDelivery:
+        def call(self, *args):
+            raise entrypoint['DeliveryError']('bot_blocked')
+    assert stats.dispatch(BlockedDelivery())
+    with Session() as s:
+        assert s.get(TelegramStatsReply, 1).status == 'failed'

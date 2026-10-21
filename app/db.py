@@ -219,5 +219,56 @@ class TelegramStatsReply(Base):
     next_attempt: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
+class CalendarSchedulerState(Base):
+    __tablename__ = 'calendar_scheduler_state'
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, default=1)
+    last_tick: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class CalendarSubscription(Base):
+    __tablename__ = 'calendar_subscriptions'
+    __table_args__ = (UniqueConstraint('owner', 'username', 'calendar_href'),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identifier)
+    owner: Mapped[str] = mapped_column(String(40), default='local')
+    username: Mapped[str] = mapped_column(String(254))
+    credential: Mapped[str] = mapped_column(Text)
+    calendar_href: Mapped[str] = mapped_column(String(2000))
+    title: Mapped[str] = mapped_column(String(200))
+    timezone: Mapped[str] = mapped_column(String(64), default='Europe/Moscow')
+    enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    connected: Mapped[bool] = mapped_column(Boolean, default=True)
+    recording_authorized: Mapped[bool] = mapped_column(Boolean, default=False)
+    analysis_types: Mapped[list] = mapped_column(JSON, default=list)
+    lead_seconds: Mapped[int] = mapped_column(Integer, default=60)
+    late_seconds: Mapped[int] = mapped_column(Integer, default=300)
+    default_duration: Mapped[int] = mapped_column(Integer, default=60)
+    last_sync: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    next_sync: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    error_code: Mapped[str | None] = mapped_column(String(80))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class CalendarOccurrence(Base):
+    __tablename__ = 'calendar_occurrences'
+    __table_args__ = (UniqueConstraint('subscription_id', 'event_key'),)
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=identifier)
+    subscription_id: Mapped[str] = mapped_column(ForeignKey('calendar_subscriptions.id'), index=True)
+    event_key: Mapped[str] = mapped_column(String(64))
+    uid: Mapped[str] = mapped_column(Text)
+    recurrence_id: Mapped[str] = mapped_column(String(100))
+    title: Mapped[str] = mapped_column(String(200))
+    url: Mapped[str | None] = mapped_column(String(400))
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    status: Mapped[str] = mapped_column(String(24), default='scheduled')
+    reason: Mapped[str | None] = mapped_column(String(80))
+    skipped: Mapped[bool] = mapped_column(Boolean, default=False)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    start_request: Mapped[dict | None] = mapped_column(JSON)
+    session_id: Mapped[str | None] = mapped_column(String(36), unique=True)
+    session_snapshot: Mapped[dict | None] = mapped_column(JSON)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
 if __name__ == "__main__":
     init()

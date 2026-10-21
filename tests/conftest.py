@@ -13,7 +13,7 @@ from app.api import app
 def database():
     Base.metadata.create_all(engine)
     with engine.begin() as conn:
-        conn.execute(text("TRUNCATE telegram_stats_groups, telegram_usage, telegram_users, meetings, actions, audit, outbox, bot_cursor RESTART IDENTITY CASCADE"))
+        conn.execute(text("TRUNCATE calendar_scheduler_state, calendar_subscriptions, telegram_stats_groups, telegram_usage, telegram_users, meetings, actions, audit, outbox, bot_cursor RESTART IDENTITY CASCADE"))
     yield
 
 

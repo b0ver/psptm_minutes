@@ -41,6 +41,25 @@
       </form>
       <div id="telemost-sessions" aria-live="polite"></div>
     </details>
+    <details class="panel intake" id="calendar-box">
+      <summary>Яндекс Календарь · автоматическое подключение к встречам</summary>
+      <p id="calendar-scheduler-status" class="muted" role="status"></p>
+      <p class="muted">Подключите календарь один раз. Ассистент будет сам находить ссылки Телемоста и входить по расписанию. Включение автоматической записи доступно после просмотра ближайших встреч.</p>
+      <form id="calendar-connect">
+        <label>Почта аккаунта Яндекса<input name="username" type="email" autocomplete="username" maxlength="254" required></label>
+        <label>Пароль приложения «Календарь»<input name="password" type="password" autocomplete="new-password" maxlength="512" required></label>
+        <p class="muted">Создайте отдельный пароль в Яндекс ID → Безопасность → Пароли приложений → Календарь. Новый пароль может заработать через 2–3 часа.</p>
+        <label>Часовой пояс календаря<input name="timezone" value="Europe/Moscow" maxlength="64" required></label>
+        <button id="calendar-discover" type="button">Найти календари</button>
+        <div id="calendar-choice" hidden>
+          <label>Календарь для подключения<select name="calendar_href" id="calendar-select"></select></label>
+          <button id="calendar-save" type="submit">Подключить выбранный календарь</button>
+        </div>
+        <p id="calendar-connect-status" class="muted" role="status" aria-live="polite"></p>
+      </form>
+      <h2>Подписки</h2><div id="calendar-subscriptions"></div>
+      <h2>Расписание ассистента</h2><div id="calendar-occurrences" aria-live="polite"></div>
+    </details>
     <section id="workspace">
       <div class="heading"><div><p class="eyebrow">ВАШЕ ПРОСТРАНСТВО</p><h1>Встречи и поручения</h1></div></div>
       <nav><button id="meetings-tab" class="active">Встречи</button><button id="registry-tab" class="secondary">Реестр поручений</button></nav>
