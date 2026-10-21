@@ -1,5 +1,7 @@
 # Состояние проекта: обновлено 21 октября 2026
 
+[CI `2592105`](https://github.com/b0ver/psptm_minutes/actions/runs/39587245636) **success** на Linux/amd64: полный набор с queue guard, audits, restore и recorder probes. Изолированные исходники кандидата перенесены на Bender с проверкой SHA256; GPU-образ и watchdog ещё не подготовлены, прогон не запущен.
+
 Владелец разрешил GPU-проверки в будни 07:00–09:00 MSK и выходные при свободных ресурсах; созданы [расписания продолжения чата](capacity-schedule.md). Реальный прогон новой версии пока не выполнен: сначала нужен watchdog и изолированный checkout кандидата.
 
 Дополнительная сверка доставки: GitHub environments и runners отсутствуют, main не защищена classic rules или rulesets. [Матрица незакрытой приёмки](reports/release-acceptance-2026-10-21.md) фиксирует доказательства и необходимые внешние шаги. Полный локальный Docker/PostgreSQL-набор — **201 passed** (9.37 s), включая пять проверок барьера остановки очередей на настоящем PostgreSQL; они не заменяют staging deploy/rollback.
