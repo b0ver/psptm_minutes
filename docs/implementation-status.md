@@ -1,5 +1,7 @@
 # Состояние проекта: обновлено 21 октября 2026
 
+[CI текущего кода `c5ab1b7`](https://github.com/b0ver/psptm_minutes/actions/runs/39647601435) **success**: 230 integration и все gates, включая новый staging HTTP upload/restart/restore, прошли на Linux/amd64. Merge checkout имеет идентичное head дерево (files=[]); [receipt](reports/staging-ci-2026-10-21.json). Серверная проверка Bender, полный version rollback, настоящий E2E/GPU и качество остаются незакрыты.
+
 Добавлен воспроизводимый [CPU staging drill](reports/staging-smoke-2026-10-21.md) в CI/release: реальный HTTP upload synthetic WAV, повторный импорт, restart persistence, архив аудио и pg_dump/restore отдельной БД. Прямой probe локально на Docker/arm64 прошёл дважды; существующие ресурсы и чужой secret root корректно отклонены. На Bender Tailscale ping доступен, SSH закрывается до входа — серверная приёмка по-прежнему pending. Приложение и production не обновлялись.
 
 [CI проверки отмены `4f08596`](https://github.com/b0ver/psptm_minutes/actions/runs/39596349525) **success**; готов отдельный cancel-job на Bender (created, не started), проверены безопасные mounts и запись статуса под UID 10001 без GPU. [Manifest/протокол](ollama-cancellation-acceptance.md). Владелец сообщил, что отдельного хоста и второго reviewer пока нет: используем существующий Bender и ручную приёмку владельцем; production workflow выключен явным opt-in gate.

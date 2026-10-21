@@ -46,3 +46,7 @@ Drill отказывается работать при существующих 
 ```sh
 python3 scripts/ops/staging_smoke_probe.py --root /home/epopov/projects/psptm_minutes-staging
 ```
+
+## Результат Linux/amd64 CI
+
+[CI `c5ab1b7`](https://github.com/b0ver/psptm_minutes/actions/runs/39647601435) **success** на Linux/amd64: **230 passed**, 17.48 s, одно предупреждение; новый настоящий HTTP staging smoke, synthetic restore с calendar credential, recorder controls/crash recovery, metadata smoke и оба Python audits прошли. GitHub checkout использовал merge commit `f85f309c86f57e2622c5569ca485e36345ec5f6d`; GitHub compare с head `c5ab1b7761308b401e4417d49ce441ac0ffac07b` подтвердил files=[]. [Безопасный receipt](staging-ci-2026-10-21.json) привязывает результат к исходникам и image ID. Это CI-стенд, не Bender, не release promotion и не version rollback.

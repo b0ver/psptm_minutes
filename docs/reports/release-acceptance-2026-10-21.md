@@ -5,7 +5,7 @@
 | Условие | Подтверждение / результат | Остаток и ответственный |
 | --- | --- | --- |
 | Сохранение и синхронизация продукта | PR #2 merged, main cd2e047; правка длинных встреч в отдельном PR #3. Лабораторное дерево сохранено вне release diff | Review PR #3 — владелец репозитория |
-| Локальные integration/security/restore gates | [CI 2592105](https://github.com/b0ver/psptm_minutes/actions/runs/39587245636) success: 201 integration, benchmark contracts, synthetic restore, recorder controls/crash recovery, оба Python audit; без настоящего GPU | Пять queue guard регрессий проверены локально и в CI; OS/Chromium/CUDA scan отдельно |
+| Локальные integration/security/restore gates | [CI c5ab1b7](https://github.com/b0ver/psptm_minutes/actions/runs/39647601435) success: 230 integration, benchmark contracts, staging HTTP upload/restart/restore, synthetic restore, recorder controls/crash recovery, оба Python audit; без настоящего GPU | Пять queue guard регрессий проверены локально и в CI; OS/Chromium/CUDA scan отдельно |
 | Барьер остановки consumers | Проверяется отдельным процессом с настоящими PostgreSQL table locks: busy в каждой из трёх очередей, блокирование FOR UPDATE SKIP LOCKED до освобождения, обработка незавершённого claim | Это не испытание полного deploy/rollback на сервере |
 | Длинные встречи | В коде bounded merge/render, сохранение пунктов/цитат, предупреждение о проверке статусов между частями | Реальный повтор 30/60/85 минут и человеческая проверка — отдельное GPU-окно, владелец |
 | Мощность | Прежние два успешных примера: 6:17/11:40; 85 минут failed | Устойчивая суточная квота не доказана; полный corpus/soak по capacity.md |
