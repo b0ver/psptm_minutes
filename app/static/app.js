@@ -140,7 +140,7 @@ function markdown(text){
 function renderAnalysis(meetingId,state){
   if(selected!==meetingId||!$('analysis-panel'))return;
   const panel=$('analysis-panel');panel.replaceChildren(node('h2','Разборы встречи'));
-  const labels={extract:'Извлекаем факты',merge:'Собираем итоги',verify:'Проверяем цитаты',render:'Готовим отчёты',waiting_transcript:'Ожидаем транскрипт',done:'Разборы готовы'};
+  const labels={extract:'Извлекаем факты',merge:'Собираем итоги',merge_summary:'Собираем обзор встречи',verify:'Проверяем цитаты',render:'Готовим отчёты',waiting_transcript:'Ожидаем транскрипт',done:'Разборы готовы'};
   analysisActive=['queued','processing'].includes(state.status);
   if(analysisActive){const p=node('p',state.status==='queued'?'Разборы в очереди':(labels[state.step]||'Обрабатываем')+' · '+state.completed+' / '+state.total,'muted');panel.append(p);const meter=node('progress');meter.max=Math.max(1,state.total);if(state.total)meter.value=state.completed;panel.append(meter);}
   if(state.error_code)panel.append(node('p','Не удалось завершить разборы: '+state.error_code+'. Можно повторить выбранные типы.','muted'));
