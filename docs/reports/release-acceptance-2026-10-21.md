@@ -17,6 +17,6 @@
 
 ## Условия внешнего шага
 
-Владелец разрешил будни 07:00–09:00 MSK и выходные при свободных ресурсах. Созданы [расписания чата](../capacity-schedule.md); [watchdog](../capacity-watchdog.md) прошёл CPU-only timeout/SIGKILL на Bender. Запуск GPU новой версии ещё не выполнен. Отдельный staging и назначенный reviewer запрошены, но пока не определены. Не создавать environments с вымышленным reviewer и не регистрировать production runner для обхода отсутствующей приёмки. Настройки GitHub в этой сверке только прочитаны.
+Владелец разрешил будни 07:00–09:00 MSK и выходные при свободных ресурсах. Созданы [расписания чата](../capacity-schedule.md); [watchdog](../capacity-watchdog.md) прошёл CPU-only timeout/SIGKILL на Bender. Отдельный образ и created-контейнеры [подготовлены](../benchmarks/capacity-preparation-2026-10-21.md), но реальная отмена и запуск GPU новой версии ещё не выполнены. Отдельный staging и назначенный reviewer запрошены, но пока не определены. Не создавать environments с вымышленным reviewer и не регистрировать production runner для обхода отсутствующей приёмки. Настройки GitHub в этой сверке только прочитаны.
 
 Следующая проверка capacity выполняется по [методике](../capacity.md) и [приёмке длинных встреч](../long-meeting-analysis-2026-10-21.md); deploy/restore — по [runbook](../ci-cd.md). В артефакты приёмки попадают только commit/digest, агрегаты, безопасные коды и результат. Записи, транскрипты, AI-ответы и credentials остаются вне Git/CI.

@@ -1,5 +1,11 @@
 # Состояние проекта: обновлено 21 октября 2026
 
+Текущий кандидат: [PR #3](https://github.com/b0ver/psptm_minutes/pull/3), код ecd3d10, полный набор 225 passed и CI success. На Bender [подготовлен отдельный GPU-образ](benchmarks/capacity-preparation-2026-10-21.md), проверены pip/CPU imports и чтение копий записей/весов под UID 10001. Права упаковки, из-за которых первый образ не читал код, исправлены; первый image ID отклонён. Два benchmark-контейнера созданы, но не запущены; start вне окна проверенно отказал. Production не обновлялся.
+
+Остаток: реальная отмена GPU/Ollama и полный цикл 85/60/30 минут в разрешённое окно, человеческое качество, внешние Telegram/calendar E2E, production restore, staging/rollback и настройки доставки. Суточная мощность не подтверждена. Далее — история промежуточных сверок; их ранние состояния не являются текущими.
+
+## История проверок
+
 [CI `ecd3d10`](https://github.com/b0ver/psptm_minutes/actions/runs/39591200763) **success** на Linux/amd64: integration, новый реальный Docker metadata smoke, restore, recorder probes и Python audits. Полный GPU build context этого commit подготовлен отдельно на Bender с проверенным SHA256; образ/inference ещё не запускались. Последующие правки этого статуса — документация.
 
 Реализован [серверный watchdog capacity](capacity-watchdog.md): окна MSK с резервом, immutable ownership, приоритет production, systemd timeout/ExecStopPost, приватное сохранение dump перед остановкой tmpfs-БД. На Bender timeout и SIGKILL drills прошли без GPU; полный локальный Docker-набор — **225 passed**. Настоящий GPU/corpus/качество ещё не проверены. Старый source archive неполон для GPU build и будет заменён.
