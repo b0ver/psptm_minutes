@@ -2,6 +2,7 @@
 import subprocess
 import sys
 import select
+from pathlib import Path
 
 directory, project = sys.argv[1:]
 command = ['docker', 'compose', '--project-directory', directory, '-p', project]
@@ -9,20 +10,7 @@ for filename in ('compose.yaml', 'compose.gpu.yaml', 'compose.telemost.yaml', 'c
     command += ['-f', directory + '/' + filename]
 for profile in ('ai', 'telegram', 'calendar', 'telemost'):
     command += ['--profile', profile]
-code = '''
-import sys
-from sqlalchemy import text
-from app.db import engine
-with engine.begin() as connection:
-    connection.execute(text("SET LOCAL lock_timeout = '5s'"))
-    connection.execute(text("LOCK TABLE meetings, meeting_analysis, meeting_reports IN EXCLUSIVE MODE"))
-    for table in ('meetings', 'meeting_analysis', 'meeting_reports'):
-        if connection.scalar(text("SELECT count(*) FROM " + table + " WHERE status='processing'")):
-            print('busy', flush=True)
-            raise SystemExit(1)
-    print('idle_locked', flush=True)
-    sys.stdin.readline()
-'''
+code = Path(__file__).with_name('queue_guard.py').read_text()
 guard = subprocess.Popen(command + ['exec', '-T', 'api', 'python', '-u', '-c', code],
                          stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
 try:

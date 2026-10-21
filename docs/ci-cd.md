@@ -2,7 +2,9 @@
 
 Спринт 21 октября: [план и результаты](sprints/2026-10-21-alpha-rc.md). Добавлены bounded retries анализа, отдельный Python lock агента, аудит обоих lockfile и synthetic restore drill в CI/release. Исторические результаты от 13 октября ниже не описывают итог повторной проверки 21 октября.
 
-Повторная проверка 21 октября: 180 integration + 6 benchmark tests passed; 4 recorder controls и checkpoint normal/SIGKILL passed; synthetic restore на финальных зависимостях passed. pip-audit 2.9.0 для 50 runtime и 21 agent Python-пакетов: 0 advisory, exit 0. CI должен повторить эти gates на hosted Linux/amd64; локальная проверка выполнена на arm64. Ни staging promotion, ни восстановление production-данных этой проверкой не подтверждаются.
+Повторная проверка 21 октября: 196 integration + 6 benchmark tests passed; recorder controls и checkpoint normal/SIGKILL, synthetic restore и аудит обоих Python lockfile прошли в [CI `ff63d1c`](https://github.com/b0ver/psptm_minutes/actions/runs/39585463301) на Linux/amd64. Локальная проверка выполнена на arm64. Дополнительные PostgreSQL-регрессии queue guard описаны в [матрице приёмки](reports/release-acceptance-2026-10-21.md). Ни staging promotion, ни восстановление production-данных этими проверками не подтверждаются.
+
+Сверка GitHub API 21 октября под учётной записью с admin-доступом: environments отсутствуют, зарегистрированных runners — 0, classic protection main отсутствует (404 Branch not protected), rulesets — пусто. Это фактические незакрытые условия доставки, а не настройки, уже применённые YAML. При настройке нужны отдельный staging, назначенный reviewer и явное решение о защите ветки. До их проверки Release alpha не запускать.
 
 ## Состояние
 
@@ -47,7 +49,7 @@ Production Compose project остаётся `psptm-minutes`, чтобы испо
 `deploy.sh` удерживает host `flock`; создаёт неизменяемый release-каталог и manifest трёх image digest, выполняет pull и проверку Compose. Затем:
 
 1. Останавливает producers (Telegram/calendar), проверяет **все** durable-состояния агента, включая неопределённые импорты и неподтверждённые частичные записи; при блокере отменяет deploy и возобновляет прежние producers.
-2. Проверяет отсутствие processing и удерживает EXCLUSIVE locks таблиц очереди при остановке worker/analysis-worker. Это закрывает гонку, при которой worker мог взять queued-задачу после проверки. При активной AI-задаче deploy откладывается, её не убивают.
+2. Проверяет отсутствие processing и удерживает EXCLUSIVE locks таблиц очереди при остановке worker/analysis-worker. Код SQL-барьера находится в `scripts/ops/queue_guard.py`; `freeze_workers.py` выполняет именно этот код внутри текущего API-контейнера. Это закрывает гонку, при которой worker мог взять queued-задачу после проверки. При активной AI-задаче deploy откладывается, её не убивают.
 3. Останавливает API/агент, делает согласованную копию БД, recordings, secrets и environment; сохраняет manifest старых образов и checksums.
 4. Проверяет схему candidate: отсутствующие/изменённые колонки или nullability блокируют deploy. Проверка не покрывает indexes, constraints, defaults и семантику приложения. Такие изменения требуют отдельного плана миграции/совместимости и review.
 5. Проверяет Ollama policy и настоящий CUDA STT, запускает API/агент с ожиданием health, затем consumers и producers. Проверяет все семь долгоживущих сервисов, сохраняет их технический снимок, меняет `current` только при успехе.
@@ -81,6 +83,6 @@ bash scripts/ops/restore-drill.sh
 
 Назначить владельца сервиса, дежурного и порядок обращения сотрудников. На пилоте ежедневно смотреть: failed-коды и незавершённые импорты, возраст queued/processing, полноту разделов, tick календаря, недоставленные Telegram-события, диск и GPU. Начальные пороги для настройки: диск <20% свободно; processing дольше 2× измеренного p95; backlog выше утверждённой квоты; отсутствие heartbeat >60 секунд; неуспешный backup или просроченный restore drill. Это предлагаемые настройки, текущих автоматических alerts нет.
 
-Следующие технические этапы: heartbeat и метрики длительности фаз; admission/квоты; bounded retries анализа; Alembic; SBOM и сканирование OS-пакетов всех трёх образов; воспроизводимая фиксация транзитивных зависимостей агента/apt; retention/delete; технический maintenance gate; резервирование общего GPU. Текущий pip-audit покрывает Python runtime lockfile, не Chromium/apt/CUDA и не весь отдельный dependency tree агента.
+Следующие технические этапы: heartbeat и метрики длительности фаз; admission/квоты; Alembic; SBOM и сканирование OS-пакетов всех трёх образов; воспроизводимая фиксация транзитивных зависимостей агента/apt; retention/delete; технический maintenance gate; резервирование общего GPU. Текущий pip-audit покрывает Python lockfile runtime и агента, не Chromium/apt/CUDA.
 
 Основания настройки процесса: [GitHub — secure use](https://docs.github.com/en/actions/reference/security/secure-use), [GitHub — environments](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments), [Docker Compose production](https://docs.docker.com/compose/how-tos/production/). Actions закреплены полными SHA, проверенными по remote tags 13 октября 2026. GitHub protection rules настраиваются отдельно от YAML.
