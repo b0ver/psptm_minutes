@@ -1,5 +1,9 @@
 # CI/CD и эксплуатация корпоративной альфы
 
+Спринт 21 октября: [план и результаты](sprints/2026-10-21-alpha-rc.md). Добавлены bounded retries анализа, отдельный Python lock агента, аудит обоих lockfile и synthetic restore drill в CI/release. Исторические результаты от 13 октября ниже не описывают итог повторной проверки 21 октября.
+
+Повторная проверка 21 октября: 180 integration + 6 benchmark tests passed; 4 recorder controls и checkpoint normal/SIGKILL passed; synthetic restore на финальных зависимостях passed. pip-audit 2.9.0 для 50 runtime и 21 agent Python-пакетов: 0 advisory, exit 0. CI должен повторить эти gates на hosted Linux/amd64; локальная проверка выполнена на arm64. Ни staging promotion, ни восстановление production-данных этой проверкой не подтверждаются.
+
 ## Состояние
 
 В репозитории подготовлены `.github/workflows/ci.yml`, `.github/workflows/release.yml`, `scripts/ops/*` и изолированный capacity-стенд. **Это подготовленная реализация процесса, а не уже активированная доставка.** GitHub environments, защита ветки, registry-доступ, runners и управляемый production baseline требуют настройки. Полный deploy/rollback на staging ещё не выполнен. Существующий сервер в ходе аудита не обновлялся.
@@ -57,6 +61,14 @@ Production Compose project остаётся `psptm-minutes`, чтобы испо
 Тестовый allowlisted Telegram user: меню → запуск согласованного тестового звонка → запись → транскрипт и все выбранные отчёты → Markdown → утверждение/статус поручения. Второй user не видит его материалы. Календарь: реальное тестовое событие, перенос и отмена. Проверить безопасный отказ занятого агента, потерянный ответ импорта и продолжение после restart. Выполнить restore и rollback candidate → previous. Сохранить безопасный отчёт приёмки с commit/digest и результатами; содержание материалов остаётся локально. Пороги мощности/качества — [capacity.md](capacity.md) и [оценка допуска](alpha-readiness-2026-10-13.md).
 
 ## Rollback и восстановление
+
+Для проверки механизма на полностью синтетических материалах выполнить:
+
+```sh
+bash scripts/ops/restore-drill.sh
+```
+
+Команда создаёт собственный Compose project с префиксом `psptm-minutes-restore-drill-`, использует только `compose.test.yaml`, создаёт синтетические Meeting/Report/CalendarSubscription и WAV. Выполняются настоящий pg_dump/pg_restore в другую БД, архивация записи и ключа, удаление исходных файлов и восстановление с проверкой под UID 10001. Проверяются отчёт, транскрипт, байты аудио и расшифровка календарного credential. После успеха удаляются только собственные контейнеры/volumes и временные synthetic-файлы. При ошибке сохраняются технические данные. Production .env, secrets и volumes не подключаются. Это не подтверждает backup/restore рабочей базы, внешнее хранилище, RPO/RTO или перенос всех Telegram-состояний.
 
 1. Закрыть приём. По сохранённому manifest **candidate** остановить Telegram/calendar, убедиться, что новые live/AI-задачи отсутствуют, остановить workers, API и агент. Если candidate уже принял работу, дождаться её окончания; не менять образ поверх записи. Использовать те же четыре Compose-файла и `-p psptm-minutes`, `--no-build`; не использовать `down -v`.
 2. Если схема/данные совместимы, запустить previous manifest с существующими volumes: init не применять как миграцию, сначала DB/API/агент с health, затем workers и producers. Проверить очередь, ownership и ключ календаря. Вернуть `current` только после smoke. Не выполнять blind rollback после несовместимой миграции.

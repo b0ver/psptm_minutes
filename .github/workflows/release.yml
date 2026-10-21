@@ -27,12 +27,14 @@ jobs:
           docker compose -f compose.test.yaml up --build --abort-on-container-exit --exit-code-from tests
           python3 -m unittest discover -s benchmarks/tests -v
           bash -n scripts/ops/deploy.sh
+          bash -n scripts/ops/restore-drill.sh
+          bash scripts/ops/restore-drill.sh
           docker run --rm -v "$PWD:/repo:ro" -w /repo \
             rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
       - name: Security gate
         run: |
           docker run --rm --user root --entrypoint sh psptm-minutes-tests-tests -c \
-            'pip install --quiet pip-audit==2.9.0 && pip-audit --no-deps --disable-pip -r /app/requirements.lock'
+            'pip install --quiet pip-audit==2.9.0 && pip-audit --no-deps --disable-pip -r /app/requirements.lock && pip-audit --no-deps --disable-pip -r /app/integrations/telemost/requirements.lock'
       - name: Authenticate registry
         env:
           GH_TOKEN: ${{ github.token }}
@@ -50,6 +52,10 @@ jobs:
               docker build --label "org.opencontainers.image.revision=$GITHUB_SHA" -f integrations/telemost/Dockerfile -t "$ref" .
             else
               docker build --label "org.opencontainers.image.revision=$GITHUB_SHA" --target "$kind" -t "$ref" .
+            fi
+            if [ "$kind" = telemost ]; then
+              docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges "$ref" python recording_controls_probe.py
+              docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges "$ref" python probe.py
             fi
             docker push "$ref"
             digest=$(docker image inspect --format '{{index .RepoDigests 0}}' "$ref")

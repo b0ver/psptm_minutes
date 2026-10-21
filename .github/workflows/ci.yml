@@ -24,17 +24,25 @@ jobs:
       - name: Compile operational tools
         run: python3 -m py_compile scripts/ops/*.py benchmarks/capacity.py
       - name: Check shell scripts
-        run: bash -n scripts/ops/deploy.sh
+        run: |
+          bash -n scripts/ops/deploy.sh
+          bash -n scripts/ops/restore-drill.sh
+      - name: Restore synthetic database, recording and calendar credential
+        run: bash scripts/ops/restore-drill.sh
       - name: Validate workflows
         run: |
           docker run --rm -v "$PWD:/repo:ro" -w /repo \
             rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
       - name: Build recorder
         run: docker build -f integrations/telemost/Dockerfile -t minutes-recorder:ci .
+      - name: Recorder controls and crash recovery without network
+        run: |
+          docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges minutes-recorder:ci python recording_controls_probe.py
+          docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges minutes-recorder:ci python probe.py
       - name: Audit pinned runtime dependencies
         run: |
           docker run --rm --user root --entrypoint sh psptm-minutes-tests-tests -c \
-            'pip install --quiet pip-audit==2.9.0 && pip-audit --no-deps --disable-pip -r /app/requirements.lock'
+            'pip install --quiet pip-audit==2.9.0 && pip-audit --no-deps --disable-pip -r /app/requirements.lock && pip-audit --no-deps --disable-pip -r /app/integrations/telemost/requirements.lock'
       - name: Validate Compose without real credentials
         run: |
           mkdir -p secrets
