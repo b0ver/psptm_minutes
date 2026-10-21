@@ -57,3 +57,5 @@ Unit содержит независимые от SSH/чата RuntimeMaxSec и 
 - SHA256 проверенного capacity_watchdog.py: `ead37d065ed6981c1cba69e9cd2bf44af3a429245bcb6933e8d9ec6fd0a4f101`; probe: `b229bc95983a2272c29e1bc2368906d87fa223b550f71894484a51ebc2834c6a`.
 
 Настоящий 85-минутный прогон, отмена GPU/LLM, человеческое качество, полная матрица и staging остаются незавершёнными.
+
+[GitHub CI `ecd3d10`](https://github.com/b0ver/psptm_minutes/actions/runs/39591200763) success на Linux/amd64, включая новый Docker metadata smoke и остальные gates. На Bender подготовлен полный source context этого commit; дальнейшая приёмка в разрешённое окно.

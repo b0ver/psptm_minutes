@@ -1,5 +1,7 @@
 # Состояние проекта: обновлено 21 октября 2026
 
+[CI `ecd3d10`](https://github.com/b0ver/psptm_minutes/actions/runs/39591200763) **success** на Linux/amd64: integration, новый реальный Docker metadata smoke, restore, recorder probes и Python audits. Полный GPU build context этого commit подготовлен отдельно на Bender с проверенным SHA256; образ/inference ещё не запускались. Последующие правки этого статуса — документация.
+
 Реализован [серверный watchdog capacity](capacity-watchdog.md): окна MSK с резервом, immutable ownership, приоритет production, systemd timeout/ExecStopPost, приватное сохранение dump перед остановкой tmpfs-БД. На Bender timeout и SIGKILL drills прошли без GPU; полный локальный Docker-набор — **225 passed**. Настоящий GPU/corpus/качество ещё не проверены. Старый source archive неполон для GPU build и будет заменён.
 
 [CI `2592105`](https://github.com/b0ver/psptm_minutes/actions/runs/39587245636) **success** на Linux/amd64: полный набор с queue guard, audits, restore и recorder probes. Изолированные исходники кандидата перенесены на Bender с проверкой SHA256; GPU-образ и watchdog ещё не подготовлены, прогон не запущен.

@@ -10,23 +10,14 @@
 
 Контейнер работает под UID 10001: каталог corpus и записи должны читаться этим UID. Предпочтительно ACL или соответствующая группа; разрешён и читаемый bind-каталог внутри внешнего защищённого каталога 0700. Не менять права исходных production-записей; работать с копиями. `PYTHONPATH=/app` в Compose требуется для запуска смонтированного `/capacity.py`.
 
-На Linux/NVIDIA с существующими весами и моделями:
+На Linux/NVIDIA подготовить полный контекст точного commit, отдельный образ и два новых контейнера без запуска по [контракту watchdog](capacity-watchdog.md). Параметры CAPACITY_CORPUS_DIR/STT_MODEL_DIR/STT_MODEL_PATH указывают на разрешённые копии и существующие веса; OLLAMA_MODEL — на разрешённый digest. Не менять права исходных записей. Запуск выполняется только через серверную защиту:
 
 ```sh
-export CAPACITY_CORPUS_DIR=/absolute/private/approved-corpus
-export STT_MODEL_DIR=/absolute/existing/whisper-cache
-export STT_MODEL_PATH=/models/whisper/path/to/snapshot
-export OLLAMA_MODEL=qwen3.5:9b
-mkdir -p benchmarks/private/capacity
-chmod 700 benchmarks/private benchmarks/private/capacity
-set -o pipefail
-docker compose -f benchmarks/compose.capacity.yaml run --build --rm measure \
-  /corpus/meeting-30m.wav /corpus/meeting-60m.wav /corpus/meeting-120m.wav \
-  > benchmarks/private/capacity/timings.jsonl
-docker compose -f benchmarks/compose.capacity.yaml down --volumes
+python3 scripts/ops/capacity_watchdog.py check /absolute/private/run/job.json
+python3 scripts/ops/capacity_watchdog.py start /absolute/private/run/job.json
 ```
 
-Последняя команда уничтожает ТОЛЬКО временные данные проекта `psptm-minutes-capacity`. Не заменять Compose-файл или project name рабочими. Сохранить метрики перед удалением. Нужны заранее разрешённые локальные записи; не применять синтетическую тишину для оценки STT/LLM-пропускной способности. Скопировать дополнительные настройки политики модели при необходимости; модель должна быть в production allowlist, скачивания и облачный fallback запрещены.
+Контроллер использует уже созданные контейнеры, сохраняет приватные logs/dump и останавливает только их. Прямой `compose run --build` обходит окно/приоритет/watchdog и для запусков по расписанию не используется. Перед удалением собственной завершённой попытки сохранить метрики и данные для человеческой проверки; не выполнять автоматический `down --volumes` до этого. Никогда не подменять project/Compose рабочими.
 
 Вывод содержит длительности, статус и коды ошибок. `speech_end_seconds` — конец последнего речевого сегмента, а не длительность всего исходного медиа; реальную длительность фиксировать отдельно. `p95` — nearest rank, на трёх примерах почти максимум, статистически слабая оценка. `planning_meetings_per_budget` выдаётся только при полном успехе, с резервом 40%; `validated_daily_capacity` всегда false. Если основной протокол failed, анализ может продолжить работу с сохранённым транскриптом; встреча всё равно не считается полной успешной обработкой.
 
