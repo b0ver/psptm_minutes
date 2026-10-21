@@ -20,3 +20,11 @@ docker compose -f compose.yaml -f compose.telemost.yaml --profile telemost up -d
 ```sh
 docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges psptm-minutes:telemost python probe.py
 ```
+
+Проверка запуска и остановки записи в обоих вариантах интерфейса (отдельная кнопка с `aria-label` и прежний пункт меню), задержки появления кнопки и отказа при отсутствии подтверждения:
+
+```sh
+docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges psptm-minutes:telemost python recording_controls_probe.py
+```
+
+Проба использует синтетическую страницу внутри iframe; к встречам не подключается. Она проверяет выбор команды остановки, но не скачивание настоящего аудиофайла Телемоста.
