@@ -87,6 +87,8 @@ bash scripts/ops/restore-drill.sh
 
 Для разрешённых capacity-проверок отдельно реализован [серверный watchdog](capacity-watchdog.md) с проверкой ownership и остановкой своих контейнеров. Он не заменяет безопасную остановку production и приёмку deploy/rollback.
 
+Изолированный CPU [staging smoke drill](reports/staging-smoke-2026-10-21.md) также выполняется в CI/release: HTTP upload синтетического WAV, restart persistence и dump/restore. Он не заменяет полный staging promotion трёх образов, version rollback и внешний E2E.
+
 ## Контроль эксплуатации
 
 Назначить владельца сервиса, дежурного и порядок обращения сотрудников. На пилоте ежедневно смотреть: failed-коды и незавершённые импорты, возраст queued/processing, полноту разделов, tick календаря, недоставленные Telegram-события, диск и GPU. Начальные пороги для настройки: диск <20% свободно; processing дольше 2× измеренного p95; backlog выше утверждённой квоты; отсутствие heartbeat >60 секунд; неуспешный backup или просроченный restore drill. Это предлагаемые настройки, текущих автоматических alerts нет.

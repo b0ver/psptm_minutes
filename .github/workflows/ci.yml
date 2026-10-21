@@ -29,6 +29,9 @@ jobs:
         run: |
           bash -n scripts/ops/deploy.sh
           bash -n scripts/ops/restore-drill.sh
+          bash -n scripts/ops/staging-smoke-drill.sh
+      - name: Synthetic staging upload, restart and restore without GPU
+        run: bash scripts/ops/staging-smoke-drill.sh
       - name: Restore synthetic database, recording and calendar credential
         run: bash scripts/ops/restore-drill.sh
       - name: Validate workflows

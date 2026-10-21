@@ -29,6 +29,8 @@ jobs:
           python3 -m unittest discover -s benchmarks/tests -v
           bash -n scripts/ops/deploy.sh
           bash -n scripts/ops/restore-drill.sh
+          bash -n scripts/ops/staging-smoke-drill.sh
+          bash scripts/ops/staging-smoke-drill.sh
           bash scripts/ops/restore-drill.sh
           docker run --rm -v "$PWD:/repo:ro" -w /repo \
             rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667

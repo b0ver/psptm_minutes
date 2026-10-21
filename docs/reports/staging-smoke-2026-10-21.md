@@ -24,3 +24,25 @@ docker compose --env-file /home/epopov/projects/psptm_minutes-staging/staging.en
 ```
 
 В `staging.env` записан точный image ID и путь к тестовым secrets. Не выводить этот файл или развёрнутый compose config в logs. Не запускать стенд с production project name. Остановка — `stop` с теми же аргументами Compose, без удаления volumes. Веб-доступ только через SSH-туннель на loopback, не публиковать порт наружу.
+
+## Повторная проверка и воспроизводимый drill
+
+Вечером 21 октября Tailscale показывал Bender Online, прямой ping прошёл, но SSH по Tailscale IP и сохранённому alias закрывался до входа; LAN SSH недоступен. Это не доказательство остановки стенда: удалённые контейнеры повторно не осмотрены и не перезапускались.
+
+Добавлен `scripts/ops/staging_smoke_probe.py`. Он проверяет project/service labels, отсутствие GPU, собственные volumes/сети и read-only secrets из указанного staging-каталога, фактическую loopback-публикацию. После этого выполняет идемпотентный импорт фиксированного synthetic WAV, сравнение SHA256, restart только проверенного API container ID, повторную сверку записи/файла и восстановление синтетического аудиоархива. Настоящий pg_dump восстанавливается в новую БД только своего PostgreSQL, проверяется синтетическая строка; временная БД удаляется. В receipt — только технические идентификаторы и boolean-результаты; секреты/HTTP-ответы/данные dump не печатаются.
+
+Локальный Docker/arm64 стенд из runtime source `366d0ea`: host loopback, upload, повторный импорт, persistence после restart, audio archive restore и database dump/restore **прошли**. Повтор тем же probe прошёл без второй встречи; bootstrap отказал при уже существующих ресурсах, неправильный secret root отклонён. Это локальное доказательство; Bender/amd64 ещё требует того же сценария. Version rollback и настоящий E2E остаются pending.
+
+Для повторяемого полностью синтетического CI drill:
+
+```sh
+bash scripts/ops/staging-smoke-drill.sh
+```
+
+Drill отказывается работать при существующих контейнерах/volumes `psptm-minutes-staging-smoke`, собирает runtime, создаёт новые тестовые secrets, выполняет probe и удаляет только собственные синтетические ресурсы. Не запускать его вместо probe поверх уже поднятого Bender-стенда. Сценарий добавлен в CI и release gates; синтаксис shell/Python и actionlint проверены локально. Результат нового GitHub запуска фиксируется отдельно после завершения.
+
+Для существующего Bender-стенда после восстановления SSH передать проверенный probe и запустить:
+
+```sh
+python3 scripts/ops/staging_smoke_probe.py --root /home/epopov/projects/psptm_minutes-staging
+```
