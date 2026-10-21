@@ -19,6 +19,8 @@ jobs:
           persist-credentials: false
       - name: Integration tests with isolated PostgreSQL
         run: docker compose -f compose.test.yaml up --build --abort-on-container-exit --exit-code-from tests
+      - name: Capacity supervisor Docker metadata without GPU
+        run: python3 scripts/ops/capacity_inspect_probe.py psptm-minutes-tests-tests
       - name: Benchmark contracts
         run: python3 -m unittest discover -s benchmarks/tests -v
       - name: Compile operational tools

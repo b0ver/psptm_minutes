@@ -1,5 +1,7 @@
 # Состояние проекта: обновлено 21 октября 2026
 
+Реализован [серверный watchdog capacity](capacity-watchdog.md): окна MSK с резервом, immutable ownership, приоритет production, systemd timeout/ExecStopPost, приватное сохранение dump перед остановкой tmpfs-БД. На Bender timeout и SIGKILL drills прошли без GPU; полный локальный Docker-набор — **225 passed**. Настоящий GPU/corpus/качество ещё не проверены. Старый source archive неполон для GPU build и будет заменён.
+
 [CI `2592105`](https://github.com/b0ver/psptm_minutes/actions/runs/39587245636) **success** на Linux/amd64: полный набор с queue guard, audits, restore и recorder probes. Изолированные исходники кандидата перенесены на Bender с проверкой SHA256; GPU-образ и watchdog ещё не подготовлены, прогон не запущен.
 
 Владелец разрешил GPU-проверки в будни 07:00–09:00 MSK и выходные при свободных ресурсах; созданы [расписания продолжения чата](capacity-schedule.md). Реальный прогон новой версии пока не выполнен: сначала нужен watchdog и изолированный checkout кандидата.

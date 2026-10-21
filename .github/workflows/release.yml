@@ -25,6 +25,7 @@ jobs:
       - name: Test exact release source
         run: |
           docker compose -f compose.test.yaml up --build --abort-on-container-exit --exit-code-from tests
+          python3 scripts/ops/capacity_inspect_probe.py psptm-minutes-tests-tests
           python3 -m unittest discover -s benchmarks/tests -v
           bash -n scripts/ops/deploy.sh
           bash -n scripts/ops/restore-drill.sh

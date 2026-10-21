@@ -1,0 +1,319 @@
+"""Host-side supervisor for two pre-created, uniquely labelled capacity containers.
+
+No application imports or host dependencies beyond Python, Docker and user systemd.
+Container/image preparation stays explicit; this program never builds or deploys.
+"""
+import argparse
+import fcntl
+import json
+import math
+import os
+import re
+import signal
+import subprocess
+import sys
+import time
+import urllib.request
+from datetime import datetime, timedelta
+from pathlib import Path
+from zoneinfo import ZoneInfo
+
+MOSCOW = ZoneInfo('Europe/Moscow')
+OWNER_LABEL = 'org.psptm.capacity.run'
+API = 'psptm-minutes-api-1'
+AGENT = 'psptm-minutes-telemost-agent-1'
+OLLAMA = 'ollama'
+INSPECT = ('{"id":{{json .Id}},"labels":{{json .Config.Labels}},'
+           '"running":{{json .State.Running}},"status":{{json .State.Status}},'
+           '"exit_code":{{json .State.ExitCode}},"health":'
+           '{{with index .State "Health"}}{{json .Status}}{{else}}""{{end}}}')
+# Read-only, bounded statements. Unrunnable historical analysis rows are counted
+# separately; they must not be mistaken for work the consumer could claim.
+QUEUE_PROBE = '''
+import json
+from sqlalchemy import text
+from app.db import engine
+with engine.connect() as c:
+    c.execute(text("SET TRANSACTION READ ONLY"))
+    c.execute(text("SET LOCAL statement_timeout = '2s'"))
+    counts = {t: c.scalar(text("SELECT count(*) FROM " + t + " WHERE status='processing'"))
+              for t in ('meetings', 'meeting_analysis', 'meeting_reports')}
+    counts['queued_meetings'] = c.scalar(text("SELECT count(*) FROM meetings WHERE status='queued'"))
+    counts['queued_analysis'] = c.scalar(text("""SELECT count(*) FROM meeting_analysis a
+        JOIN meetings m ON m.id=a.meeting_id WHERE a.status='queued'
+        AND m.status IN ('ready','failed')
+        AND CASE WHEN json_typeof(m.transcript)='array'
+                 THEN json_array_length(m.transcript)>0 ELSE false END"""))
+print(json.dumps(counts))
+'''
+AGENT_PROBE = '''
+import json
+from pathlib import Path
+from states import TERMINAL
+root=Path('/data/telemost')
+if not root.is_dir(): raise SystemExit(2)
+states=[json.loads(p.read_text()) for p in root.glob('*/state.json')]
+# partial_saved is terminal for capacity; deployment has a stricter gate.
+print(json.dumps({'blocked':sum(s['status'] not in TERMINAL or s['status']=='upload_uncertain' for s in states)}))
+'''
+
+
+class Refused(Exception):
+    pass
+
+
+def command(argv, timeout=10):
+    result = subprocess.run(argv, capture_output=True, text=True, timeout=timeout)
+    if result.returncode:
+        raise Refused('command_unavailable')
+    return result.stdout
+
+
+def deadline(now, minimum_minutes=10):
+    """Reserve 15 minutes for cancellation/inspection; cap a job at two hours."""
+    now = now.astimezone(MOSCOW)
+    if now.weekday() < 5:
+        if not 7 <= now.hour < 9:
+            return None
+        end = now.replace(hour=9, minute=0, second=0, microsecond=0)
+    else:
+        end = (now + timedelta(days=7 - now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+    stop = min(end - timedelta(minutes=15), now + timedelta(hours=2))
+    return stop if stop - now >= timedelta(minutes=minimum_minutes) else None
+
+
+def load_job(path):
+    path = Path(path).absolute()
+    if path.is_symlink() or path.stat().st_mode & 0o077 or path.parent.stat().st_mode & 0o077:
+        raise Refused('private_job_required')
+    job = json.loads(path.read_text())
+    if set(job) != {'run_id', 'project', 'measure', 'database', 'lab_lock', 'model_digest'}:
+        raise Refused('invalid_job')
+    if not re.fullmatch('[0-9a-f]{16}', job['run_id']):
+        raise Refused('invalid_job')
+    if job['project'] != 'psptm-minutes-capacity-' + job['run_id']:
+        raise Refused('invalid_project')
+    if any(not re.fullmatch('[0-9a-f]{64}', job[key]) for key in ('measure', 'database', 'model_digest')):
+        raise Refused('immutable_id_required')
+    if job['measure'] == job['database']:
+        raise Refused('invalid_job')
+    lock = Path(job['lab_lock'])
+    if not lock.is_absolute() or not lock.is_file() or lock.is_symlink():
+        raise Refused('lab_lock_unavailable')
+    job['_path'] = path
+    return job
+
+
+def inspect(identifier):
+    return json.loads(command(['docker', 'inspect', '--format', INSPECT, identifier]))
+
+
+def owned(job, role):
+    row = inspect(job[role])
+    labels = row.get('labels') or {}
+    if (row['id'] != job[role] or labels.get(OWNER_LABEL) != job['run_id']
+            or labels.get('com.docker.compose.project') != job['project']
+            or labels.get('com.docker.compose.service') != ('measure' if role == 'measure' else 'capacity-db')):
+        raise Refused('container_ownership_mismatch')
+    return row
+
+
+def production_idle():
+    for name, service in ((API, 'api'), (AGENT, 'telemost-agent')):
+        row = inspect(name)
+        labels = row.get('labels') or {}
+        if (not row['running'] or row['health'] != 'healthy'
+                or labels.get('com.docker.compose.project') != 'psptm-minutes'
+                or labels.get('com.docker.compose.service') != service):
+            raise Refused('production_probe_unavailable')
+    counts = json.loads(command(['docker', 'exec', API, 'python', '-c', QUEUE_PROBE]))
+    sessions = json.loads(command(['docker', 'exec', AGENT, 'python', '-c', AGENT_PROBE]))
+    if set(counts) != {'meetings', 'meeting_analysis', 'meeting_reports', 'queued_meetings', 'queued_analysis'}:
+        raise Refused('production_probe_unavailable')
+    values = list(counts.values()) + [sessions['blocked']]
+    if any(type(value) is not int or value < 0 for value in values):
+        raise Refused('production_probe_unavailable')
+    if any(values):
+        raise Refused('production_busy')
+
+
+def ollama_models():
+    with urllib.request.urlopen('http://127.0.0.1:11434/api/ps', timeout=5) as response:
+        models = json.load(response)['models']
+    if not isinstance(models, list):
+        raise Refused('ollama_probe_unavailable')
+    return models
+
+
+def gpu_pids():
+    output = command(['nvidia-smi', '--query-compute-apps=pid', '--format=csv,noheader,nounits'])
+    return {int(line.strip()) for line in output.splitlines() if line.strip()}
+
+
+def container_pids(identifier):
+    output = command(['docker', 'top', identifier, '-eo', 'pid'])
+    return {int(line.strip()) for line in output.splitlines()[1:] if line.strip()}
+
+
+def resource_gate(job, starting):
+    production_idle()
+    models = ollama_models()
+    if starting:
+        values = command(['nvidia-smi', '--query-gpu=utilization.gpu,memory.free', '--format=csv,noheader,nounits']).strip().split(',')
+        if len(values) != 2 or float(values[0]) > 5 or float(values[1]) < 20000 or gpu_pids() or models:
+            raise Refused('gpu_busy')
+    else:
+        if any(model['digest'].removeprefix('sha256:') != job['model_digest'] for model in models):
+            raise Refused('foreign_model_loaded')
+        allowed = container_pids(job['measure']) | container_pids(OLLAMA)
+        if gpu_pids() - allowed:
+            raise Refused('foreign_gpu_process')
+
+
+def save(job, status, **fields):
+    target = job['_path'].parent / 'watchdog.json'
+    temporary = target.with_suffix('.tmp')
+    temporary.write_text(json.dumps({'run_id': job['run_id'], 'status': status,
+                                    'time': datetime.now(MOSCOW).isoformat(), **fields}))
+    temporary.replace(target)
+
+
+def capture_evidence(job):
+    # Keep private outputs available for human review after tmpfs PostgreSQL stops.
+    owned(job, 'measure')
+    log = job['_path'].parent / 'measurement.log'
+    with log.open('w') as output:
+        subprocess.run(['docker', 'logs', job['measure']], stdout=output, stderr=subprocess.STDOUT,
+                       timeout=15, check=True)
+    database = owned(job, 'database')
+    target = job['_path'].parent / 'database.dump'
+    if database['running'] and database['health'] == 'healthy' and not target.exists():
+        temporary = target.with_suffix('.tmp')
+        try:
+            with temporary.open('wb') as output:
+                subprocess.run(['docker', 'exec', job['database'], 'pg_dump', '-U', 'minutes', '-d', 'minutes', '-Fc'],
+                               stdout=output, stderr=subprocess.DEVNULL, timeout=30, check=True)
+            temporary.replace(target)
+        finally:
+            temporary.unlink(missing_ok=True)
+
+
+def cleanup(job):
+    """Stop only owned IDs; preserve evidence before stopping the tmpfs database."""
+    measure = owned(job, 'measure')
+    if measure['running']:
+        command(['docker', 'stop', '--time', '10', job['measure']], timeout=20)
+    if owned(job, 'measure')['running']:
+        raise Refused('cleanup_unconfirmed')
+    capture_failed = False
+    try:
+        capture_evidence(job)
+    except Exception:
+        capture_failed = True
+    database = owned(job, 'database')
+    if database['running']:
+        command(['docker', 'stop', '--time', '10', job['database']], timeout=20)
+    if owned(job, 'database')['running']:
+        raise Refused('cleanup_unconfirmed')
+    if capture_failed:
+        raise Refused('evidence_capture_failed')
+
+
+def supervise(job, stop_at):
+    end = deadline(datetime.now(MOSCOW))
+    if end is None or not math.isfinite(stop_at) or not time.time() < stop_at <= end.timestamp() + 1:
+        raise Refused('outside_window')
+    for role in ('measure', 'database'):
+        if owned(job, role)['status'] != 'created':
+            raise Refused('fresh_containers_required')
+    with Path(job['lab_lock']).open('r+') as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            raise Refused('lab_busy') from None
+        try:
+            resource_gate(job, starting=True)
+            save(job, 'starting', stop_at=stop_at)
+            command(['docker', 'start', job['database']])
+            health_until = min(stop_at, time.time() + 90)
+            while owned(job, 'database')['health'] != 'healthy':
+                if time.time() >= health_until:
+                    raise Refused('database_not_ready')
+                time.sleep(1)
+            if time.time() >= stop_at:
+                raise Refused('window_closed')
+            resource_gate(job, starting=True)
+            command(['docker', 'start', job['measure']])
+            save(job, 'running', stop_at=stop_at)
+            while True:
+                row = owned(job, 'measure')
+                if not row['running']:
+                    if row['status'] != 'exited' or row['exit_code'] != 0:
+                        raise Refused('measurement_failed')
+                    return
+                if time.time() >= stop_at or deadline(datetime.now(MOSCOW), minimum_minutes=0) is None:
+                    raise Refused('window_closed')
+                resource_gate(job, starting=False)
+                time.sleep(3)
+        finally:
+            # Locks remain held until both own containers have stopped.
+            cleanup(job)
+
+
+def start_service(job):
+    end = deadline(datetime.now(MOSCOW))
+    if end is None:
+        raise Refused('outside_window')
+    for role in ('measure', 'database'):
+        if owned(job, role)['status'] != 'created':
+            raise Refused('fresh_containers_required')
+    script = Path(__file__).resolve()
+    if any(not re.fullmatch(r'/[A-Za-z0-9/_.-]+', str(p)) for p in (script, job['_path'])):
+        raise Refused('systemd_path_unsupported')
+    unit = 'minutes-capacity-' + job['run_id']
+    command(['systemd-run', '--user', '--collect', '--unit=' + unit,
+             '--property=RuntimeMaxSec=' + str(max(1, int(end.timestamp() - time.time()))),
+             '--property=TimeoutStopSec=60', '--property=UMask=0077', '--property=KillMode=control-group',
+             '--property=ExecStopPost=/usr/bin/python3 ' + str(script) + ' cleanup ' + str(job['_path']),
+             '/usr/bin/python3', str(script), 'run', str(job['_path']), '--stop-at', str(end.timestamp())])
+    print(json.dumps({'unit': unit, 'stop_at': end.isoformat()}))
+
+
+def main():
+    os.umask(0o077)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('mode', choices=('start', 'run', 'cleanup', 'check'))
+    parser.add_argument('job', type=Path)
+    parser.add_argument('--stop-at', type=float)
+    args = parser.parse_args()
+    job = None
+    def interrupted(signum, frame):
+        raise Refused('controller_interrupted')
+    signal.signal(signal.SIGTERM, interrupted)
+    signal.signal(signal.SIGINT, interrupted)
+    try:
+        job = load_job(args.job)
+        if args.mode == 'start':
+            start_service(job)
+        elif args.mode == 'cleanup':
+            cleanup(job)
+        elif args.mode == 'check':
+            owned(job, 'measure'); owned(job, 'database')
+            resource_gate(job, starting=True)
+            print(json.dumps({'ready': True, 'window_open': deadline(datetime.now(MOSCOW)) is not None}))
+        else:
+            if args.stop_at is None:
+                raise Refused('deadline_required')
+            supervise(job, args.stop_at)
+            save(job, 'finished', result='success', stopped_verified=True)
+        return 0
+    except Exception as error:
+        code = str(error) if isinstance(error, Refused) else 'watchdog_unavailable'
+        if job is not None and args.mode == 'run':
+            save(job, 'failed', reason=code)
+        print(json.dumps({'ready': False, 'reason': code}))
+        return 1
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
