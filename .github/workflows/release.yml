@@ -85,6 +85,8 @@ jobs:
           RELEASE_SHA: ${{ github.sha }}
         run: bash scripts/ops/deploy.sh "$DEPLOY_ROOT" psptm-minutes-staging
   production:
+    # Enable only after manifest acceptance, protected approval and staging rollback.
+    if: vars.ALPHA_PRODUCTION_DELIVERY_ENABLED == 'true'
     needs: [build, staging]
     runs-on: [self-hosted, linux, x64, minutes-production]
     environment: alpha-production

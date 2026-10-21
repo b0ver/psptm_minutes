@@ -1,12 +1,14 @@
 # Состояние проекта: обновлено 21 октября 2026
 
-[CI проверки отмены `4f08596`](https://github.com/b0ver/psptm_minutes/actions/runs/39596349525) **success**; готов отдельный cancel-job на Bender (created, не started), проверены безопасные mounts и запись статуса под UID 10001 без GPU. [Manifest/протокол](ollama-cancellation-acceptance.md). Для внешней приёмки повторно запрошены staging и reviewer; значения пока не заданы.
+[CI проверки отмены `4f08596`](https://github.com/b0ver/psptm_minutes/actions/runs/39596349525) **success**; готов отдельный cancel-job на Bender (created, не started), проверены безопасные mounts и запись статуса под UID 10001 без GPU. [Manifest/протокол](ollama-cancellation-acceptance.md). Владелец сообщил, что отдельного хоста и второго reviewer пока нет: используем существующий Bender и ручную приёмку владельцем; production workflow выключен явным opt-in gate.
 
 Подготовлен [клиент проверки отмены Ollama](ollama-cancellation-acceptance.md), который хранит только счётчики и не заявляет серверную отмену по выходу клиента. Полный локальный Docker-набор — **230 passed**, включая реальный offline TCP/SIGTERM. GPU-отмена и corpus по-прежнему не выполнены.
 
 Текущий кандидат: [PR #3](https://github.com/b0ver/psptm_minutes/pull/3), код ecd3d10, полный набор 225 passed и CI success. На Bender [подготовлен отдельный GPU-образ](benchmarks/capacity-preparation-2026-10-21.md), проверены pip/CPU imports и чтение копий записей/весов под UID 10001. Права упаковки, из-за которых первый образ не читал код, исправлены; первый image ID отклонён. Два benchmark-контейнера созданы, но не запущены; start вне окна проверенно отказал. Production не обновлялся.
 
 Остаток: реальная отмена GPU/Ollama и полный цикл 85/60/30 минут в разрешённое окно, человеческое качество, внешние Telegram/calendar E2E, production restore, staging/rollback и настройки доставки. Суточная мощность не подтверждена. Далее — история промежуточных сверок; их ранние состояния не являются текущими.
+
+На Bender создан [CPU staging smoke](reports/staging-smoke-2026-10-21.md): отдельный project/данные/новые секреты, runtime image ID точного commit `366d0ea`, DB/init/API подняты. После исправления сетевой конфигурации Compose up --wait завершился успешно. Внешняя проверка loopback, synthetic upload/restart/restore ещё не завершена: SSH затем дважды закрыл соединение. Реальный version rollback не выполнен.
 
 ## История проверок
 

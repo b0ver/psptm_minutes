@@ -50,6 +50,7 @@ jobs:
           mkdir -p secrets
           for key in db_password calendar_key telegram_token; do printf 'ci-placeholder' > "secrets/$key"; done
           docker compose -f compose.yaml -f compose.gpu.yaml -f compose.telemost.yaml --profile ai --profile telegram --profile calendar --profile telemost config --quiet
+          STAGING_RUNTIME_IMAGE=sha256:$(printf '0%.0s' {1..64}) STAGING_SECRETS_DIR="$PWD/secrets" docker compose --env-file /dev/null -f compose.staging-smoke.yaml config --quiet
       - name: Cleanup
         if: always()
         run: docker compose -f compose.test.yaml down --volumes
