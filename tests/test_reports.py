@@ -134,3 +134,29 @@ def test_original_relative_deadline_rule_overridden():
 def test_structural_validation_rejects_wrong_shapes():
     with pytest.raises(ProcessingError):
         reports.validate_json({'summary':'only'},reports.schema('facts'))
+
+
+@pytest.mark.parametrize('error,code', [
+    (httpx.ReadTimeout('synthetic'), 'analysis_ollama_timeout'),
+    (httpx.ConnectError('synthetic'), 'analysis_ollama_unavailable'),
+])
+def test_failed_render_keeps_facts_and_manual_retry_reuses_them(client, error, code):
+    mid = add_meeting()
+    client.post('/api/meetings/' + mid + '/analysis', json={'types': ['tldr']})
+    class FailingRender(FakeLLM):
+        def chat(self, system, user, spec=None):
+            if spec is None:
+                raise error
+            return super().chat(system, user, spec)
+    assert reports.process_analysis_one(FailingRender)
+    state = client.get('/api/meetings/' + mid + '/analysis').json()
+    assert state['status'] == 'failed' and state['error_code'] == code
+    assert state['reports'][0]['status'] == 'failed'
+    class RetryRenderOnly(FakeLLM):
+        def chat(self, system, user, spec=None):
+            assert spec is None, 'Saved facts must survive a failed render'
+            return super().chat(system, user, spec)
+    assert client.post('/api/meetings/' + mid + '/analysis', json={'types': ['tldr']}).status_code == 202
+    assert reports.process_analysis_one(RetryRenderOnly)
+    state = client.get('/api/meetings/' + mid + '/analysis').json()
+    assert state['status'] == 'ready' and state['reports'][0]['status'] == 'ready'
