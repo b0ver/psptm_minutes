@@ -1,0 +1,45 @@
+name: CI
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Integration tests with isolated PostgreSQL
+        run: docker compose -f compose.test.yaml up --build --abort-on-container-exit --exit-code-from tests
+      - name: Benchmark contracts
+        run: python3 -m unittest discover -s benchmarks/tests -v
+      - name: Compile operational tools
+        run: python3 -m py_compile scripts/ops/*.py benchmarks/capacity.py
+      - name: Check shell scripts
+        run: bash -n scripts/ops/deploy.sh
+      - name: Validate workflows
+        run: |
+          docker run --rm -v "$PWD:/repo:ro" -w /repo \
+            rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+      - name: Build recorder
+        run: docker build -f integrations/telemost/Dockerfile -t minutes-recorder:ci .
+      - name: Audit pinned runtime dependencies
+        run: |
+          docker run --rm --user root --entrypoint sh psptm-minutes-tests-tests -c \
+            'pip install --quiet pip-audit==2.9.0 && pip-audit --no-deps --disable-pip -r /app/requirements.lock'
+      - name: Validate Compose without real credentials
+        run: |
+          mkdir -p secrets
+          for key in db_password calendar_key telegram_token; do printf 'ci-placeholder' > "secrets/$key"; done
+          docker compose -f compose.yaml -f compose.gpu.yaml -f compose.telemost.yaml --profile ai --profile telegram --profile calendar --profile telemost config --quiet
+      - name: Cleanup
+        if: always()
+        run: docker compose -f compose.test.yaml down --volumes

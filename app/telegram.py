@@ -11,16 +11,10 @@ from sqlalchemy import select, text
 from app.db import Session, Outbox, BotCursor, engine, now
 from app.registry import locked_action, change_status
 from app.settings import secret
+from app.telegram_errors import DeliveryError
 
 log = logging.getLogger("minutes.telegram")
 DISPATCHER_LOCK = 90601010  # STT: 90601008; analysis: 90601009.
-
-
-class DeliveryError(Exception):
-    def __init__(self, code='telegram_unavailable', retry_after=0):
-        super().__init__(code)
-        self.code, self.retry_after = code, retry_after
-
 
 
 class Telegram:
@@ -234,17 +228,19 @@ def background(bot,stopped):
     from app.telegram_stats import dispatch as dispatch_stats
     with httpx.Client(timeout=20,trust_env=False,follow_redirects=False) as client:
         while not stopped.is_set():
+            stage='commands'
             try:
                 command_one(client)
-                watch_cards(client)
+                stage='cards';watch_cards(client)
+                stage='interface'
                 for _ in range(5):
                     if not dispatch_interface(bot):break
-                dispatch_owned_action(bot)
-                dispatch_stats(bot)
+                stage='actions';dispatch_owned_action(bot)
+                stage='stats';dispatch_stats(bot)
                 stopped.wait(2)
-            except Exception:
-                # Never log HTTP exceptions: Telegram URLs contain the token.
-                log.warning('telegram_background_unavailable');stopped.wait(5)
+            except Exception as error:
+                # Type and stage are safe; exception text may contain tokens or private data.
+                log.warning('telegram_background_unavailable stage=%s type=%s',stage,type(error).__name__);stopped.wait(5)
 
 
 def main():

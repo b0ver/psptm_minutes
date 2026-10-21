@@ -1,0 +1,63 @@
+name: psptm-minutes-capacity
+services:
+  capacity-db:
+    image: postgres:16.10-alpine@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297
+    environment:
+      POSTGRES_DB: minutes
+      POSTGRES_USER: minutes
+      POSTGRES_PASSWORD: test-only
+    tmpfs: [/var/lib/postgresql/data]
+    networks: [capacity]
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U minutes -d minutes]
+      interval: 1s
+      timeout: 2s
+      retries: 30
+  measure:
+    build: {context: .., target: gpu}
+    entrypoint: [python, /capacity.py]
+    environment:
+      PYTHONPATH: /app
+      DB_HOST: capacity-db
+      DB_PASSWORD_FILE: /capacity-password
+      CAPACITY_ACK_ISOLATED: '1'
+      DATA_DIR: /data
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen3.5:9b}
+      STT_MODEL_PATH: ${STT_MODEL_PATH:-/models/whisper}
+      STT_DEVICE: cuda
+      STT_COMPUTE_TYPE: float16
+    volumes:
+      - capacity-data:/data
+      - ./capacity.py:/capacity.py:ro
+      - ../tests/db-password:/capacity-password:ro
+      - type: bind
+        source: ${CAPACITY_CORPUS_DIR:?approved private corpus directory required}
+        target: /corpus
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: ${STT_MODEL_DIR:?existing model directory required}
+        target: /models/whisper
+        read_only: true
+        bind: {create_host_path: false}
+    extra_hosts: [host.docker.internal:host-gateway]
+    networks: [capacity, inference]
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ['0']
+              capabilities: [gpu]
+    depends_on:
+      capacity-db: {condition: service_healthy}
+networks:
+  capacity: {internal: true}
+  inference: {}
+volumes:
+  capacity-data:

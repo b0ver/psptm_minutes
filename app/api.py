@@ -26,6 +26,19 @@ async def lifespan(app):
 
 app = FastAPI(title="Протоколы и поручения", lifespan=lifespan, docs_url=None, redoc_url=None, openapi_url=None)
 
+from app.calendar_api import router as calendar_router
+from fastapi.exceptions import RequestValidationError
+from fastapi.exception_handlers import request_validation_exception_handler
+app.include_router(calendar_router)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request, exc):
+    if request.url.path.startswith('/api/calendars'):
+        # Pydantic's default errors can echo credential input back to the browser.
+        return JSONResponse({'detail': 'Проверьте поля подключения и настройки календаря'}, status_code=422)
+    return await request_validation_exception_handler(request, exc)
+
 
 
 
