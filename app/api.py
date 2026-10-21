@@ -9,6 +9,7 @@ from fastapi import FastAPI, HTTPException, UploadFile, File, Form, Request
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import select, text
+from pydantic import TypeAdapter
 
 from app.db import Session, Meeting, RecordingImport, Action, Audit, Outbox
 from app.registry import action_dict, audit, locked_action, approve, change_status
@@ -83,8 +84,14 @@ def meetings():
 @app.post("/api/meetings", status_code=201)
 async def upload(title: str = Form(..., min_length=1, max_length=200), recording: UploadFile = File(...),
                  analysis_types: str = Form(default=''), meeting_date: str = Form(default=''), participants: str = Form(default='', max_length=2000),
-                 import_session: str = Form(default='', max_length=36), recording_complete: bool = Form(default=True),
+                 import_session: str = Form(default='', max_length=36), recording_complete: str = Form(default='true'),
                  telemost_context: str = Form(default='',max_length=2000000)):
+    # Missing means a complete API upload, not an unchecked HTML checkbox.
+    # Recent FastAPI treats absent bool Form fields as False regardless of default.
+    try:
+        recording_complete = TypeAdapter(bool).validate_python(recording_complete)
+    except ValueError:
+        raise HTTPException(422, 'Некорректный признак полноты записи') from None
     try:
         types = reports.selected_types(json.loads(analysis_types) if analysis_types else reports.DEFAULT_TYPES)
         known_date = date.fromisoformat(meeting_date) if meeting_date else None
