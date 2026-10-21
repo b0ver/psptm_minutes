@@ -1,0 +1,22 @@
+{
+  "client_commit": "4f08596ebf86086ffa5890c9062108989efadfe3",
+  "client_sha256": "f7124a5e5de722a4088932f081e99c6a9808238be1e506b3779319ea66299035",
+  "guard_sha256": "ead37d065ed6981c1cba69e9cd2bf44af3a429245bcb6933e8d9ec6fd0a4f101",
+  "tools_archive_sha256": "6db15de5f261e8011e6344d049375b79753742f28d3eb71b57d48b87fc799bdd",
+  "runtime_source_commit": "ecd3d10b7ef6f1011dba65afaecca1aa09eb390e",
+  "runtime_image_id": "sha256:21295ad6cb679361dbde6b7bb1ce4928e5c8f4a9313fa2fb07cfa22342f81a24",
+  "model_digest": "6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7",
+  "prepared_project": "psptm-minutes-capacity-aa6a06955f894f60",
+  "containers_state": "created",
+  "storage_uid": 10001,
+  "storage_writable": true,
+  "local_gpu_device_requests": false,
+  "offline_container_checks": [
+    "cancel_probe_ack_required",
+    "cancel_probe_outside_window"
+  ],
+  "tests_passed": 230,
+  "ci": "https://github.com/b0ver/psptm_minutes/actions/runs/39596349525",
+  "real_ollama_inference_started": false,
+  "server_cancellation_verified": false
+}

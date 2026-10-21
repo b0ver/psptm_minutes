@@ -27,3 +27,5 @@
 [Подготовка ecd3d10](benchmarks/capacity-preparation-2026-10-21.md) завершена: отдельный образ собран, pip/CPU imports и чтение corpus/весов под UID 10001 проверены без GPU. Два контейнера prepared-ecd3d10-01 созданы и не запущены; реальный вызов start вне окна безопасно отклонён. Перед полным corpus обязательно проверить настоящую отмену inference в разрешённое окно.
 
 Для первой проверки в окне подготовлен [клиент и протокол отмены Ollama](ollama-cancellation-acceptance.md): синтетический prompt, только счётчики, собственный двухминутный таймер, обязательные окно/digest/ACK. Реальная GPU-отмена остаётся pending; offline TCP SIGTERM тест прошёл в составе 230 Docker-тестов.
+
+Отдельный cancel-job `cancel-prepared-4f08596-01` подготовлен в created, его readonly client mounts/UID storage проверены без GPU; [CI 4f08596](https://github.com/b0ver/psptm_minutes/actions/runs/39596349525) success. В первое доступное окно использовать сначала его по протоколу отмены, а не основной corpus-job. Настоящая отмена по-прежнему pending.

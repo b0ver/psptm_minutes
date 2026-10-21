@@ -1,5 +1,7 @@
 # Состояние проекта: обновлено 21 октября 2026
 
+[CI проверки отмены `4f08596`](https://github.com/b0ver/psptm_minutes/actions/runs/39596349525) **success**; готов отдельный cancel-job на Bender (created, не started), проверены безопасные mounts и запись статуса под UID 10001 без GPU. [Manifest/протокол](ollama-cancellation-acceptance.md). Для внешней приёмки повторно запрошены staging и reviewer; значения пока не заданы.
+
 Подготовлен [клиент проверки отмены Ollama](ollama-cancellation-acceptance.md), который хранит только счётчики и не заявляет серверную отмену по выходу клиента. Полный локальный Docker-набор — **230 passed**, включая реальный offline TCP/SIGTERM. GPU-отмена и corpus по-прежнему не выполнены.
 
 Текущий кандидат: [PR #3](https://github.com/b0ver/psptm_minutes/pull/3), код ecd3d10, полный набор 225 passed и CI success. На Bender [подготовлен отдельный GPU-образ](benchmarks/capacity-preparation-2026-10-21.md), проверены pip/CPU imports и чтение копий записей/весов под UID 10001. Права упаковки, из-за которых первый образ не читал код, исправлены; первый image ID отклонён. Два benchmark-контейнера созданы, но не запущены; start вне окна проверенно отказал. Production не обновлялся.

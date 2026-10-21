@@ -33,3 +33,13 @@ Measure-клиент создаётся с runtime=runc и **без GPU DeviceRe
 Полный Docker/PostgreSQL-набор — **230 passed**, 12.25 s, одно предупреждение Starlette testclient. Пять новых тестов проверяют отсутствие generated content в статусе/выводе, отказ неправильному digest до HTTP, обязательный ACK, отказ вне окна до сети и SIGTERM на настоящем локальном streaming HTTP-соединении. В последнем тесте synthetic server наблюдает разрыв соединения, а клиент не заявляет server_cancellation_verified. Используется test-only замена часов для offline loopback-сервера; CLI не имеет флага обхода окна.
 
 Эти результаты не доказывают поведение настоящего Ollama/GPU. Настоящая проверка остаётся pending до отдельного разрешённого окна.
+
+## Подготовленная попытка на Bender
+
+[Безопасный manifest](benchmarks/ollama-cancel-preparation-2026-10-21.json) фиксирует source/hash и образ. Код клиента — commit 4f08596, [его CI](https://github.com/b0ver/psptm_minutes/actions/runs/39596349525) success. Образ приложения остаётся ecd3d10; проверено отсутствие изменений app/config/Dockerfile/requirements между этими commit. Это два источника операционного стенда, не production release manifest.
+
+Файлы из Git archive (tar.umask=0022) с проверенным SHA256 размещены в `benchmarks/private/capacity/cancel-tools-4f08596/scripts/ops`. Внутри image UID 10001 проверены именно read-only mounts этих файлов: без ACK и вне окна — отказ до HTTP; использован network=none и нерабочий локальный порт, фактическая Ollama не вызывалась.
+
+Отдельный project `psptm-minutes-capacity-aa6a06955f894f60` создан, оба контейнера в created. Job: `/home/epopov/projects/psptm_minutes/benchmarks/private/capacity/cancel-prepared-4f08596-01/job.json`. Host watchdog брать из указанной immutable копии cancel-tools, не редактировать во время unit. Source/helper SHA256 находятся в manifest. Named volume /data проверен отдельным CPU-only контейнером: запись/удаление синтетического файла под UID 10001 прошли. Клиент не имеет локальных DeviceRequests; GPU-инференс будет выполняться общей Ollama только после разрешённого старта.
+
+**Сейчас unit не запускался, request_started/streaming и настоящая серверная отмена не подтверждены.** Не принимать успешную CPU-подготовку за допуск к полному corpus. Основной job prepared-ecd3d10-01 не использовался и остаётся отдельно подготовленным.
