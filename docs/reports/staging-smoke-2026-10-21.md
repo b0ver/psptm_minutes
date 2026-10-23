@@ -50,3 +50,9 @@ python3 scripts/ops/staging_smoke_probe.py --root /home/epopov/projects/psptm_mi
 ## Результат Linux/amd64 CI
 
 [CI `c5ab1b7`](https://github.com/b0ver/psptm_minutes/actions/runs/39647601435) **success** на Linux/amd64: **230 passed**, 17.48 s, одно предупреждение; новый настоящий HTTP staging smoke, synthetic restore с calendar credential, recorder controls/crash recovery, metadata smoke и оба Python audits прошли. GitHub checkout использовал merge commit `f85f309c86f57e2622c5569ca485e36345ec5f6d`; GitHub compare с head `c5ab1b7761308b401e4417d49ce441ac0ffac07b` подтвердил files=[]. [Безопасный receipt](staging-ci-2026-10-21.json) привязывает результат к исходникам и image ID. Это CI-стенд, не Bender, не release promotion и не version rollback.
+
+## Приёмка Bender 23 октября
+
+23 октября SSH к Bender восстановился. На отдельном CPU-стенде **прошли** host loopback, synthetic WAV upload, persistence после restart API, восстановление аудиоархива и pg_dump в отдельную тестовую БД. Probe перед передачей/исполнением сверен по SHA256; [receipt](bender-staging-smoke-2026-10-23.json). Использован уже подготовленный runtime `366d0ea`, образ не пересобирался. Это не version rollback, full release promotion или настоящий Telegram/calendar E2E.
+
+Cancel/corpus jobs перепроверены: created, systemd units inactive; image IDs и hash клиента/guard совпадают с manifests. Два read-only watchdog check вернули `gpu_busy` (первое наблюдение: utilization 9%, free VRAM 23311 MiB). Запусков inference/STT не было; чужие процессы/Ollama и production не менялись. Общий lab.lock был доступен в момент проверки, что не отменяет GPU gate. Для capacity по-прежнему требуется доступный ресурс в разрешённое окно, принятая отмена и затем corpus.

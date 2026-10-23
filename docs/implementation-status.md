@@ -1,5 +1,10 @@
 # Состояние проекта: обновлено 21 октября 2026
 
+23 октября SSH к Bender восстановился. На отдельном CPU-стенде **прошли** host loopback, synthetic WAV upload, persistence после restart API, восстановление аудиоархива и pg_dump в отдельную тестовую БД. Probe перед передачей/исполнением сверен по SHA256; [receipt](reports/bender-staging-smoke-2026-10-23.json). Использован уже подготовленный runtime `366d0ea`, образ не пересобирался. Это не version rollback, full release promotion или настоящий Telegram/calendar E2E.
+
+Cancel/corpus jobs перепроверены: created, systemd units inactive; image IDs и hash клиента/guard совпадают с manifests. Два read-only watchdog check вернули `gpu_busy` (первое наблюдение: utilization 9%, free VRAM 23311 MiB). Запусков inference/STT не было; чужие процессы/Ollama и production не менялись. Общий lab.lock был доступен в момент проверки, что не отменяет GPU gate. Для capacity по-прежнему требуется доступный ресурс в разрешённое окно, принятая отмена и затем corpus.
+
+
 [CI текущего кода `c5ab1b7`](https://github.com/b0ver/psptm_minutes/actions/runs/39647601435) **success**: 230 integration и все gates, включая новый staging HTTP upload/restart/restore, прошли на Linux/amd64. Merge checkout имеет идентичное head дерево (files=[]); [receipt](reports/staging-ci-2026-10-21.json). Серверная проверка Bender, полный version rollback, настоящий E2E/GPU и качество остаются незакрыты.
 
 Добавлен воспроизводимый [CPU staging drill](reports/staging-smoke-2026-10-21.md) в CI/release: реальный HTTP upload synthetic WAV, повторный импорт, restart persistence, архив аудио и pg_dump/restore отдельной БД. Прямой probe локально на Docker/arm64 прошёл дважды; существующие ресурсы и чужой secret root корректно отклонены. На Bender Tailscale ping доступен, SSH закрывается до входа — серверная приёмка по-прежнему pending. Приложение и production не обновлялись.
