@@ -72,3 +72,5 @@ Cancel/corpus jobs перепроверены: created, systemd units inactive; 
 [Инструкция](../README.md) · [ADR](adr/0001-docker-host-ollama-local-processing.md).
 
 23 октября: по запросу владельца watchdog допускает подтверждённый NVIDIA pmon графический фон до 20% при свободной VRAM, отсутствии compute PID/моделей и повторной проверке гонки. Неизвестная телеметрия блокирует старт; имена процессов не whitelist. Полный локальный Docker-набор 258 passed; CI точного commit проверяется отдельно. Реальная GPU-отмена и corpus пока pending.
+
+23 октября: graphics gate прошёл CI f5693eb. Первая реальная cancel-попытка остановлена watchdog с foreign_gpu_process на стадии requesting (0 chunks), client_cancelled, measure/db exited. Причина: контейнер ollama оказался socat-прокси, реальная Ollama — native systemd service. Runtime membership дополнен только PID из проверенной /system.slice/ollama.service cgroup, включая дочерние cgroups; чужие compute PID по-прежнему блокируются. Новый локальный Docker-набор 262 passed; реальная отмена остаётся pending.

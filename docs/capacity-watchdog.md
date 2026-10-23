@@ -63,3 +63,5 @@ Unit содержит независимые от SSH/чата RuntimeMaxSec и 
 Образ и контейнеры для ecd3d10 подготовлены: [фактический отчёт](benchmarks/capacity-preparation-2026-10-21.md). Реальный запуск и отмена GPU остаются отдельной приёмкой.
 
 23 октября: на Bender три снимка pmon показали только G-процессы Xorg/GNOME Shell/Happ/Firefox, compute PID и модели Ollama отсутствовали. Прежний gate ошибочно считал графический фон 8–11% вычислительной занятостью. Добавлено ограниченное исключение с регрессиями; фактическая приёмка отмены и corpus ещё не выполнены. Старый helper в mounts cancel-client не меняется; новая host-копия guard имеет отдельный hash.
+
+На Bender контейнер ollama содержит socat, перенаправляющий запросы в native ollama.service. При runtime gate разрешаются также PID только из активной systemd cgroup /system.slice/ollama.service и её дочерних cgroups. Пустая/неизвестная принадлежность не разрешает чужие PID. Проверка отмены всё ещё требует настоящих streaming/GPU наблюдений.

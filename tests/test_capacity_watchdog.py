@@ -240,3 +240,19 @@ def test_desktop_exception_preserves_admission_gates(monkeypatch, utilization, c
     else:
         with pytest.raises(cw.Refused):
             cw.resource_gate({}, starting=True)
+
+
+def test_native_ollama_membership_uses_systemd_cgroup(tmp_path, monkeypatch):
+    monkeypatch.setattr(cw, 'command', lambda *a, **k: 'ActiveState=active\nControlGroup=/system.slice/ollama.service\n')
+    folder = tmp_path / 'system.slice/ollama.service'
+    (folder / 'runner').mkdir(parents=True)
+    (folder / 'cgroup.procs').write_text('3396\n')
+    (folder / 'runner/cgroup.procs').write_text('4400\n')
+    assert cw.native_ollama_pids(tmp_path) == {3396, 4400}
+
+
+@pytest.mark.parametrize('group', ['/system.slice/other.service', '/', ''])
+def test_native_ollama_refuses_unexpected_cgroup(monkeypatch, group):
+    monkeypatch.setattr(cw, 'command', lambda *a, **k: 'ActiveState=active\nControlGroup=' + group)
+    with pytest.raises(cw.Refused):
+        cw.native_ollama_pids()

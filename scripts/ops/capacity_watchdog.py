@@ -173,6 +173,20 @@ def graphics_only():
     return seen
 
 
+def native_ollama_pids(root=Path('/sys/fs/cgroup')):
+    """Bender's ollama container is a socat proxy to this system service."""
+    state = dict(line.split('=', 1) for line in command([
+        'systemctl', 'show', 'ollama.service', '--property=ActiveState,ControlGroup'
+    ]).splitlines() if '=' in line)
+    if state.get('ActiveState') == 'inactive':
+        return set()
+    if state.get('ActiveState') != 'active' or state.get('ControlGroup') != '/system.slice/ollama.service':
+        raise Refused('ollama_process_ownership_unavailable')
+    folder = root / 'system.slice/ollama.service'
+    files = [folder / 'cgroup.procs', *folder.glob('**/cgroup.procs')]
+    return {int(pid) for path in files for pid in path.read_text().split()}
+
+
 def resource_gate(job, starting):
     production_idle()
     models = ollama_models()
@@ -188,7 +202,7 @@ def resource_gate(job, starting):
     else:
         if any(model['digest'].removeprefix('sha256:') != job['model_digest'] for model in models):
             raise Refused('foreign_model_loaded')
-        allowed = container_pids(job['measure']) | container_pids(OLLAMA)
+        allowed = container_pids(job['measure']) | container_pids(OLLAMA) | native_ollama_pids()
         if gpu_pids() - allowed:
             raise Refused('foreign_gpu_process')
 
