@@ -1,0 +1,46 @@
+{
+  "date": "2026-10-23",
+  "graphics_evidence": {
+    "pmon_samples": 3,
+    "process_types": [
+      "G"
+    ],
+    "process_names": [
+      "Xorg",
+      "gnome-shell",
+      "Happ",
+      "firefox"
+    ],
+    "initial_compute_process_count": 0,
+    "initial_ollama_models": 0,
+    "observed_utilization_percent": [
+      8,
+      10,
+      11
+    ]
+  },
+  "graphics_guard_commit": "bfa46e3edec38ad25505fdd34bb64130e25fcf87",
+  "current_guard_commit": "b1723a7d64207a9a0c36f4cc8d26e26c055d8309",
+  "guard_sha256": "e8b6001aea3ecd47a176487d4c0a4869838873a7dc28641a8a7d7cf853cf7a96",
+  "ci": "https://github.com/b0ver/psptm_minutes/actions/runs/39905007314",
+  "local_tests_passed": 262,
+  "graphics_utilization_cap_percent": 20,
+  "free_vram_required_mib": 20000,
+  "native_ollama_cgroup": "/system.slice/ollama.service",
+  "first_cancel_attempt": {
+    "project": "psptm-minutes-capacity-aa6a06955f894f60",
+    "watchdog_reason": "foreign_gpu_process",
+    "client_phase": "client_cancelled",
+    "chunks": 0,
+    "measure_state": "exited",
+    "database_state": "exited",
+    "accepted": false
+  },
+  "next_cancel_job": "cancel-native-b1723a7-01/job.json",
+  "next_unit": "minutes-capacity-615bb171e1f332f8",
+  "next_containers_state": "created",
+  "next_started": false,
+  "latest_gate": "gpu_busy_foreign_model_loaded",
+  "server_cancellation_verified": false,
+  "corpus_started": false
+}
