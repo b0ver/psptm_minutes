@@ -36,11 +36,39 @@
     "database_state": "exited",
     "accepted": false
   },
-  "next_cancel_job": "cancel-native-b1723a7-01/job.json",
-  "next_unit": "minutes-capacity-615bb171e1f332f8",
-  "next_containers_state": "created",
-  "next_started": false,
-  "latest_gate": "gpu_busy_foreign_model_loaded",
   "server_cancellation_verified": false,
-  "corpus_started": false
+  "corpus_started": false,
+  "second_cancel_attempt": {
+    "job": "cancel-native-b1723a7-01/job.json",
+    "unit": "minutes-capacity-615bb171e1f332f8",
+    "stream_chunks": [
+      48,
+      148
+    ],
+    "stream_characters": [
+      66,
+      200
+    ],
+    "done": false,
+    "pre_cancel_compute_sm_percent": [
+      89,
+      89
+    ],
+    "client_final_chunks": 1330,
+    "client_phase": "client_cancelled",
+    "measure_exit": 130,
+    "database_exit": 0,
+    "containers_state": "exited",
+    "result": "post_cancel_process_ownership_ambiguous",
+    "accepted": false
+  },
+  "subsequent_resource_check": {
+    "time_moscow": "2026-10-23T08:33:00+03:00",
+    "gpu_utilization_percent": 0,
+    "free_vram_mib": 23848,
+    "ollama_loaded_models": 0,
+    "natural_release": true,
+    "continuous_quiescence_verified": false
+  },
+  "next_action": "Diagnose post-cancel observer, prepare one fresh isolated attempt; confirm server cancellation before corpus."
 }

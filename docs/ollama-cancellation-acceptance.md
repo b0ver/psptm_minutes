@@ -34,7 +34,7 @@ Measure-клиент создаётся с runtime=runc и **без GPU DeviceRe
 
 Эти результаты не доказывают поведение настоящего Ollama/GPU. Настоящая проверка остаётся pending до отдельного разрешённого окна.
 
-## Подготовленная попытка на Bender
+## История подготовки на Bender (21 октября)
 
 [Безопасный manifest](benchmarks/ollama-cancel-preparation-2026-10-21.json) фиксирует source/hash и образ. Код клиента — commit 4f08596, [его CI](https://github.com/b0ver/psptm_minutes/actions/runs/39596349525) success. Образ приложения остаётся ecd3d10; проверено отсутствие изменений app/config/Dockerfile/requirements между этими commit. Это два источника операционного стенда, не production release manifest.
 
@@ -42,8 +42,10 @@ Measure-клиент создаётся с runtime=runc и **без GPU DeviceRe
 
 Отдельный project `psptm-minutes-capacity-aa6a06955f894f60` создан, оба контейнера в created. Job: `/home/epopov/projects/psptm_minutes/benchmarks/private/capacity/cancel-prepared-4f08596-01/job.json`. Host watchdog брать из указанной immutable копии cancel-tools, не редактировать во время unit. Source/helper SHA256 находятся в manifest. Named volume /data проверен отдельным CPU-only контейнером: запись/удаление синтетического файла под UID 10001 прошли. Клиент не имеет локальных DeviceRequests; GPU-инференс будет выполняться общей Ollama только после разрешённого старта.
 
-**Сейчас unit не запускался, request_started/streaming и настоящая серверная отмена не подтверждены.** Не принимать успешную CPU-подготовку за допуск к полному corpus. Основной job prepared-ecd3d10-01 не использовался и остаётся отдельно подготовленным.
+**На момент подготовки 21 октября unit не запускался; результаты попыток 23 октября приведены ниже.** Не принимать успешную CPU-подготовку за допуск к полному corpus. Основной job prepared-ecd3d10-01 не использовался и остаётся отдельно подготовленным.
 
 23 октября владелец разрешил исправить ложную блокировку графическим фоном. Новый host guard хранится отдельно в `benchmarks/private/capacity/native-guard-b1723a7/capacity_watchdog.py`, SHA256 `e8b6001aea3ecd47a176487d4c0a4869838873a7dc28641a8a7d7cf853cf7a96`. Старые client/helper mounts и оба prepared jobs не изменяются. Приёмку отмены привязывать к новому host guard и прежнему helper отдельно; старый manifest остаётся историей подготовки.
 
-Текущее состояние 23 октября: [receipt](reports/graphics-watchdog-2026-10-23.json). Первый cancel-job stopped с 0 chunks и не принят. Следующий job — `benchmarks/private/capacity/cancel-native-b1723a7-01/job.json`, unit `minutes-capacity-615bb171e1f332f8`, created. Он использует тот же image/client/helper, новую собственную БД и data volume. Новый host guard прошёл CI b1723a7; применять его также к основному corpus-job. На последней проверке загружена чужая модель: старт отложен, модель не выгружалась. Оба расписания обновлены на новые пути; повторно сверять handles, не создавать дубль.
+Текущее состояние 23 октября: [receipt](reports/graphics-watchdog-2026-10-23.json). Обе cancel-попытки завершены; повторно их не запускать. Первая остановлена с 0 chunks. Во второй (`cancel-native-b1723a7-01/job.json`, unit `minutes-capacity-615bb171e1f332f8`) подтверждены рост streaming 48→148 chunks при done=false и SM Ollama 89%. После остановки своего unit клиент завершился с 130, БД с 0. Однако pmon после остановки показал неизвестный compute SM, а дополнительное наблюдение прервалось на проверке принадлежности PID. Результат `post_cancel_process_ownership_ambiguous`; серверная отмена **не принята**. Последующая проверка cgroup показала PID Ollama в ожидаемом service, но не объяснила сбой непрерывного наблюдения.
+
+В 08:33 MSK модель уже освободилась естественно: /api/ps пуст, GPU 0%, free VRAM 23848 MiB. Это не заменяет непрерывную проверку отмены. Основной corpus-job остаётся created; до cutoff 08:45 матрица уже не помещалась и не запускалась. Следующий шаг — диагностировать observer без GPU, затем подготовить одну новую изолированную попытку, сохранив прежние evidence и immutable client/helper/image. Оба расписания обновлены: они требуют проверки handles и новой подготовки, а не повторного старта завершённого job. Новый host guard b1723a7 прошёл CI; применять его также к основному corpus-job.
