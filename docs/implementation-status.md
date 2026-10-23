@@ -71,4 +71,4 @@ Cancel/corpus jobs перепроверены: created, systemd units inactive; 
 
 [Инструкция](../README.md) · [ADR](adr/0001-docker-host-ollama-local-processing.md).
 
-23 октября: по запросу владельца watchdog допускает подтверждённый NVIDIA pmon графический фон до 20% при свободной VRAM, отсутствии compute PID/моделей и повторной проверке гонки. Неизвестная телеметрия блокирует старт; имена процессов не whitelist. Полный Docker-набор 242 passed. Реальная GPU-отмена и corpus пока pending.
+23 октября: по запросу владельца watchdog допускает подтверждённый NVIDIA pmon графический фон до 20% при свободной VRAM, отсутствии compute PID/моделей и повторной проверке гонки. Неизвестная телеметрия блокирует старт; имена процессов не whitelist. Полный локальный Docker-набор 258 passed; CI точного commit проверяется отдельно. Реальная GPU-отмена и corpus пока pending.
