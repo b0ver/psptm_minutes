@@ -155,12 +155,35 @@ def container_pids(identifier):
     return {int(line.strip()) for line in output.splitlines()[1:] if line.strip()}
 
 
+def graphics_only():
+    """Driver classification, never process names; unknown telemetry fails closed."""
+    output = command(['nvidia-smi', 'pmon', '-c', '2', '-s', 'um'])
+    seen = False
+    for line in output.splitlines():
+        if not line.strip() or line.lstrip().startswith('#'):
+            continue
+        fields = line.split()
+        if len(fields) < 3 or fields[0] != '0':
+            raise Refused('gpu_telemetry_ambiguous')
+        if fields[1:3] == ['-', '-']:
+            continue
+        if not fields[1].isdigit() or fields[2] != 'G':
+            raise Refused('foreign_gpu_process')
+        seen = True
+    return seen
+
+
 def resource_gate(job, starting):
     production_idle()
     models = ollama_models()
     if starting:
         values = command(['nvidia-smi', '--query-gpu=utilization.gpu,memory.free', '--format=csv,noheader,nounits']).strip().split(',')
-        if len(values) != 2 or float(values[0]) > 5 or float(values[1]) < 20000 or gpu_pids() or models:
+        if len(values) != 2 or float(values[1]) < 20000 or gpu_pids() or models:
+            raise Refused('gpu_busy')
+        utilization = float(values[0])
+        if not math.isfinite(utilization) or not 0 <= utilization <= 20:
+            raise Refused('gpu_busy')
+        if utilization > 5 and (not graphics_only() or gpu_pids() or ollama_models()):
             raise Refused('gpu_busy')
     else:
         if any(model['digest'].removeprefix('sha256:') != job['model_digest'] for model in models):

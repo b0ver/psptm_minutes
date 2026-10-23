@@ -200,3 +200,43 @@ def test_failed_evidence_capture_still_stops_own_database(job, monkeypatch):
     with pytest.raises(cw.Refused, match='evidence_capture_failed'):
         cw.cleanup(job)
     assert not any(data['running'] for data in rows.values())
+
+
+@pytest.mark.parametrize('telemetry,accepted', [
+    ('# header\n0 2177 G - - - - - - 114 0 Xorg\n0 2501 G - - - - - - 10 0 gnome-shell', True),
+    ('0 99 C - - - - - - 100 0 python', False),
+    ('0 99 C+G - - - - - - 100 0 Xorg', False),
+    ('0 - - - - - - - - - - -', False),
+    ('unsupported', False),
+    ('1 99 G - - - - - - 10 0 Xorg', False),
+])
+def test_graphics_classification_uses_driver_type(monkeypatch, telemetry, accepted):
+    monkeypatch.setattr(cw, 'command', lambda *a, **k: telemetry)
+    if accepted:
+        assert cw.graphics_only()
+    else:
+        try:
+            assert not cw.graphics_only()
+        except cw.Refused:
+            pass
+
+
+@pytest.mark.parametrize('utilization,compute,models,graphics,accepted', [
+    (10, set(), [], True, True),
+    (21, set(), [], True, False),
+    (10, {99}, [], True, False),
+    (10, set(), [{'digest': 'foreign'}], True, False),
+    (10, set(), [], False, False),
+    (float('nan'), set(), [], True, False),
+])
+def test_desktop_exception_preserves_admission_gates(monkeypatch, utilization, compute, models, graphics, accepted):
+    monkeypatch.setattr(cw, 'production_idle', lambda: None)
+    monkeypatch.setattr(cw, 'ollama_models', lambda: models)
+    monkeypatch.setattr(cw, 'gpu_pids', lambda: compute)
+    monkeypatch.setattr(cw, 'graphics_only', lambda: graphics)
+    monkeypatch.setattr(cw, 'command', lambda *a, **k: f'{utilization},23000')
+    if accepted:
+        cw.resource_gate({}, starting=True)
+    else:
+        with pytest.raises(cw.Refused):
+            cw.resource_gate({}, starting=True)
