@@ -17,7 +17,7 @@ python3 /ABSOLUTE/tools/capacity_worker_pause_probe.py probe /ABSOLUTE/private/n
 
 Directory каждого probe должен отсутствовать; существующий результат/handle требует осмотра, не нового запуска поверх него. Имя/путь image из примера не является разрешённым digest: передавать заранее проверенный Python image ID без сборки моделей.
 
-Локально: **301 Docker/PostgreSQL тест passed**, 13.20 s, одно предупреждение Starlette; cleanup выполнен. Это рабочее дерево с дополнительными untracked-тестами, чистый CI считается отдельно. Новые регрессии проверяют отказ production project/public manifest/смене кода или image, отсутствие restore без journal, журнал до stop, восстановление после исключения, идемпотентность и проверку running после старта. Настоящие systemd drills на Bender пока pending.
+Локально: **301 Docker/PostgreSQL тест passed**, 13.20 s, одно предупреждение Starlette; cleanup выполнен. Это рабочее дерево с дополнительными untracked-тестами, чистый CI считается отдельно. Новые регрессии проверяют отказ production project/public manifest/смене кода или image, отсутствие restore без journal, журнал до stop, восстановление после исключения, идемпотентность и проверку running после старта. Результаты systemd drills на Bender приведены ниже.
 
 ## Что ещё обязательно до паузы production worker
 
@@ -32,3 +32,11 @@ Directory каждого probe должен отсутствовать; суще
 7. При неподтверждённой остановке/восстановлении сохраняют safe error и требуют разбора; не обещают гарантии при отказе Docker/хоста/питания. Только после реальных отказных drills конкретного полного контроллера переходят к GPU.
 
 Подготовленные cancel/corpus jobs остаются created, старые manifests не меняются. Security-кандидат `3fa09d4` подготовлен отдельно; сборка и новая GPU-приёмка ещё не выполнены. [Контракт отмены](ollama-cancellation-acceptance.md), [правила мощности](capacity-schedule.md).
+
+## Подтверждение на Bender 24 октября
+
+[CI 993472b](https://github.com/b0ver/psptm_minutes/actions/runs/40110730282) **success**, чистый Linux/amd64 checkout: **274 passed**, 21.29 s; оба Python audits, synthetic staging/restore и recorder gates passed. Инструмент с проверенным hash установлен отдельно в `benchmarks/private/capacity/pause-tools-993472b`; соседний watchdog не изменялся.
+
+Настоящие user-systemd drills **timeout** и **SIGKILL main** прошли на собственных CPU-only контейнерах. В обоих случаях совпал ожидаемый unit Result, journal стал restored, worker и control фактически работали при проверке. После фиксации receipt все созданные контейнеры удалены. Рабочий STT consumer остался running с прежним compute PID21405/cgroup, GPU не запрашивался. [Безопасный receipt](reports/worker-pause-probe-2026-10-24.json).
+
+Не повторять эти успешные drills на тех же hashes без причины. Они подтверждают восстановление синтетического worker через ExecStopPost, включая смерть контроллера без finally. Полный production lease, queue claim/admission и его связь с cancel observer **ещё не реализованы/не приняты**; следующий этап — собрать и проверить единый контроллер по перечню выше. Рабочая пауза и GPU-прогон этим receipt не разрешаются.
