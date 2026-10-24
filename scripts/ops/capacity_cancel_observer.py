@@ -45,7 +45,7 @@ def pmon_compute(output):
     return result
 
 
-def ollama_identity(pid, root=Path('/proc')):
+def process_identity(pid, cgroup, root=Path('/proc')):
     """Read the actual driver's PID, not two non-atomic membership lists."""
     folder = root / str(pid)
     try:
@@ -56,9 +56,24 @@ def ollama_identity(pid, root=Path('/proc')):
         raise cw.Refused('process_identity_unavailable') from None
     if before != after:
         raise cw.Refused('process_identity_changed')
-    if groups != ['0::/system.slice/ollama.service']:
+    if groups != ['0::' + cgroup]:
         raise cw.Refused('foreign_gpu_process')
     return before
+
+
+def ollama_identity(pid, root=Path('/proc')):
+    return process_identity(pid, '/system.slice/ollama.service', root)
+
+
+def identities(job, pids):
+    worker = cw.idle_worker(job)
+    result = {}
+    for pid in pids:
+        if worker is not None and pid in worker['pids']:
+            result[pid] = ('worker', process_identity(pid, '/system.slice/docker-' + worker['id'] + '.scope'))
+        else:
+            result[pid] = ('ollama', ollama_identity(pid))
+    return result
 
 
 def snapshot(job):
@@ -69,21 +84,26 @@ def snapshot(job):
     if any(m['digest'].removeprefix('sha256:') != job['model_digest'] for m in cw.ollama_models()):
         raise cw.Refused('foreign_model_loaded')
     initial = cw.gpu_pids()
-    identities = {pid: ollama_identity(pid) for pid in initial}
+    before = identities(job, initial)
     compute = pmon_compute(cw.command(['nvidia-smi', 'pmon', '-c', '1', '-s', 'um']))
     utilization = float(cw.command(['nvidia-smi', '--query-gpu=utilization.gpu',
                                     '--format=csv,noheader,nounits']).strip())
     final = cw.gpu_pids()
     if initial != final or set(compute) != final:
         raise cw.Refused('gpu_process_snapshot_changed')
-    if any(ollama_identity(pid) != identities[pid] for pid in final):
+    if identities(job, final) != before:
         raise cw.Refused('process_identity_changed')
     if not math.isfinite(utilization) or not 0 <= utilization <= 20:
         raise cw.Refused('gpu_busy')
-    # '-' remains unknown, including when the device-wide counter is zero.
+    cw.production_idle()
+    # '-' stays unknown. A separate measured whole-device zero is independent
+    # evidence; positive process SM contradicts it and resets the interval.
+    positive = any(sm is not None and sm > 0 for sm in compute.values())
+    basis = ('no_compute' if not compute else 'whole_device_zero' if utilization == 0
+             else 'per_process_zero' if all(sm == 0 for sm in compute.values()) else 'unknown')
     return {'gpu_utilization_percent': utilization, 'compute_pid_count': len(final),
             'compute_sm_percent': sorted(compute.values(), key=lambda x: -1 if x is None else x),
-            'quiescent': all(sm == 0 for sm in compute.values())}
+            'quiescence_basis': basis, 'quiescent': not positive and basis != 'unknown'}
 
 
 def observe(job, sample=snapshot, clock=time.monotonic, sleep=time.sleep, rows=None):

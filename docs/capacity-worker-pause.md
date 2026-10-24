@@ -40,3 +40,7 @@ Directory каждого probe должен отсутствовать; суще
 Настоящие user-systemd drills **timeout** и **SIGKILL main** прошли на собственных CPU-only контейнерах. В обоих случаях совпал ожидаемый unit Result, journal стал restored, worker и control фактически работали при проверке. После фиксации receipt все созданные контейнеры удалены. Рабочий STT consumer остался running с прежним compute PID21405/cgroup, GPU не запрашивался. [Безопасный receipt](reports/worker-pause-probe-2026-10-24.json).
 
 Не повторять эти успешные drills на тех же hashes без причины. Они подтверждают восстановление синтетического worker через ExecStopPost, включая смерть контроллера без finally. Полный production lease, queue claim/admission и его связь с cancel observer **ещё не реализованы/не приняты**; следующий этап — собрать и проверить единый контроллер по перечню выше. Рабочая пауза и GPU-прогон этим receipt не разрешаются.
+
+## Выбор пути приёмки
+
+Для текущего resident idle CUDA-контекста подготовлен [явный admission без остановки consumer](capacity-idle-worker.md). Полный production pause lease не активируется; synthetic restore proof сохраняется отдельно. Успешные drills не повторять без причины.

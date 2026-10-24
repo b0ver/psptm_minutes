@@ -46,10 +46,43 @@ def snapshot_stubs(monkeypatch, sm='0', pids=None):
     monkeypatch.setattr(obs.cw, 'command', lambda argv: f'0 12 C {sm} 0' if 'pmon' in argv else '0')
 
 
-def test_zero_device_util_does_not_resolve_unknown_compute_sm(monkeypatch):
+def test_device_zero_is_independent_evidence_without_converting_unknown_sm(monkeypatch):
     snapshot_stubs(monkeypatch, '-')
     row = obs.snapshot({})
-    assert row['compute_sm_percent'] == [None] and not row['quiescent']
+    assert row['compute_sm_percent'] == [None] and row['quiescent']
+    assert row['quiescence_basis'] == 'whole_device_zero'
+
+
+def test_unknown_sm_with_positive_device_util_is_not_quiescent(monkeypatch):
+    snapshot_stubs(monkeypatch, '-')
+    monkeypatch.setattr(obs.cw, 'command', lambda argv: '0 12 C - 0' if 'pmon' in argv else '1')
+    assert not obs.snapshot({})['quiescent']
+
+
+def test_positive_compute_sm_contradicts_device_zero(monkeypatch):
+    snapshot_stubs(monkeypatch, '89')
+    assert not obs.snapshot({})['quiescent']
+
+
+def test_bound_worker_pid_uses_exact_container_cgroup(monkeypatch):
+    snapshot_stubs(monkeypatch, '-')
+    monkeypatch.setattr(obs.cw, 'idle_worker', lambda job: {'id': 'a' * 64, 'pids': {12}})
+    groups = []
+    def identity(pid, group):
+        groups.append(group)
+        return '987'
+    monkeypatch.setattr(obs, 'process_identity', identity)
+    row = obs.snapshot({})
+    assert row['quiescent'] and row['compute_sm_percent'] == [None]
+    assert groups == ['/system.slice/docker-' + 'a' * 64 + '.scope'] * 2
+
+
+def test_worker_change_between_snapshots_cannot_certify_quiescence(monkeypatch):
+    snapshot_stubs(monkeypatch)
+    workers = iter(['a', 'b'])
+    monkeypatch.setattr(obs.cw, 'idle_worker', lambda job: {'id': next(workers) * 64, 'pids': {12}})
+    monkeypatch.setattr(obs, 'process_identity', lambda pid, group: group)
+    with pytest.raises(obs.cw.Refused, match='process_identity_changed'): obs.snapshot({})
 
 
 def test_pid_disappearing_between_sources_is_explicit_refusal(monkeypatch):

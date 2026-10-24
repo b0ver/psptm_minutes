@@ -65,3 +65,7 @@ Unit содержит независимые от SSH/чата RuntimeMaxSec и 
 23 октября: на Bender три снимка pmon показали только G-процессы Xorg/GNOME Shell/Happ/Firefox, compute PID и модели Ollama отсутствовали. Прежний gate ошибочно считал графический фон 8–11% вычислительной занятостью. Добавлено ограниченное исключение с регрессиями; фактическая приёмка отмены и corpus ещё не выполнены. Старый helper в mounts cancel-client не меняется; новая host-копия guard имеет отдельный hash.
 
 На Bender контейнер ollama содержит socat, перенаправляющий запросы в native ollama.service. При runtime gate разрешаются также PID только из активной systemd cgroup /system.slice/ollama.service и её дочерних cgroups. Пустая/неизвестная принадлежность не разрешает чужие PID. Проверка отмены всё ещё требует настоящих streaming/GPU наблюдений.
+
+## Явный idle worker admission — 24 октября
+
+Опциональный [контракт](capacity-idle-worker.md) допускает только отдельно привязанный по job SHA/container/image/StartedAt рабочий STT context после 10 s whole-device GPU=0%, free VRAM≥20000 MiB и повторных idle gates. Без private binding строгий режим сохраняется. Это не классификация compute как G и не остановка consumer.

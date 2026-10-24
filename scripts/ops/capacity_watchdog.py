@@ -5,6 +5,7 @@ Container/image preparation stays explicit; this program never builds or deploys
 """
 import argparse
 import fcntl
+import hashlib
 import json
 import math
 import os
@@ -187,13 +188,93 @@ def native_ollama_pids(root=Path('/sys/fs/cgroup')):
     return {int(pid) for path in files for pid in path.read_text().split()}
 
 
+def worker_snapshot():
+    fmt = ('{"id":{{json .Id}},"image":{{json .Image}},"started_at":{{json .State.StartedAt}},'
+           '"running":{{json .State.Running}},"labels":{{json .Config.Labels}}}')
+    row = json.loads(command(['docker', 'inspect', '--format', fmt, 'psptm-minutes-worker-1']))
+    labels = row.get('labels') or {}
+    if (not row['running'] or labels.get('com.docker.compose.project') != 'psptm-minutes'
+            or labels.get('com.docker.compose.service') != 'worker'
+            or not re.fullmatch('[0-9a-f]{64}', row['id'])
+            or not re.fullmatch('sha256:[0-9a-f]{64}', row['image'])):
+        raise Refused('idle_worker_identity_unavailable')
+    return {k: row[k] for k in ('id', 'image', 'started_at')}
+
+
+def idle_worker(job):
+    """Explicit per-job identity binding; absence preserves the strict GPU gate."""
+    if '_path' not in job:
+        return None
+    path = job['_path'].parent / 'idle-worker.json'
+    if not path.exists() and not path.is_symlink():
+        return None
+    if path.is_symlink() or path.stat().st_mode & 0o077:
+        raise Refused('private_idle_worker_binding_required')
+    bound = json.loads(path.read_text())
+    if (set(bound) != {'job_sha256', 'worker'}
+            or bound['job_sha256'] != hashlib.sha256(job['_path'].read_bytes()).hexdigest()
+            or bound['worker'] != worker_snapshot()):
+        raise Refused('idle_worker_binding_changed')
+    return dict(bound['worker'], pids=container_pids(bound['worker']['id']))
+
+
+def idle_context_gate(job, initial):
+    """Whole-device zero over 10 seconds, with fresh production/identity probes."""
+    started = time.monotonic()
+    since = None
+    previous = None
+    while True:
+        production_idle()
+        worker = idle_worker(job)
+        values = command(['nvidia-smi', '--query-gpu=utilization.gpu,memory.free',
+                          '--format=csv,noheader,nounits']).strip().split(',')
+        if (worker is None or len(values) != 2 or float(values[0]) != 0
+                or not math.isfinite(float(values[1])) or float(values[1]) < 20000
+                or gpu_pids() != initial or initial - worker['pids'] or ollama_models()):
+            raise Refused('gpu_busy')
+        now = time.monotonic()
+        if now - started >= 30:
+            raise Refused('idle_worker_observation_timeout')
+        if previous is not None and now - previous > 3:
+            raise Refused('idle_worker_observation_gap')
+        previous = now
+        since = now if since is None else since
+        if now - since >= 10:
+            production_idle()
+            return
+        time.sleep(1)
+
+
+def bind_idle_worker(job):
+    for role in ('measure', 'database'):
+        if owned(job, role)['status'] != 'created':
+            raise Refused('fresh_containers_required')
+    production_idle()
+    value = dict(job_sha256=hashlib.sha256(job['_path'].read_bytes()).hexdigest(), worker=worker_snapshot())
+    path = job['_path'].parent / 'idle-worker.json'
+    if path.exists() or path.is_symlink():
+        raise Refused('idle_worker_binding_already_exists')
+    with path.open('x') as output:
+        output.write(json.dumps(value))
+    path.chmod(0o600)
+    resource_gate(job, starting=True)
+    return value
+
+
 def resource_gate(job, starting):
     production_idle()
     models = ollama_models()
+    worker = idle_worker(job)
     if starting:
         values = command(['nvidia-smi', '--query-gpu=utilization.gpu,memory.free', '--format=csv,noheader,nounits']).strip().split(',')
-        if len(values) != 2 or float(values[1]) < 20000 or gpu_pids() or models:
+        if len(values) != 2 or not math.isfinite(float(values[1])) or float(values[1]) < 20000 or models:
             raise Refused('gpu_busy')
+        pids = gpu_pids()
+        if pids:
+            if worker is None or pids - worker['pids']:
+                raise Refused('gpu_busy')
+            idle_context_gate(job, pids)
+            return
         utilization = float(values[0])
         if not math.isfinite(utilization) or not 0 <= utilization <= 20:
             raise Refused('gpu_busy')
@@ -203,6 +284,8 @@ def resource_gate(job, starting):
         if any(model['digest'].removeprefix('sha256:') != job['model_digest'] for model in models):
             raise Refused('foreign_model_loaded')
         allowed = container_pids(job['measure']) | container_pids(OLLAMA) | native_ollama_pids()
+        if worker is not None:
+            allowed |= worker['pids']
         if gpu_pids() - allowed:
             raise Refused('foreign_gpu_process')
 
@@ -319,7 +402,7 @@ def start_service(job):
 def main():
     os.umask(0o077)
     parser = argparse.ArgumentParser()
-    parser.add_argument('mode', choices=('start', 'run', 'cleanup', 'check'))
+    parser.add_argument('mode', choices=('start', 'run', 'cleanup', 'check', 'bind-idle-worker'))
     parser.add_argument('job', type=Path)
     parser.add_argument('--stop-at', type=float)
     args = parser.parse_args()
@@ -334,6 +417,9 @@ def main():
             start_service(job)
         elif args.mode == 'cleanup':
             cleanup(job)
+        elif args.mode == 'bind-idle-worker':
+            bind_idle_worker(job)
+            print(json.dumps({'idle_worker_bound': True, 'ready': True}))
         elif args.mode == 'check':
             owned(job, 'measure'); owned(job, 'database')
             resource_gate(job, starting=True)
