@@ -82,3 +82,5 @@ Cancel/corpus jobs перепроверены: created, systemd units inactive; 
 - 24 октября: добавлен воспроизводимый read-only `capacity_cancel_observer.py`: exact PID cgroup/starttime, unknown SM fail-closed, 10 s непрерывного покоя, безопасный однократный receipt с частичными снимками. 290 локальных Docker-тестов passed (12.88 s); точный CI отдельно. SSH требует Tailscale check; инструмент не установлен на Bender и GPU-приёмка не выполнена. [Протокол](ollama-cancellation-acceptance.md).
 
 - Дополнительная проверка observer: пустой/header-only pmon не считается отсутствием compute; добавлены два отказных случая. Полный локальный Docker-набор **292 passed**, 12.13 s; тестовые контейнеры и сеть удалены.
+
+- 24 октября: CI c24ab90 остановлен security gate — три advisory filelock 4.0.12. Pin обновлён до 4.2.1 в requirements.txt/lock без исключений audit. Повтор: 292 Docker-теста passed (12.43 s), pip check success, audit runtime и agent lockfile — 0 findings. Это не обновляет подготовленные образы Bender; их прежний security/capacity scope зафиксирован в docs/ci-cd.md. CI нового commit проверяется отдельно.

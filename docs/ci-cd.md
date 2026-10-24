@@ -96,3 +96,16 @@ bash scripts/ops/restore-drill.sh
 Следующие технические этапы: heartbeat и метрики длительности фаз; admission/квоты; Alembic; SBOM и сканирование OS-пакетов всех трёх образов; воспроизводимая фиксация транзитивных зависимостей агента/apt; retention/delete; технический maintenance gate; резервирование общего GPU. Текущий pip-audit покрывает Python lockfile runtime и агента, не Chromium/apt/CUDA.
 
 Основания настройки процесса: [GitHub — secure use](https://docs.github.com/en/actions/reference/security/secure-use), [GitHub — environments](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments), [Docker Compose production](https://docs.docker.com/compose/how-tos/production/). Actions закреплены полными SHA, проверенными по remote tags 13 октября 2026. GitHub protection rules настраиваются отдельно от YAML.
+
+
+## Повторный security gate 24 октября
+
+CI `c24ab90` обнаружил три новых advisory для runtime pin filelock 4.0.12:
+[GHSA-v4x8-3wr5-3wq8](https://github.com/advisories/GHSA-v4x8-3wr5-3wq8),
+[GHSA-9vhv-jxww-xfm5](https://github.com/advisories/GHSA-9vhv-jxww-xfm5),
+[GHSA-567q-5qvw-pf92](https://github.com/advisories/GHSA-567q-5qvw-pf92).
+Audit указал исправление 4.2.1; runtime lock и входной requirements.txt обновлены на этот pin. Исключений/ignore advisory не добавлено. Совместимость и отсутствие известных advisory проверяются повторно, результат предыдущего CI не переносится на новые зависимости.
+
+Подготовленный GPU-образ ecd3d10 и CPU staging runtime остаются историческими кандидатами с прежними зависимостями. Их нельзя объявлять прошедшими security gate нового RC или подменять image ID в прежних manifests. Существующий диагностический capacity-job не изменять автоматически. После восстановления SSH отдельно сверить его зависимости и определить новый immutable candidate/release manifest с чистым CI; при смене runtime image новая приёмка должна явно указывать фактические hashes. Старые capacity-результаты не доказывают мощность нового образа.
+
+Локальный повтор с filelock 4.2.1: 292 passed (12.43 s), pip check success; pip-audit 2.9.0 для runtime и agent lockfile — `No known vulnerabilities found`, оба exit 0. PostgreSQL tests cleanup выполнен. GPU/CUDA/OS этим аудитом не покрываются.
