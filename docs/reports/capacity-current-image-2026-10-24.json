@@ -5,7 +5,7 @@
   "source_hashes_verified": true,
   "filelock_version": "4.2.1",
   "cpu_image_probe": "passed",
-  "gpu_acceptance": "pending",
+  "gpu_acceptance": "transport_cancellation_passed_corpus_running",
   "three_registry_digest_release_manifest": false,
   "production_changed": false
 }

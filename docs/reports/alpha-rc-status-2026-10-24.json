@@ -35,12 +35,12 @@
     "ssh": "available_2026-10-24_21:17_MSK",
     "server_cancellation": "all_four_transport_profiles_accepted_and_natural_release_verified",
     "new_observer_installed_on_bender": true,
-    "bounded_reduce_corpus_85_60_30": "interrupted_before_first_complete_sample",
+    "bounded_reduce_corpus_85_60_30": "running_with_recap_priority_gate",
     "human_e2e": "pending",
     "production_data_restore": "pending",
     "full_staging_promotion_and_version_rollback": "pending",
     "validated_daily_capacity": false,
-    "current_capacity_gate": "independent_recap_queue_priority"
+    "current_capacity_gate": "await_actual_corpus_result"
   },
   "image_scope": {
     "prepared_gpu_source": "ecd3d10b7ef6f1011dba65afaecca1aa09eb390e",
@@ -52,19 +52,19 @@
   },
   "release_ready": false,
   "observer": {
-    "directory": "benchmarks/private/capacity/qualification-tools-20d6869-r2",
-    "source_commit": "20d6869e90b1069adf18bab23f5fd6c8f6ace584",
+    "directory": "benchmarks/private/capacity/qualification-tools-49350a7",
+    "source_commit": "49350a73f4438b2d91f549387a9a248085e3e26b",
     "observer_sha256": "a793ee0dc195b7e38665a4ab1d8ce649c11ef08140127681305e4d0b9155eb72",
-    "guard_sha256": "228fb79d4a155f13dacb364e778fb232c65541aaba4cf609ef969e20319db69b",
+    "guard_sha256": "71229898864ccb71495aa24cb2180ab729e03f3580ae7a92b8ca2447a6bedfee",
     "cpu_help_and_parser_probe": "passed"
   },
   "latest_resource_check": {
-    "observed_epoch": 1792867643.4476626,
-    "gpu_utilization_percent": 0,
-    "gpu_free_mib": 19487,
+    "observed_epoch": 1792868453.3952994,
+    "gpu_utilization_percent": 93,
+    "gpu_free_mib": 19085,
     "own_measure_compute_pid_count": 1,
     "runtime_resource_gate": "passed",
-    "note": "Point-in-time during STT; not a completed sample or quota."
+    "note": "Real STT processing of first recording; no complete sample yet."
   },
   "compute_ownership": {
     "container": "psptm-minutes-worker-1",
@@ -96,23 +96,30 @@
     "terminal_reason": "foreign_gpu_process"
   },
   "current_cancellation_evidence": "cancellation-profiles-2026-10-24.json",
-  "next_action": "After exact CI, deploy guard with read-only Recap priority gate in a new immutable directory; prepare one new job after confirming all old handles terminal.",
+  "next_action": "Monitor exact current main04 handles. Export only safe aggregate rows after completion. Never restart a live or consumed job.",
   "production_worker_pause_required": false,
   "latest_tool_ci": {
-    "commit": "20d6869e90b1069adf18bab23f5fd6c8f6ace584",
-    "url": "https://github.com/b0ver/psptm_minutes/actions/runs/40120029522",
+    "commit": "49350a73f4438b2d91f549387a9a248085e3e26b",
+    "url": "https://github.com/b0ver/psptm_minutes/actions/runs/40122951864",
     "conclusion": "success",
-    "integration_tests_passed": 315,
-    "integration_seconds": 22.02,
+    "integration_tests_passed": 337,
+    "integration_seconds": 20.58,
     "runtime_lock_audit": "no_known_vulnerabilities",
     "agent_lock_audit": "no_known_vulnerabilities"
   },
   "current_main_job": {
-    "job": "benchmarks/private/capacity/prepared-current-3fa09d4-03/job.json",
-    "unit": "minutes-capacity-29938a168bd54e6b",
-    "orchestrator_unit": "minutes-capacity-orchestrator-29938a168bd54e6b",
-    "measure_started_at": "2026-10-24T18:47:05.428182649Z",
-    "state": "stopped_by_foreign_gpu_process",
+    "job": "benchmarks/private/capacity/prepared-current-3fa09d4-04/job.json",
+    "unit": "minutes-capacity-ecf31efb88164bba",
+    "orchestrator_unit": "minutes-capacity-orchestrator-ecf31efb88164bba",
+    "controller_sha256": "1af5be2ccf28a83a446ef659f7e09af710445f0645814446ea484c065150b4a4",
+    "state": "running",
+    "measure_started_at": "2026-10-24T19:00:03.047211983Z",
+    "watchdog_stop_at_epoch": 1792875586.132746,
+    "runtime_resource_gate": "passed",
+    "database_health": "healthy",
+    "meeting_status_counts": {
+      "processing": 1
+    },
     "source_files_verified": 72,
     "uid10001_storage_mount_and_app_model_path_probe": "passed",
     "input_durations_seconds": [
@@ -121,14 +128,8 @@
       1762.0
     ],
     "stt_weight_files_hashed": 11,
-    "runtime_resource_gate": "passed",
-    "database_health": "healthy",
-    "meeting_status_counts": {
-      "processing": 1
-    },
-    "validated_daily_capacity": false,
     "complete_samples": 0,
-    "result": "not_accepted"
+    "validated_daily_capacity": false
   },
   "historical_main_attempts": [
     {
@@ -153,6 +154,31 @@
       "reports_ready": 0,
       "image_changed": false,
       "weights_changed": false,
+      "volumes_removed": false
+    },
+    {
+      "job": "benchmarks/private/capacity/prepared-current-3fa09d4-03/job.json",
+      "unit": "minutes-capacity-29938a168bd54e6b",
+      "orchestrator_unit": "minutes-capacity-orchestrator-29938a168bd54e6b",
+      "measure_started_at": "2026-10-24T18:47:05.428182649Z",
+      "state": "retired_after_foreign_recap_gpu_process",
+      "source_files_verified": 72,
+      "uid10001_storage_mount_and_app_model_path_probe": "passed",
+      "input_durations_seconds": [
+        5079.8,
+        3531.68,
+        1762.0
+      ],
+      "stt_weight_files_hashed": 11,
+      "runtime_resource_gate": "passed",
+      "database_health": "healthy",
+      "meeting_status_counts": {
+        "processing": 1
+      },
+      "validated_daily_capacity": false,
+      "complete_samples": 0,
+      "result": "not_accepted",
+      "attempt": "prepared-current-3fa09d4-03",
       "volumes_removed": false
     }
   ],
