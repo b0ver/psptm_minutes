@@ -188,6 +188,28 @@ def native_ollama_pids(root=Path('/sys/fs/cgroup')):
     return {int(pid) for path in files for pid in path.read_text().split()}
 
 
+def native_gpu_owned(pid, root=Path('/proc')):
+    """Check late-arriving driver PIDs directly against the live service cgroup."""
+    state = dict(line.split('=', 1) for line in command([
+        'systemctl', 'show', 'ollama.service', '--property=ActiveState,ControlGroup,MainPID'
+    ]).splitlines() if '=' in line)
+    group = '/system.slice/ollama.service'
+    if (state.get('ActiveState') != 'active' or state.get('ControlGroup') != group
+            or not state.get('MainPID', '').isdigit() or int(state['MainPID']) < 1):
+        return False
+    try:
+        if (root / state['MainPID'] / 'cgroup').read_text().splitlines() != ['0::' + group]:
+            return False
+        folder = root / str(pid)
+        before = (folder / 'stat').read_text().rsplit(')', 1)[1].split()[19]
+        groups = (folder / 'cgroup').read_text().splitlines()
+        after = (folder / 'stat').read_text().rsplit(')', 1)[1].split()[19]
+        return (before == after and len(groups) == 1
+                and (groups[0] == '0::' + group or groups[0].startswith('0::' + group + '/')))
+    except (OSError, IndexError):
+        return False
+
+
 def worker_snapshot():
     fmt = ('{"id":{{json .Id}},"image":{{json .Image}},"started_at":{{json .State.StartedAt}},'
            '"running":{{json .State.Running}},"labels":{{json .Config.Labels}}}')
@@ -286,7 +308,23 @@ def resource_gate(job, starting):
         allowed = container_pids(job['measure']) | container_pids(OLLAMA) | native_ollama_pids()
         if worker is not None:
             allowed |= worker['pids']
-        if gpu_pids() - allowed:
+        observed = gpu_pids()
+        unknown = {pid for pid in observed - allowed if not native_gpu_owned(pid)}
+        if unknown:
+            if '_path' in job:
+                details = {'time': datetime.now(MOSCOW).isoformat(), 'gpu_pids': sorted(observed),
+                           'allowed_snapshot': sorted(allowed), 'unclassified_pids': sorted(unknown)}
+                owners = {}
+                for pid in unknown:
+                    try:
+                        owners[str(pid)] = (Path('/proc') / str(pid) / 'cgroup').read_text().strip()
+                    except OSError:
+                        owners[str(pid)] = 'pid_unavailable'
+                details['unclassified_cgroups'] = owners
+                try:
+                    (job['_path'].parent / 'gpu-refusal.json').write_text(json.dumps(details))
+                except OSError:
+                    pass  # A failed audit write must not prevent stopping this workload.
             raise Refused('foreign_gpu_process')
 
 

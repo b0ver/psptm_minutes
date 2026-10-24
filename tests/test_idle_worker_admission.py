@@ -93,3 +93,34 @@ def test_long_gap_refuses_instead_of_counting_unobserved_time(monkeypatch):
     now, _ = gate_setup(monkeypatch)
     monkeypatch.setattr(cw.time, 'sleep', lambda seconds: now.__setitem__(0, now[0] + 4))
     with pytest.raises(cw.Refused, match='idle_worker_observation_gap'): cw.resource_gate({}, starting=True)
+
+
+def test_native_driver_pid_can_be_verified_after_membership_snapshot(tmp_path, monkeypatch):
+    main = tmp_path / '10'; main.mkdir()
+    (main / 'cgroup').write_text('0::/system.slice/ollama.service\n')
+    gpu = tmp_path / '20'; gpu.mkdir()
+    (gpu / 'stat').write_text('20 (runner) ' + ' '.join(['S'] + ['0'] * 18 + ['123']))
+    (gpu / 'cgroup').write_text('0::/system.slice/ollama.service\n')
+    monkeypatch.setattr(cw, 'command', lambda argv: 'ActiveState=active\nControlGroup=/system.slice/ollama.service\nMainPID=10')
+    assert cw.native_gpu_owned(20, tmp_path)
+    (gpu / 'cgroup').write_text('0::/system.slice/foreign.service\n')
+    assert not cw.native_gpu_owned(20, tmp_path)
+    assert not cw.native_gpu_owned(99, tmp_path)
+
+
+@pytest.mark.parametrize('group', ['/system.slice/foreign.service', '/'])
+def test_native_fallback_rejects_unexpected_service_group(monkeypatch, group):
+    monkeypatch.setattr(cw, 'command', lambda argv: 'ActiveState=active\nControlGroup=' + group + '\nMainPID=10')
+    assert not cw.native_gpu_owned(20)
+
+
+def test_runtime_fallback_never_allows_other_compute(monkeypatch):
+    gate_setup(monkeypatch)
+    monkeypatch.setattr(cw, 'container_pids', lambda cid: set())
+    monkeypatch.setattr(cw, 'native_ollama_pids', lambda: set())
+    monkeypatch.setattr(cw, 'gpu_pids', lambda: {42, 99})
+    seen = []
+    monkeypatch.setattr(cw, 'native_gpu_owned', lambda pid: seen.append(pid) or False)
+    with pytest.raises(cw.Refused, match='foreign_gpu_process'):
+        cw.resource_gate({'measure': 'synthetic', 'model_digest': 'a' * 64}, starting=False)
+    assert seen == [99]
