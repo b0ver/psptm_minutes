@@ -1,14 +1,44 @@
 {
-  "as_of_msk": "2026-10-24T21:24:00+03:00",
+  "as_of_msk": "2026-10-24T21:44:00+03:00",
   "runtime_source_commit": "3fa09d44932720d1b8ab4d0100bf158305af6a5a",
   "image_id": "sha256:97077db98378e4cc6eaa7d80e8ca2a428bef3890190447fc39e82f5924c36d98",
   "model_digest": "6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7",
   "production_worker_paused": false,
   "profiles": {
     "streaming": {
-      "attempt": "cancel-qualification-streaming-01",
+      "image_id": "sha256:97077db98378e4cc6eaa7d80e8ca2a428bef3890190447fc39e82f5924c36d98",
+      "model_digest": "6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7",
+      "source_commit": "f9cc9ee5dd7d5664fddf8c642eef0c187cf68351",
       "server_cancellation_verified": true,
       "natural_model_release_verified": true,
+      "quiescence_verified": true,
+      "quiescence_seconds": null,
+      "first_quiescence_latency_upper_seconds": null,
+      "sample_count": 6,
+      "watchdog_reason": "controller_interrupted",
+      "client_final": {
+        "phase": "client_cancelled",
+        "chunks": 324,
+        "characters": 431,
+        "done": false
+      },
+      "containers": {
+        "measure": {
+          "state": "exited",
+          "exit": 130,
+          "running": false
+        },
+        "database": {
+          "state": "exited",
+          "exit": 0,
+          "running": false
+        }
+      },
+      "tool_hashes": {
+        "capacity_watchdog.py": "228fb79d4a155f13dacb364e778fb232c65541aaba4cf609ef969e20319db69b",
+        "capacity_cancel_observer.py": "66169da1f4db2cbe614d822a8ca40380e45ea33dcfdfc65ef562710edbfe931e"
+      },
+      "attempt": "cancel-qualification-streaming-01",
       "stream_chunks": [
         1,
         201
@@ -17,41 +47,16 @@
         53,
         89
       ],
-      "measure_exit": 130,
-      "database_exit": 0
+      "model_release_observed_epoch": 1792867383.8367083
     },
     "extract-json": {
-      "attempt": "cancel-qualification-extract-json-03",
-      "server_cancellation_verified": true,
-      "quiescence_verified": true,
-      "quiescence_seconds": 10.809,
-      "conservative_latency_seconds": 5.075517416,
-      "maximum_latency_seconds": 5,
-      "reason": "latency_upper_bound_exceeded",
-      "retry_requires": "exact GPU measurement timestamps, successful CI, new isolated attempt",
-      "attempts": [
-        {
-          "attempt": "cancel-qualification-extract-json-01",
-          "server_cancellation_verified": false,
-          "quiescence_verified": true,
-          "quiescence_seconds": 10.736,
-          "conservative_latency_seconds": 5.075517416,
-          "maximum_latency_seconds": 5,
-          "reason": "latency_upper_bound_exceeded",
-          "retry_requires": "exact GPU measurement timestamps, successful CI, new isolated attempt"
-        },
-        {
-          "attempt": "cancel-qualification-extract-json-02",
-          "reason": "client_mount_permission_denied",
-          "model_request_started": false,
-          "server_cancellation_verified": false
-        }
-      ],
-      "profile": "extract-json",
       "image_id": "sha256:97077db98378e4cc6eaa7d80e8ca2a428bef3890190447fc39e82f5924c36d98",
       "model_digest": "6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7",
       "source_commit": "20d6869e90b1069adf18bab23f5fd6c8f6ace584",
-      "natural_model_release_verified": false,
+      "server_cancellation_verified": true,
+      "natural_model_release_verified": true,
+      "quiescence_verified": true,
+      "quiescence_seconds": 10.809,
       "first_quiescence_latency_upper_seconds": 1.544792189000873,
       "sample_count": 5,
       "watchdog_reason": "controller_interrupted",
@@ -80,16 +85,112 @@
         "capacity_watchdog.py": "228fb79d4a155f13dacb364e778fb232c65541aaba4cf609ef969e20319db69b",
         "capacity_cancel_observer.py": "a793ee0dc195b7e38665a4ab1d8ce649c11ef08140127681305e4d0b9155eb72",
         "ollama_nonstream_cancel_client.py": "ca311a3285e1311f8dadcfe8c0b3a7c2509d508d669aef6bb93461c58965d785"
-      }
+      },
+      "attempt": "cancel-qualification-extract-json-03",
+      "attempts": [
+        {
+          "attempt": "cancel-qualification-extract-json-01",
+          "server_cancellation_verified": false,
+          "quiescence_verified": true,
+          "quiescence_seconds": 10.736,
+          "conservative_latency_seconds": 5.075517416,
+          "maximum_latency_seconds": 5,
+          "reason": "latency_upper_bound_exceeded",
+          "retry_requires": "exact GPU measurement timestamps, successful CI, new isolated attempt"
+        },
+        {
+          "attempt": "cancel-qualification-extract-json-02",
+          "reason": "client_mount_permission_denied",
+          "model_request_started": false,
+          "server_cancellation_verified": false
+        }
+      ],
+      "model_release_observed_epoch": 1792867383.8817632
     },
     "analysis-json": {
-      "status": "not_started"
+      "image_id": "sha256:97077db98378e4cc6eaa7d80e8ca2a428bef3890190447fc39e82f5924c36d98",
+      "model_digest": "6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7",
+      "source_commit": "20d6869e90b1069adf18bab23f5fd6c8f6ace584",
+      "server_cancellation_verified": true,
+      "natural_model_release_verified": true,
+      "quiescence_verified": true,
+      "quiescence_seconds": 10.759,
+      "first_quiescence_latency_upper_seconds": 4.291928788996302,
+      "sample_count": 6,
+      "watchdog_reason": "controller_interrupted",
+      "client_final": {
+        "phase": "client_cancelled",
+        "profile": "analysis-json",
+        "response_received": false,
+        "done": false,
+        "num_ctx": 32768,
+        "num_predict": 12000,
+        "payload_sha256": "884ffc7dd6c07349ba9ae527354256cb3a0cfee3890bdbbfca92166788f4a7b1"
+      },
+      "containers": {
+        "measure": {
+          "state": "exited",
+          "exit": 130,
+          "running": false
+        },
+        "database": {
+          "state": "exited",
+          "exit": 0,
+          "running": false
+        }
+      },
+      "tool_hashes": {
+        "capacity_watchdog.py": "228fb79d4a155f13dacb364e778fb232c65541aaba4cf609ef969e20319db69b",
+        "capacity_cancel_observer.py": "a793ee0dc195b7e38665a4ab1d8ce649c11ef08140127681305e4d0b9155eb72",
+        "ollama_nonstream_cancel_client.py": "ca311a3285e1311f8dadcfe8c0b3a7c2509d508d669aef6bb93461c58965d785"
+      },
+      "attempt": "cancel-qualification-analysis-json-01",
+      "model_release_observed_epoch": 1792867383.9263508
     },
     "analysis-text": {
-      "status": "not_started"
+      "image_id": "sha256:97077db98378e4cc6eaa7d80e8ca2a428bef3890190447fc39e82f5924c36d98",
+      "model_digest": "6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7",
+      "source_commit": "20d6869e90b1069adf18bab23f5fd6c8f6ace584",
+      "server_cancellation_verified": true,
+      "natural_model_release_verified": true,
+      "quiescence_verified": true,
+      "quiescence_seconds": 10.734,
+      "first_quiescence_latency_upper_seconds": 4.237954002019251,
+      "sample_count": 6,
+      "watchdog_reason": "controller_interrupted",
+      "client_final": {
+        "phase": "client_cancelled",
+        "profile": "analysis-text",
+        "response_received": false,
+        "done": false,
+        "num_ctx": 32768,
+        "num_predict": 6000,
+        "payload_sha256": "f162d7c33052e17b042afe480208f8069edd4d1ef807f8d0bfe4ae95ff529dd7"
+      },
+      "containers": {
+        "measure": {
+          "state": "exited",
+          "exit": 130,
+          "running": false
+        },
+        "database": {
+          "state": "exited",
+          "exit": 0,
+          "running": false
+        }
+      },
+      "tool_hashes": {
+        "capacity_watchdog.py": "228fb79d4a155f13dacb364e778fb232c65541aaba4cf609ef969e20319db69b",
+        "capacity_cancel_observer.py": "a793ee0dc195b7e38665a4ab1d8ce649c11ef08140127681305e4d0b9155eb72",
+        "ollama_nonstream_cancel_client.py": "ca311a3285e1311f8dadcfe8c0b3a7c2509d508d669aef6bb93461c58965d785"
+      },
+      "attempt": "cancel-qualification-analysis-text-01",
+      "model_release_observed_epoch": 1792867383.9701767
     }
   },
   "corpus_started": false,
   "validated_daily_capacity": false,
-  "production_delivery_enabled": false
+  "production_delivery_enabled": false,
+  "all_transport_cancellations_verified": true,
+  "natural_release_all_profiles_verified": true
 }

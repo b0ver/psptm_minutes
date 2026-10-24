@@ -15,7 +15,17 @@
 | Защита GitHub | Admin API: main protection 404 Branch not protected; rulesets=[] | Review/status checks и deployment branch policy — владелец. Второго reviewer нет; ручная приёмка владельцем допустима по runbook, production workflow пока выключен |
 | Доставка/откат | Runbook и scripts подготовлены | Три immutable digest одного commit; staging deploy и candidate→previous rollback; приёмка точного manifest — оператор + reviewer |
 
-## Актуальная сверка 24 октября
+## Актуальная сверка 24 октября, вечер
+
+CI инструмента 20d6869 прошел: [40120029522](https://github.com/b0ver/psptm_minutes/actions/runs/40120029522). Чистый checkout: 315 passed, оба Python audit без известных уязвимостей. Runtime image 97077db собран из чистого security-кандидата 3fa09d4. Приложение, зависимости и capacity.py после него не менялись. Это один локальный capacity-образ. Три registry digest еще не выпущены.
+
+Потоковая отмена, extract-json и analysis-json приняты на Bender. Рабочий STT-контейнер не останавливался. Idle CUDA-контекст теперь требует явной identity-привязки и десяти секунд device GPU=0%. Для analysis-json первое quiet-измерение получено через 4.292 секунды после stop. Затем наблюдалось 10.759 секунды покоя. Клиент завершился с exit 130. БД завершилась с exit 0. Профиль analysis-text также принят: первая quiet-метка через 4.238 секунды, затем 10.734 секунды покоя. Естественное освобождение модели подтверждено после всех четырех профилей.
+
+Входы корпуса проверены без GPU под UID 10001. Длительности в порядке запуска: 5079.8, 3531.68 и 1762.0 секунды. Хеши трех записей и 11 файлов весов сохранены только на Bender. Исторический ecd3d10 job выведен из подготовки с сохранением данных. Основной job prepared-current-3fa09d4-03 на image 97077db запущен после исправления пути STT snapshot. Предыдущая попытка дала stt_weights_missing для трех входов. Ее отрицательный результат сохранен. Текущий результат корпуса еще отсутствует. Человеческое качество, внешний E2E, рабочий restore и полный staging rollback остаются открыты.
+
+Актуальные агрегаты: [status](alpha-rc-status-2026-10-24.json), [профили отмены](cancellation-profiles-2026-10-24.json).
+
+## Историческая сверка 24 октября до новых GPU-проверок
 
 [Безопасный receipt](alpha-rc-status-2026-10-24.json) фиксирует точные исходники и пределы доказательства. PR #3 открыт в draft, head `3fa09d4`, main `cd2e047`. [CI 3fa09d4](https://github.com/b0ver/psptm_minutes/actions/runs/40097561349) **success**: **265 passed**, 19.61 s на чистом Linux/amd64 checkout; оба Python audit, synthetic staging upload/restart/restore, synthetic backup restore и recorder controls/crash recovery passed. Локальные 292 теста включают дополнительные untracked-тесты, поэтому это другой объём проверки. Filelock pin обновлён 4.0.12→4.2.1 после трёх новых advisory; исключений audit нет.
 

@@ -33,14 +33,14 @@
   },
   "external_acceptance": {
     "ssh": "available_2026-10-24_21:17_MSK",
-    "server_cancellation": "streaming_and_extract_json_accepted_analysis_profiles_pending",
+    "server_cancellation": "all_four_transport_profiles_accepted_and_natural_release_verified",
     "new_observer_installed_on_bender": true,
-    "bounded_reduce_corpus_85_60_30": "not_started",
+    "bounded_reduce_corpus_85_60_30": "running",
     "human_e2e": "pending",
     "production_data_restore": "pending",
     "full_staging_promotion_and_version_rollback": "pending",
     "validated_daily_capacity": false,
-    "current_capacity_gate": "nonstream_transport_cancellation_profiles"
+    "current_capacity_gate": "await_actual_corpus_result"
   },
   "image_scope": {
     "prepared_gpu_source": "ecd3d10b7ef6f1011dba65afaecca1aa09eb390e",
@@ -59,10 +59,12 @@
     "cpu_help_and_parser_probe": "passed"
   },
   "latest_resource_check": {
-    "observed_msk": "2026-10-24T21:17:39+03:00",
+    "observed_epoch": 1792867643.4476626,
     "gpu_utilization_percent": 0,
-    "gpu_free_mib": 23494,
-    "note": "point-in-time only; all gates repeat before each start"
+    "gpu_free_mib": 19487,
+    "own_measure_compute_pid_count": 1,
+    "runtime_resource_gate": "passed",
+    "note": "Point-in-time during STT; not a completed sample or quota."
   },
   "compute_ownership": {
     "container": "psptm-minutes-worker-1",
@@ -90,11 +92,66 @@
     "image_id": "sha256:21295ad6cb679361dbde6b7bb1ce4928e5c8f4a9313fa2fb07cfa22342f81a24",
     "historical_diagnostic_image": true,
     "cpu_uid_storage_and_policy_import_probes": "passed",
-    "new_model_calls": 0,
     "server_cancellation_verified": false,
     "terminal_reason": "foreign_gpu_process"
   },
   "current_cancellation_evidence": "cancellation-profiles-2026-10-24.json",
-  "next_action": "Natural model release, then analysis-json and analysis-text on the same immutable runtime",
-  "production_worker_pause_required": false
+  "next_action": "Monitor exact current main unit and owned container IDs; do not start another corpus. Preserve safe aggregates and private evidence.",
+  "production_worker_pause_required": false,
+  "latest_tool_ci": {
+    "commit": "20d6869e90b1069adf18bab23f5fd6c8f6ace584",
+    "url": "https://github.com/b0ver/psptm_minutes/actions/runs/40120029522",
+    "conclusion": "success",
+    "integration_tests_passed": 315,
+    "integration_seconds": 22.02,
+    "runtime_lock_audit": "no_known_vulnerabilities",
+    "agent_lock_audit": "no_known_vulnerabilities"
+  },
+  "current_main_job": {
+    "job": "benchmarks/private/capacity/prepared-current-3fa09d4-03/job.json",
+    "unit": "minutes-capacity-29938a168bd54e6b",
+    "orchestrator_unit": "minutes-capacity-orchestrator-29938a168bd54e6b",
+    "measure_started_at": "2026-10-24T18:47:05.428182649Z",
+    "state": "running",
+    "source_files_verified": 72,
+    "uid10001_storage_mount_and_app_model_path_probe": "passed",
+    "input_durations_seconds": [
+      5079.8,
+      3531.68,
+      1762.0
+    ],
+    "stt_weight_files_hashed": 11,
+    "runtime_resource_gate": "passed",
+    "database_health": "healthy",
+    "meeting_status_counts": {
+      "processing": 1
+    },
+    "validated_daily_capacity": false
+  },
+  "historical_main_attempts": [
+    {
+      "attempt": "prepared-ecd3d10-01",
+      "state": "retired_created_objects",
+      "security_current_rc": false,
+      "volumes_removed": false
+    },
+    {
+      "attempt": "prepared-current-3fa09d4-01",
+      "state": "retired_after_admission_refusal",
+      "reason": "additional_compute_pid",
+      "ownership": "unconfirmed_pid_disappeared_before_diagnosis",
+      "model_calls": 0,
+      "volumes_removed": false
+    },
+    {
+      "attempt": "prepared-current-3fa09d4-02",
+      "state": "failed_and_retired",
+      "reason": "stt_weights_missing_from_cache_root_path",
+      "samples": 3,
+      "reports_ready": 0,
+      "image_changed": false,
+      "weights_changed": false,
+      "volumes_removed": false
+    }
+  ]
 }
