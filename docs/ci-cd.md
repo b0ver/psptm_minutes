@@ -2,7 +2,9 @@
 
 Спринт 21 октября: [план и результаты](sprints/2026-10-21-alpha-rc.md). Добавлены bounded retries анализа, отдельный Python lock агента, аудит обоих lockfile и synthetic restore drill в CI/release. Исторические результаты от 13 октября ниже не описывают итог повторной проверки 21 октября.
 
-Повторная проверка 21 октября: 180 integration + 6 benchmark tests passed; 4 recorder controls и checkpoint normal/SIGKILL passed; synthetic restore на финальных зависимостях passed. pip-audit 2.9.0 для 50 runtime и 21 agent Python-пакетов: 0 advisory, exit 0. CI должен повторить эти gates на hosted Linux/amd64; локальная проверка выполнена на arm64. Ни staging promotion, ни восстановление production-данных этой проверкой не подтверждаются.
+Повторная проверка 21 октября: 196 integration + 6 benchmark tests passed; recorder controls и checkpoint normal/SIGKILL, synthetic restore и аудит обоих Python lockfile прошли в [CI `ff63d1c`](https://github.com/b0ver/psptm_minutes/actions/runs/39585463301) на Linux/amd64. Локальная проверка выполнена на arm64. Дополнительные PostgreSQL-регрессии queue guard описаны в [матрице приёмки](reports/release-acceptance-2026-10-21.md). Ни staging promotion, ни восстановление production-данных этими проверками не подтверждаются.
+
+Сверка GitHub API 21 октября под учётной записью с admin-доступом: environments отсутствуют, зарегистрированных runners — 0, classic protection main отсутствует (404 Branch not protected), rulesets — пусто. Это фактические незакрытые условия доставки, а не настройки, уже применённые YAML. Отдельного хоста и второго reviewer у владельца пока нет; по его решению используем изолированный стенд на Bender. Настройки GitHub и защита ветки остаются незакрыты. Production job дополнительно требует repository variable `ALPHA_PRODUCTION_DELIVERY_ENABLED=true`; без неё пропускается. Сейчас включать её нельзя.
 
 ## Состояние
 
@@ -19,11 +21,17 @@ CI запускает integration-тесты с настоящим изолир�
 1. Выбрать default branch; потребовать PR, успешный `CI / tests` и review. Запретить прямые push/bypass для штатных изменений. Дополнительно CODEOWNERS для workflow, model policy и ops при наличии назначенных владельцев.
 2. Создать environments `alpha-staging` и `alpha-production`. В production настроить required reviewer, запрет самоутверждения и только default branch. Reviewer принимает конкретный release после настоящего E2E, restore и проверки AI-качества, не только зелёных тестов. Убедиться, что тариф и visibility репозитория поддерживают требуемые protection rules; если нет — не включать production job до альтернативного контролируемого approval.
 3. На изолированном staging runner задать labels `self-hosted,linux,x64,minutes-staging`; на production — `self-hosted,linux,x64,minutes-production`. Ограничить runner group этим репозиторием и доверенными workflow. PR и fork никогда не исполнять на этих runners. Checkout доверенного commit на production всё равно даёт ему доступ к хосту: права Docker фактически административные.
-4. Environment variable `DEPLOY_ROOT`: абсолютный каталог, например `/srv/psptm-minutes-staging` и `/srv/psptm-minutes`. Разные машины/volumes, API-порты и Telegram-токены; staging не получает production calendar credentials и не записывает встречи сотрудников. Изоляция Compose не изолирует общий GPU: выделить отдельный хост или согласованное окно.
+4. Environment variable `DEPLOY_ROOT`: абсолютный каталог, например `/srv/psptm-minutes-staging` и `/srv/psptm-minutes`. Разные каталоги, Compose projects, volumes, API-порты и Telegram-токены; на этапе альфы по решению владельца допустим один Bender; staging не получает production calendar credentials и не записывает встречи сотрудников. Изоляция Compose не изолирует общий GPU: выделить отдельный хост или согласованное окно.
 5. GHCR: сборка публикует с `GITHUB_TOKEN`, доступ package привязать к репозиторию. Каждый deploy host заранее авторизовать read-only credential с `read:packages` через `docker login --password-stdin`. Токен хранить вне workflow logs; production secrets не передавать в GitHub.
 6. Подготовить `DEPLOY_ROOT/shared/.env` и `shared/secrets/{db_password,calendar_key,telegram_token}`. Корневой каталог и shared — 0700; файлы secrets должны читаться UID 10001 внутри контейнера в соответствии с текущим Compose secrets. Установить STT_MODEL_DIR/PATH на заранее имеющиеся веса, зафиксировать разрешённую модель/digest. Настроить лимитированные Telegram ID и согласованный режим календаря. Никогда не печатать `compose config` без `--quiet`.
 
 Секреты staging создаются bootstrap отдельно. Пароль БД должен соответствовать реальному volume. Для production использовать существующий calendar_key: генерация нового ключа ломает расшифровку подключений. Никакого повторного bootstrap поверх рабочих credentials.
+
+## Доступный стенд и ручной выпуск владельцем
+
+Решение владельца 21 октября: дополнительного хоста и второго reviewer нет, работать на имеющихся ресурсах. На Bender подготовлен [CPU smoke-стенд](reports/staging-smoke-2026-10-21.md) с отдельными данными и новыми секретами. Он не запускает AI, Telegram или календарь; не является полным release staging. Общий GPU проверяется только в согласованные окна. Изоляция Compose не защищает от отказа общего хоста/диска.
+
+Пока нет независимого reviewer, приёмку конкретного manifest может выполнить сам владелец вручную: зафиксировать commit и три registry digest, результаты полного staging E2E, rollback и restore, оценку качества и решение о допуске. После этого согласовать конкретное production-окно и выполнить контролируемый ручной выпуск по этому runbook. Это не независимый review и не разрешение пропускать критерии. Production workflow остаётся выключен; включение repository variable требует отдельного решения после настройки защищённого approval и runner. Не указывать вымышленного reviewer и не регистрировать runner с доступом к production ради обхода приёмки.
 
 ## Принять текущее развёртывание под управление
 
@@ -47,7 +55,7 @@ Production Compose project остаётся `psptm-minutes`, чтобы испо
 `deploy.sh` удерживает host `flock`; создаёт неизменяемый release-каталог и manifest трёх image digest, выполняет pull и проверку Compose. Затем:
 
 1. Останавливает producers (Telegram/calendar), проверяет **все** durable-состояния агента, включая неопределённые импорты и неподтверждённые частичные записи; при блокере отменяет deploy и возобновляет прежние producers.
-2. Проверяет отсутствие processing и удерживает EXCLUSIVE locks таблиц очереди при остановке worker/analysis-worker. Это закрывает гонку, при которой worker мог взять queued-задачу после проверки. При активной AI-задаче deploy откладывается, её не убивают.
+2. Проверяет отсутствие processing и удерживает EXCLUSIVE locks таблиц очереди при остановке worker/analysis-worker. Код SQL-барьера находится в `scripts/ops/queue_guard.py`; `freeze_workers.py` выполняет именно этот код внутри текущего API-контейнера. Это закрывает гонку, при которой worker мог взять queued-задачу после проверки. При активной AI-задаче deploy откладывается, её не убивают.
 3. Останавливает API/агент, делает согласованную копию БД, recordings, secrets и environment; сохраняет manifest старых образов и checksums.
 4. Проверяет схему candidate: отсутствующие/изменённые колонки или nullability блокируют deploy. Проверка не покрывает indexes, constraints, defaults и семантику приложения. Такие изменения требуют отдельного плана миграции/совместимости и review.
 5. Проверяет Ollama policy и настоящий CUDA STT, запускает API/агент с ожиданием health, затем consumers и producers. Проверяет все семь долгоживущих сервисов, сохраняет их технический снимок, меняет `current` только при успехе.
@@ -77,10 +85,27 @@ bash scripts/ops/restore-drill.sh
 
 Автоматическая резервная копия перед deploy — защищённая локальная копия; отказ диска/хоста она не покрывает. Политика для согласования: ежедневная зашифрованная off-host копия, 7 ежедневных + 4 еженедельных, пробный restore еженедельно, предложенный RPO ≤24 ч / RTO ≤2 ч. Эти цели ещё не подтверждены. Настроить штатный scheduler/backup-сервис после выбора хранилища и retention; удаление рабочих материалов по TTL согласовать отдельно.
 
+Для разрешённых capacity-проверок отдельно реализован [серверный watchdog](capacity-watchdog.md) с проверкой ownership и остановкой своих контейнеров. Он не заменяет безопасную остановку production и приёмку deploy/rollback.
+
+Изолированный CPU [staging smoke drill](reports/staging-smoke-2026-10-21.md) также выполняется в CI/release: HTTP upload синтетического WAV, restart persistence и dump/restore. Он не заменяет полный staging promotion трёх образов, version rollback и внешний E2E.
+
 ## Контроль эксплуатации
 
 Назначить владельца сервиса, дежурного и порядок обращения сотрудников. На пилоте ежедневно смотреть: failed-коды и незавершённые импорты, возраст queued/processing, полноту разделов, tick календаря, недоставленные Telegram-события, диск и GPU. Начальные пороги для настройки: диск <20% свободно; processing дольше 2× измеренного p95; backlog выше утверждённой квоты; отсутствие heartbeat >60 секунд; неуспешный backup или просроченный restore drill. Это предлагаемые настройки, текущих автоматических alerts нет.
 
-Следующие технические этапы: heartbeat и метрики длительности фаз; admission/квоты; bounded retries анализа; Alembic; SBOM и сканирование OS-пакетов всех трёх образов; воспроизводимая фиксация транзитивных зависимостей агента/apt; retention/delete; технический maintenance gate; резервирование общего GPU. Текущий pip-audit покрывает Python runtime lockfile, не Chromium/apt/CUDA и не весь отдельный dependency tree агента.
+Следующие технические этапы: heartbeat и метрики длительности фаз; admission/квоты; Alembic; SBOM и сканирование OS-пакетов всех трёх образов; воспроизводимая фиксация транзитивных зависимостей агента/apt; retention/delete; технический maintenance gate; резервирование общего GPU. Текущий pip-audit покрывает Python lockfile runtime и агента, не Chromium/apt/CUDA.
 
 Основания настройки процесса: [GitHub — secure use](https://docs.github.com/en/actions/reference/security/secure-use), [GitHub — environments](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments), [Docker Compose production](https://docs.docker.com/compose/how-tos/production/). Actions закреплены полными SHA, проверенными по remote tags 13 октября 2026. GitHub protection rules настраиваются отдельно от YAML.
+
+
+## Повторный security gate 24 октября
+
+CI `c24ab90` обнаружил три новых advisory для runtime pin filelock 4.0.12:
+[GHSA-v4x8-3wr5-3wq8](https://github.com/advisories/GHSA-v4x8-3wr5-3wq8),
+[GHSA-9vhv-jxww-xfm5](https://github.com/advisories/GHSA-9vhv-jxww-xfm5),
+[GHSA-567q-5qvw-pf92](https://github.com/advisories/GHSA-567q-5qvw-pf92).
+Audit указал исправление 4.2.1; runtime lock и входной requirements.txt обновлены на этот pin. Исключений/ignore advisory не добавлено. Совместимость и отсутствие известных advisory проверяются повторно, результат предыдущего CI не переносится на новые зависимости.
+
+Подготовленный GPU-образ ecd3d10 и CPU staging runtime остаются историческими кандидатами с прежними зависимостями. Их нельзя объявлять прошедшими security gate нового RC или подменять image ID в прежних manifests. Существующий диагностический capacity-job не изменять автоматически. После восстановления SSH отдельно сверить его зависимости и определить новый immutable candidate/release manifest с чистым CI; при смене runtime image новая приёмка должна явно указывать фактические hashes. Старые capacity-результаты не доказывают мощность нового образа.
+
+Локальный повтор с filelock 4.2.1: 292 passed (12.43 s), pip check success; pip-audit 2.9.0 для runtime и agent lockfile — `No known vulnerabilities found`, оба exit 0. PostgreSQL tests cleanup выполнен. GPU/CUDA/OS этим аудитом не покрываются.

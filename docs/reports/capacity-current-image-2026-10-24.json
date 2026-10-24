@@ -1,0 +1,11 @@
+{
+  "source_commit": "3fa09d44932720d1b8ab4d0100bf158305af6a5a",
+  "source_archive_sha256": "7897548b6e9acb067d4d5b32f6ccce8c3b4e9c49660e29672950e0149b686efa",
+  "image_id": "sha256:97077db98378e4cc6eaa7d80e8ca2a428bef3890190447fc39e82f5924c36d98",
+  "source_hashes_verified": true,
+  "filelock_version": "4.2.1",
+  "cpu_image_probe": "passed",
+  "gpu_acceptance": "transport_cancellation_passed_corpus_running",
+  "three_registry_digest_release_manifest": false,
+  "production_changed": false
+}

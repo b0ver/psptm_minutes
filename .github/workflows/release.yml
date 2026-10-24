@@ -25,9 +25,12 @@ jobs:
       - name: Test exact release source
         run: |
           docker compose -f compose.test.yaml up --build --abort-on-container-exit --exit-code-from tests
+          python3 scripts/ops/capacity_inspect_probe.py psptm-minutes-tests-tests
           python3 -m unittest discover -s benchmarks/tests -v
           bash -n scripts/ops/deploy.sh
           bash -n scripts/ops/restore-drill.sh
+          bash -n scripts/ops/staging-smoke-drill.sh
+          bash scripts/ops/staging-smoke-drill.sh
           bash scripts/ops/restore-drill.sh
           docker run --rm -v "$PWD:/repo:ro" -w /repo \
             rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
@@ -84,6 +87,8 @@ jobs:
           RELEASE_SHA: ${{ github.sha }}
         run: bash scripts/ops/deploy.sh "$DEPLOY_ROOT" psptm-minutes-staging
   production:
+    # Enable only after manifest acceptance, protected approval and staging rollback.
+    if: vars.ALPHA_PRODUCTION_DELIVERY_ENABLED == 'true'
     needs: [build, staging]
     runs-on: [self-hosted, linux, x64, minutes-production]
     environment: alpha-production
