@@ -40,7 +40,7 @@
     "production_data_restore": "pending",
     "full_staging_promotion_and_version_rollback": "pending",
     "validated_daily_capacity": false,
-    "current_capacity_gate": "gpu_busy_foreign_compute"
+    "current_capacity_gate": "production_worker_idle_cuda_context"
   },
   "image_scope": {
     "prepared_gpu_source": "ecd3d10b7ef6f1011dba65afaecca1aa09eb390e",
@@ -71,7 +71,24 @@
     "lab_lock": "available",
     "gpu_utilization_percent": 0,
     "free_vram_mib": 23494,
-    "foreign_compute_pid_count": 1,
-    "foreign_compute_vram_mib": 394
+    "compute_pid_count": 1
+  },
+  "compute_ownership": {
+    "container": "psptm-minutes-worker-1",
+    "compose_project": "psptm-minutes",
+    "compose_service": "worker",
+    "container_image_id": "sha256:c28908dee490a2497178cbe33e2f9da4e7bcbc1a1ef5e84587cb8e4e913cf954",
+    "state": "running",
+    "gpu_memory_mib": 394,
+    "service_stopped": false
+  },
+  "current_candidate_source": {
+    "commit": "3fa09d44932720d1b8ab4d0100bf158305af6a5a",
+    "directory": "benchmarks/private/capacity/candidate-3fa09d4/source",
+    "archive_sha256": "7897548b6e9acb067d4d5b32f6ccce8c3b4e9c49660e29672950e0149b686efa",
+    "file_count": 72,
+    "file_hashes_verified": true,
+    "filelock_pin": "4.2.1",
+    "image_built": false
   }
 }
