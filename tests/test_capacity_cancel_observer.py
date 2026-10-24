@@ -124,6 +124,27 @@ def test_non_quiescent_times_out():
     assert not okay and len(rows) == 30
 
 
+def test_validation_time_cannot_substitute_for_gpu_observation_interval():
+    now = [0]; count = [0]
+    def sample(job):
+        measured = now[0]
+        if count[0] == 4: now[0] += 2
+        count[0] += 1
+        return {'quiescent': True, 'gpu_observed_monotonic': measured}
+    def sleep(seconds): now[0] += 2
+    rows, okay = obs.observe({}, sample=sample, clock=lambda: now[0], sleep=sleep)
+    assert okay and len(rows) == 11
+    assert rows[4]['gpu_elapsed_seconds'] == 8 and rows[4]['elapsed_seconds'] == 10
+    assert rows[-1]['gpu_elapsed_seconds'] == 22
+
+
+@pytest.mark.parametrize('measured', [-1, 1, float('nan'), float('inf')])
+def test_stale_or_invalid_measurement_timestamp_refuses(measured):
+    with pytest.raises(obs.cw.Refused, match='gpu_telemetry_stale'):
+        obs.observe({}, sample=lambda job: {'quiescent': True, 'gpu_observed_monotonic': measured},
+                    clock=lambda: 0, sleep=lambda seconds: None)
+
+
 def test_partial_evidence_survives_failure_and_existing_receipt_not_overwritten(tmp_path, monkeypatch, capsys):
     lock = tmp_path / 'lock'; lock.touch()
     monkeypatch.setattr(sys, 'argv', ['observer', str(tmp_path / 'job.json')])

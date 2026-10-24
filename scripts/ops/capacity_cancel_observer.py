@@ -88,6 +88,8 @@ def snapshot(job):
     compute = pmon_compute(cw.command(['nvidia-smi', 'pmon', '-c', '1', '-s', 'um']))
     utilization = float(cw.command(['nvidia-smi', '--query-gpu=utilization.gpu',
                                     '--format=csv,noheader,nounits']).strip())
+    gpu_observed_monotonic = time.monotonic()
+    gpu_observed_epoch = time.time()
     final = cw.gpu_pids()
     if initial != final or set(compute) != final:
         raise cw.Refused('gpu_process_snapshot_changed')
@@ -102,6 +104,8 @@ def snapshot(job):
     basis = ('no_compute' if not compute else 'whole_device_zero' if utilization == 0
              else 'per_process_zero' if all(sm == 0 for sm in compute.values()) else 'unknown')
     return {'gpu_utilization_percent': utilization, 'compute_pid_count': len(final),
+            'gpu_observed_monotonic': gpu_observed_monotonic,
+            'gpu_observed_epoch': gpu_observed_epoch,
             'compute_sm_percent': sorted(compute.values(), key=lambda x: -1 if x is None else x),
             'quiescence_basis': basis, 'quiescent': not positive and basis != 'unknown'}
 
@@ -113,15 +117,20 @@ def observe(job, sample=snapshot, clock=time.monotonic, sleep=time.sleep, rows=N
     while clock() - started < 30:
         row = sample(job)
         now = clock()
+        measured = row.get('gpu_observed_monotonic', now)
+        if (type(measured) not in (int, float) or not math.isfinite(measured)
+                or not started <= measured <= now or now - measured > 3):
+            raise cw.Refused('gpu_telemetry_stale')
         row['elapsed_seconds'] = round(now - started, 3)
+        row['gpu_elapsed_seconds'] = round(measured - started, 3)
         rows.append(row)
-        if not row['quiescent'] or (previous is not None and now - previous > 3):
+        if not row['quiescent'] or (previous is not None and measured - previous > 3):
             since = None
         if row['quiescent']:
-            since = now if since is None else since
-            if now - since >= 10 and now - started < 30:
+            since = measured if since is None else since
+            if measured - since >= 10 and now - started < 30:
                 return rows, True
-        previous = now
+        previous = measured
         sleep(1)
     return rows, False
 
@@ -144,7 +153,11 @@ def main():
         with open(job['lab_lock'], 'a') as lock:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
             report['samples'] = []
-            _, report['quiescence_verified'] = observe(job, rows=report['samples'])
+            report['observation_started_epoch'] = time.time()
+            try:
+                _, report['quiescence_verified'] = observe(job, rows=report['samples'])
+            finally:
+                report['observation_finished_epoch'] = time.time()
         report['result'] = 'quiescent' if report['quiescence_verified'] else 'quiescence_not_verified'
     except FileExistsError:
         target = None
