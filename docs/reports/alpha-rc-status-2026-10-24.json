@@ -64,7 +64,8 @@
     "gpu_free_mib": 19085,
     "own_measure_compute_pid_count": 1,
     "runtime_resource_gate": "passed",
-    "note": "Real STT processing of first recording; no complete sample yet."
+    "note": "Real STT processing of first recording; no complete sample yet.",
+    "point_in_time_before_interruption": true
   },
   "compute_ownership": {
     "container": "psptm-minutes-worker-1",
@@ -199,6 +200,17 @@
     "queue_gate_alone_sufficient": false,
     "project_changed": false,
     "proposal": "docs/proposals/recap-healthcheck-coordination-2026-10-24.md",
+    "owner_approval": "pending"
+  },
+  "proposed_healthcheck_ci": {
+    "commit": "8b846720d70c015d682d1ce4d2b15fe280448a8f",
+    "url": "https://github.com/b0ver/psptm_minutes/actions/runs/40124283349",
+    "conclusion": "success",
+    "clean_tests_passed": 348,
+    "clean_seconds": 20.52,
+    "runtime_lock_audit": "no_known_vulnerabilities",
+    "agent_lock_audit": "no_known_vulnerabilities",
+    "deployed_to_recap": false,
     "owner_approval": "pending"
   }
 }

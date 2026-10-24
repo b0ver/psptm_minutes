@@ -49,3 +49,8 @@ Overlay закрепляет текущий image ID Recap. Он добавля�
 14. Только затем подготовь одну новую capacity-попытку.
 
 Если конфигурация изменилась или безопасное обслуживание Recap не подготовлено, не пересоздавай сервис. Это предложение требует разрешения на изменение другого проекта. Оно не разрешает production delivery psptm_minutes.
+
+
+## CI подготовленного healthcheck helper
+
+Commit 8b846720d70c015d682d1ce4d2b15fe280448a8f прошел CI: https://github.com/b0ver/psptm_minutes/actions/runs/40124283349. Чистый checkout: 348 passed за20.52s. Оба Python audit без известных уязвимостей. Synthetic staging/restore, recorder и остальные gates прошли. Это проверка helper и регрессий, а не разрешение на изменение Recap. Владелец еще не подтвердил применение. Новые GPU-попытки не запускались. Сам Recap не менялся. Goal остается незавершенным: корпус, human E2E/качество, рабочий restore и full staging rollback не приняты.

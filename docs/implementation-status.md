@@ -160,3 +160,8 @@ Main04 завершен foreign_gpu_process: measure exit137, DB exit0. Метр
 Подготовлены helper scripts/ops/recap_gpu_healthcheck.py и proposal overlay docs/proposals/recap-stt-shared-gpu-healthcheck.yaml. Общий read-only flock сохраняется через exec исходного smoke. При занятой lease выполняется только CPU/API liveness с явным deferred GPU readiness. Ошибка исходного smoke не скрывается. В Recap ничего не применено. Все действия ограничены read-only диагностикой и CPU-проверками в отдельных контейнерах.
 
 Локально375 passed за13.01s. Синтетический реальный exec доказал удержание lease и сохранение exit0/7. Bender CPU-only proof подтвердил взаимную видимость read-only bind/host locks без изменения inode/mtime. Подробное предложение и условия безопасного применения: docs/proposals/recap-healthcheck-coordination-2026-10-24.md. Требуется разрешение владельца на изменение другого проекта согласно AGENTS.md.
+
+
+## CI подготовленного healthcheck helper
+
+Commit 8b846720d70c015d682d1ce4d2b15fe280448a8f прошел CI: https://github.com/b0ver/psptm_minutes/actions/runs/40124283349. Чистый checkout: 348 passed за20.52s. Оба Python audit без известных уязвимостей. Synthetic staging/restore, recorder и остальные gates прошли. Это проверка helper и регрессий, а не разрешение на изменение Recap. Владелец еще не подтвердил применение. Новые GPU-попытки не запускались. Сам Recap не менялся. Goal остается незавершенным: корпус, human E2E/качество, рабочий restore и full staging rollback не приняты.
