@@ -1,0 +1,95 @@
+{
+  "as_of_msk": "2026-10-24T21:24:00+03:00",
+  "runtime_source_commit": "3fa09d44932720d1b8ab4d0100bf158305af6a5a",
+  "image_id": "sha256:97077db98378e4cc6eaa7d80e8ca2a428bef3890190447fc39e82f5924c36d98",
+  "model_digest": "6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7",
+  "production_worker_paused": false,
+  "profiles": {
+    "streaming": {
+      "attempt": "cancel-qualification-streaming-01",
+      "server_cancellation_verified": true,
+      "natural_model_release_verified": true,
+      "stream_chunks": [
+        1,
+        201
+      ],
+      "native_sm_percent": [
+        53,
+        89
+      ],
+      "measure_exit": 130,
+      "database_exit": 0
+    },
+    "extract-json": {
+      "attempt": "cancel-qualification-extract-json-03",
+      "server_cancellation_verified": true,
+      "quiescence_verified": true,
+      "quiescence_seconds": 10.809,
+      "conservative_latency_seconds": 5.075517416,
+      "maximum_latency_seconds": 5,
+      "reason": "latency_upper_bound_exceeded",
+      "retry_requires": "exact GPU measurement timestamps, successful CI, new isolated attempt",
+      "attempts": [
+        {
+          "attempt": "cancel-qualification-extract-json-01",
+          "server_cancellation_verified": false,
+          "quiescence_verified": true,
+          "quiescence_seconds": 10.736,
+          "conservative_latency_seconds": 5.075517416,
+          "maximum_latency_seconds": 5,
+          "reason": "latency_upper_bound_exceeded",
+          "retry_requires": "exact GPU measurement timestamps, successful CI, new isolated attempt"
+        },
+        {
+          "attempt": "cancel-qualification-extract-json-02",
+          "reason": "client_mount_permission_denied",
+          "model_request_started": false,
+          "server_cancellation_verified": false
+        }
+      ],
+      "profile": "extract-json",
+      "image_id": "sha256:97077db98378e4cc6eaa7d80e8ca2a428bef3890190447fc39e82f5924c36d98",
+      "model_digest": "6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7",
+      "source_commit": "20d6869e90b1069adf18bab23f5fd6c8f6ace584",
+      "natural_model_release_verified": false,
+      "first_quiescence_latency_upper_seconds": 1.544792189000873,
+      "sample_count": 5,
+      "watchdog_reason": "controller_interrupted",
+      "client_final": {
+        "phase": "client_cancelled",
+        "profile": "extract-json",
+        "response_received": false,
+        "done": false,
+        "num_ctx": 8192,
+        "num_predict": 2500,
+        "payload_sha256": "bfdbaa5ce9edb374d44bbd41793f3d443930d0019cfdbabe7bb7657230c2c4e8"
+      },
+      "containers": {
+        "measure": {
+          "state": "exited",
+          "exit": 130,
+          "running": false
+        },
+        "database": {
+          "state": "exited",
+          "exit": 0,
+          "running": false
+        }
+      },
+      "tool_hashes": {
+        "capacity_watchdog.py": "228fb79d4a155f13dacb364e778fb232c65541aaba4cf609ef969e20319db69b",
+        "capacity_cancel_observer.py": "a793ee0dc195b7e38665a4ab1d8ce649c11ef08140127681305e4d0b9155eb72",
+        "ollama_nonstream_cancel_client.py": "ca311a3285e1311f8dadcfe8c0b3a7c2509d508d669aef6bb93461c58965d785"
+      }
+    },
+    "analysis-json": {
+      "status": "not_started"
+    },
+    "analysis-text": {
+      "status": "not_started"
+    }
+  },
+  "corpus_started": false,
+  "validated_daily_capacity": false,
+  "production_delivery_enabled": false
+}

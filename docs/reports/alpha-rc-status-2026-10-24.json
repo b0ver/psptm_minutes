@@ -20,8 +20,8 @@
     "recorder_controls_and_crash_recovery": "passed"
   },
   "local_worktree": {
-    "integration_tests_passed": 292,
-    "integration_seconds": 12.43,
+    "integration_tests_passed": 342,
+    "integration_seconds": 13.63,
     "includes_additional_untracked_tests": true,
     "laboratory_changes_preserved": true
   },
@@ -32,46 +32,37 @@
     "production_delivery_enabled": false
   },
   "external_acceptance": {
-    "ssh": "available_2026-10-24_18:56_MSK",
-    "server_cancellation": "not_accepted",
+    "ssh": "available_2026-10-24_21:17_MSK",
+    "server_cancellation": "streaming_and_extract_json_accepted_analysis_profiles_pending",
     "new_observer_installed_on_bender": true,
     "bounded_reduce_corpus_85_60_30": "not_started",
     "human_e2e": "pending",
     "production_data_restore": "pending",
     "full_staging_promotion_and_version_rollback": "pending",
     "validated_daily_capacity": false,
-    "current_capacity_gate": "production_worker_idle_cuda_context"
+    "current_capacity_gate": "nonstream_transport_cancellation_profiles"
   },
   "image_scope": {
     "prepared_gpu_source": "ecd3d10b7ef6f1011dba65afaecca1aa09eb390e",
-    "prepared_images_security_gate_for_current_rc": "not_verified",
-    "current_three_registry_digest_release_manifest": "not_created"
+    "prepared_images_security_gate_for_current_rc": "old_ecd3d10_is_historical_only",
+    "current_three_registry_digest_release_manifest": "not_created",
+    "current_capacity_image": "sha256:97077db98378e4cc6eaa7d80e8ca2a428bef3890190447fc39e82f5924c36d98",
+    "current_capacity_source": "3fa09d44932720d1b8ab4d0100bf158305af6a5a",
+    "current_capacity_build": "cpu_verified"
   },
   "release_ready": false,
   "observer": {
-    "directory": "benchmarks/private/capacity/observer-3fa09d4",
-    "source_commit": "3fa09d44932720d1b8ab4d0100bf158305af6a5a",
-    "observer_sha256": "9683d198cbf1c574eb085fb5fb5f7d31dc81d86995af4aadfaaa1b267f097b28",
-    "guard_sha256": "e8b6001aea3ecd47a176487d4c0a4869838873a7dc28641a8a7d7cf853cf7a96",
+    "directory": "benchmarks/private/capacity/qualification-tools-20d6869-r2",
+    "source_commit": "20d6869e90b1069adf18bab23f5fd6c8f6ace584",
+    "observer_sha256": "a793ee0dc195b7e38665a4ab1d8ce649c11ef08140127681305e4d0b9155eb72",
+    "guard_sha256": "228fb79d4a155f13dacb364e778fb232c65541aaba4cf609ef969e20319db69b",
     "cpu_help_and_parser_probe": "passed"
   },
-  "next_cancel_attempt": {
-    "job": "benchmarks/private/capacity/cancel-observer-3fa09d4-01/job.json",
-    "unit": "minutes-capacity-64af8b08b363474b",
-    "containers_state": "created",
-    "started": false,
-    "image_id": "sha256:21295ad6cb679361dbde6b7bb1ce4928e5c8f4a9313fa2fb07cfa22342f81a24",
-    "historical_diagnostic_image": true,
-    "cpu_uid_storage_and_policy_import_probes": "passed",
-    "new_model_calls": 0
-  },
   "latest_resource_check": {
-    "production_idle": true,
-    "ollama_loaded_models": 0,
-    "lab_lock": "available",
+    "observed_msk": "2026-10-24T21:17:39+03:00",
     "gpu_utilization_percent": 0,
-    "free_vram_mib": 23494,
-    "compute_pid_count": 1
+    "gpu_free_mib": 23494,
+    "note": "point-in-time only; all gates repeat before each start"
   },
   "compute_ownership": {
     "container": "psptm-minutes-worker-1",
@@ -90,5 +81,20 @@
     "file_hashes_verified": true,
     "filelock_pin": "4.2.1",
     "image_built": false
-  }
+  },
+  "historical_cancel_attempt_64af8b08b363474b": {
+    "job": "benchmarks/private/capacity/cancel-observer-3fa09d4-01/job.json",
+    "unit": "minutes-capacity-64af8b08b363474b",
+    "containers_state": "exited",
+    "started": true,
+    "image_id": "sha256:21295ad6cb679361dbde6b7bb1ce4928e5c8f4a9313fa2fb07cfa22342f81a24",
+    "historical_diagnostic_image": true,
+    "cpu_uid_storage_and_policy_import_probes": "passed",
+    "new_model_calls": 0,
+    "server_cancellation_verified": false,
+    "terminal_reason": "foreign_gpu_process"
+  },
+  "current_cancellation_evidence": "cancellation-profiles-2026-10-24.json",
+  "next_action": "Natural model release, then analysis-json and analysis-text on the same immutable runtime",
+  "production_worker_pause_required": false
 }
