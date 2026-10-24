@@ -250,9 +250,18 @@ def idle_context_gate(job, initial):
         worker = idle_worker(job)
         values = command(['nvidia-smi', '--query-gpu=utilization.gpu,memory.free',
                           '--format=csv,noheader,nounits']).strip().split(',')
+        observed = gpu_pids()
+        models = ollama_models()
         if (worker is None or len(values) != 2 or float(values[0]) != 0
                 or not math.isfinite(float(values[1])) or float(values[1]) < 20000
-                or gpu_pids() != initial or initial - worker['pids'] or ollama_models()):
+                or observed != initial or initial - worker['pids'] or models):
+            if '_path' in job:
+                details = dict(time=datetime.now(MOSCOW).isoformat(), gpu_fields=values,
+                               compute_pids=sorted(observed), loaded_models=len(models))
+                try:
+                    (job['_path'].parent / 'idle-worker-refusal.json').write_text(json.dumps(details))
+                except OSError:
+                    pass
             raise Refused('gpu_busy')
         now = time.monotonic()
         if now - started >= 30:
@@ -279,7 +288,6 @@ def bind_idle_worker(job):
     with path.open('x') as output:
         output.write(json.dumps(value))
     path.chmod(0o600)
-    resource_gate(job, starting=True)
     return value
 
 
@@ -390,7 +398,9 @@ def supervise(job, stop_at):
         except BlockingIOError:
             raise Refused('lab_busy') from None
         try:
-            resource_gate(job, starting=True)
+            # The database is CPU-only. The full GPU admission runs after its
+            # health check, immediately before starting the GPU/HTTP client.
+            production_idle()
             save(job, 'starting', stop_at=stop_at)
             command(['docker', 'start', job['database']])
             health_until = min(stop_at, time.time() + 90)
@@ -457,7 +467,7 @@ def main():
             cleanup(job)
         elif args.mode == 'bind-idle-worker':
             bind_idle_worker(job)
-            print(json.dumps({'idle_worker_bound': True, 'ready': True}))
+            print(json.dumps({'idle_worker_bound': True, 'ready': False, 'admission': 'not_checked'}))
         elif args.mode == 'check':
             owned(job, 'measure'); owned(job, 'database')
             resource_gate(job, starting=True)

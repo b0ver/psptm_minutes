@@ -108,6 +108,7 @@ def test_production_work_interrupts_only_own_containers_before_unlock(job, monke
     now = clock(monkeypatch)
     rows = {job[role]: row(job, role) for role in ('measure', 'database')}
     monkeypatch.setattr(cw, 'inspect', lambda identifier: copy.deepcopy(rows[identifier]))
+    monkeypatch.setattr(cw, 'production_idle', lambda: None)
     stops = []
     def command(argv, **kwargs):
         data = rows[argv[-1]]
@@ -141,6 +142,29 @@ def test_busy_lab_never_starts_container(job, monkeypatch):
         fcntl.flock(other, fcntl.LOCK_EX | fcntl.LOCK_NB)
         with pytest.raises(cw.Refused, match='lab_busy'):
             cw.supervise(job, cw.deadline(now).timestamp())
+
+
+def test_gpu_refusal_after_database_health_never_starts_client(job, monkeypatch):
+    now = clock(monkeypatch)
+    rows = {job[role]: row(job, role) for role in ('measure', 'database')}
+    monkeypatch.setattr(cw, 'inspect', lambda identifier: copy.deepcopy(rows[identifier]))
+    monkeypatch.setattr(cw, 'production_idle', lambda: None)
+    starts = []
+    def command(argv, **kw):
+        data = rows[argv[-1]]
+        if argv[1] == 'start':
+            starts.append(argv[-1]); data.update(running=True, status='running')
+        else:
+            data.update(running=False, status='exited')
+        return ''
+    def gate(job, starting):
+        assert rows[job['database']]['running'] and rows[job['database']]['health'] == 'healthy'
+        raise cw.Refused('gpu_busy')
+    monkeypatch.setattr(cw, 'command', command)
+    monkeypatch.setattr(cw, 'resource_gate', gate)
+    with pytest.raises(cw.Refused, match='gpu_busy'): cw.supervise(job, cw.deadline(now).timestamp())
+    assert starts == [job['database']] and rows[job['measure']]['status'] == 'created'
+    assert not rows[job['database']]['running']
 
 
 def test_closed_window_never_starts_container(job, monkeypatch):

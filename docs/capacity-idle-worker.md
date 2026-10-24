@@ -12,7 +12,7 @@
 python3 /ABSOLUTE/immutable-tools/capacity_watchdog.py bind-idle-worker /ABSOLUTE/private/job.json
 ```
 
-Команда читает Docker identity и production probes, пишет рядом с job **новый** private `idle-worker.json`: SHA256 неизменённого job.json, immutable container ID, image ID и StartedAt рабочего `psptm-minutes-worker-1`. Она не меняет старый job/mounts/images/production. Оба benchmark-контейнера должны быть created; существующую привязку не перезаписывает. После создания сразу проверяет resource gate; при отказе файл не является доказательством допуска. Каждый subsequent check/start заново проверяет identity и ресурсы.
+Команда читает Docker identity и production probes, пишет рядом с job **новый** private `idle-worker.json`: SHA256 неизменённого job.json, immutable container ID, image ID и StartedAt рабочего `psptm-minutes-worker-1`. Она не меняет старый job/mounts/images/production. Оба benchmark-контейнера должны быть created; существующую привязку не перезаписывает. Команда создает только identity binding. Она возвращает ready=false и admission=not_checked. Каждый check/start заново проверяет identity и ресурсы. Полный GPU gate выполняется после health своей CPU-БД. Он остается обязательным перед запуском клиента.
 
 Для допуска с resident compute нужны **10 секунд** последовательных наблюдений: global GPU utilization ровно 0%, free VRAM≥20000 MiB, пустой Ollama /api/ps, все production/agent gates idle, GPU PID принадлежат только привязанному worker. Разрыв между observations >3 s, новый/исчезнувший compute PID, неизвестная телеметрия, смена identity/StartedAt или очередь означают отказ. Нельзя принять десять секунд без наблюдений за непрерывный простой. Бюджет admission 30 s между probes; каждый внешний probe ограничен timeout.
 
