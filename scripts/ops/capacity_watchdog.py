@@ -24,6 +24,7 @@ OWNER_LABEL = 'org.psptm.capacity.run'
 API = 'psptm-minutes-api-1'
 AGENT = 'psptm-minutes-telemost-agent-1'
 OLLAMA = 'ollama'
+LAB = 'ml-school-lab-worker-1'
 INSPECT = ('{"id":{{json .Id}},"labels":{{json .Config.Labels}},'
            '"running":{{json .State.Running}},"status":{{json .State.Status}},'
            '"exit_code":{{json .State.ExitCode}},"health":'
@@ -56,6 +57,17 @@ if not root.is_dir(): raise SystemExit(2)
 states=[json.loads(p.read_text()) for p in root.glob('*/state.json')]
 # partial_saved is terminal for capacity; deployment has a stricter gate.
 print(json.dumps({'blocked':sum(s['status'] not in TERMINAL or s['status']=='upload_uncertain' for s in states)}))
+'''
+LAB_QUEUE_PROBE = '''
+import json
+import sqlite3
+from app.config import DB_PATH
+with sqlite3.connect(DB_PATH.resolve().as_uri() + '?mode=ro', uri=True, timeout=2) as db:
+    db.execute('PRAGMA query_only=ON')
+    counts = {state: db.execute('SELECT count(*) FROM lab_jobs WHERE state=?', (state,)).fetchone()[0]
+              for state in ('queued', 'running')}
+    counts['unknown'] = db.execute("SELECT count(*) FROM lab_jobs WHERE state NOT IN ('queued','running','done','failed')").fetchone()[0]
+print(json.dumps(counts))
 '''
 
 
@@ -129,9 +141,17 @@ def production_idle():
             raise Refused('production_probe_unavailable')
     counts = json.loads(command(['docker', 'exec', API, 'python', '-c', QUEUE_PROBE]))
     sessions = json.loads(command(['docker', 'exec', AGENT, 'python', '-c', AGENT_PROBE]))
+    lab = inspect(LAB)
+    labels = lab.get('labels') or {}
+    if (not lab['running'] or labels.get('com.docker.compose.project') != 'ml-school'
+            or labels.get('com.docker.compose.service') != 'lab-worker'):
+        raise Refused('lab_probe_unavailable')
+    lab_counts = json.loads(command(['docker', 'exec', LAB, 'python', '-B', '-c', LAB_QUEUE_PROBE]))
+    if set(lab_counts) != {'queued', 'running', 'unknown'}:
+        raise Refused('lab_probe_unavailable')
     if set(counts) != {'meetings', 'meeting_analysis', 'meeting_reports', 'queued_meetings', 'queued_analysis'}:
         raise Refused('production_probe_unavailable')
-    values = list(counts.values()) + [sessions['blocked']]
+    values = list(counts.values()) + [sessions['blocked']] + list(lab_counts.values())
     if any(type(value) is not int or value < 0 for value in values):
         raise Refused('production_probe_unavailable')
     if any(values):

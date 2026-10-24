@@ -69,3 +69,11 @@ Unit содержит независимые от SSH/чата RuntimeMaxSec и 
 ## Явный idle worker admission — 24 октября
 
 Опциональный [контракт](capacity-idle-worker.md) допускает только отдельно привязанный по job SHA/container/image/StartedAt рабочий STT context после 10 s whole-device GPU=0%, free VRAM≥20000 MiB и повторных idle gates. Без private binding строгий режим сохраняется. Это не классификация compute как G и не остановка consumer.
+
+## Лабораторная очередь
+
+Guard проверяет ml-school-lab-worker-1 при каждом production probe. Он проверяет Compose project=ml-school и service=lab-worker. Затем он читает только счетчики lab_jobs. Соединение SQLite использует mode=ro и PRAGMA query_only=ON. Python работает с флагом -B.
+
+Queued, running и неизвестные состояния блокируют нагрузку. Состояния done и failed не блокируют ее. Недоступный контейнер или ошибка запроса также вызывает отказ. Guard не меняет лабораторную базу и контейнер.
+
+Локальный набор дал 337 passed за 13.20 s. Отдельный тест подтвердил неизменность файла SQLite после пробы. Новый guard еще требует CI перед модельным прогоном.
