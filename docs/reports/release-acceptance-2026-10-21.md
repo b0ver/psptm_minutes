@@ -15,7 +15,17 @@
 | Защита GitHub | Admin API: main protection 404 Branch not protected; rulesets=[] | Review/status checks и deployment branch policy — владелец. Второго reviewer нет; ручная приёмка владельцем допустима по runbook, production workflow пока выключен |
 | Доставка/откат | Runbook и scripts подготовлены | Три immutable digest одного commit; staging deploy и candidate→previous rollback; приёмка точного manifest — оператор + reviewer |
 
-## Условия внешнего шага
+## Актуальная сверка 24 октября
+
+[Безопасный receipt](alpha-rc-status-2026-10-24.json) фиксирует точные исходники и пределы доказательства. PR #3 открыт в draft, head `3fa09d4`, main `cd2e047`. [CI 3fa09d4](https://github.com/b0ver/psptm_minutes/actions/runs/40097561349) **success**: **265 passed**, 19.61 s на чистом Linux/amd64 checkout; оба Python audit, synthetic staging upload/restart/restore, synthetic backup restore и recorder controls/crash recovery passed. Локальные 292 теста включают дополнительные untracked-тесты, поэтому это другой объём проверки. Filelock pin обновлён 4.0.12→4.2.1 после трёх новых advisory; исключений audit нет.
+
+Bender CPU staging smoke пройден 23 октября на прежнем runtime, [receipt](bender-staging-smoke-2026-10-23.json). Это не полный staging promotion/version rollback. Реальная synthetic streaming/cancel попытка показала работу клиента и штатную остановку своих контейнеров, но серверная отмена не принята; [evidence](graphics-watchdog-2026-10-23.json). Новый read-only observer проверен offline, на Bender не установлен. Corpus 85/60/30 новой bounded-reduce версии не запускался.
+
+Текущий внешний блокер: SSH требует Tailscale check. **Владелец** подтверждает доступ, затем **агент** сверяет handles/hashes/очереди/GPU/lock, устанавливает проверенный observer отдельно от старых mounts и готовит одну новую отмену в разрешённом окне. Подготовленные образы ecd3d10/366d0ea содержат прежние зависимости; их нельзя объявлять security-прошедшими образами нового RC или переносить на него старые capacity-результаты. Для актуального runtime нужны три immutable registry digest одного commit и приёмка конкретного manifest.
+
+GitHub повторно прочитан: environments=[], self-hosted runners=0, production opt-in variable отсутствует (404). Release build допускает только default branch, поэтому текущий draft PR ещё не может выпустить эти образы штатным release workflow. **Владелец** принимает продуктовый diff/merge PR #3; после этого возможны сборка точного main, настройка изолированного staging и ручная приёмка manifest по runbook. Не обходить branch gate и не включать production delivery. Human E2E, качество, восстановление рабочей копии данных и full staging rollback остаются открытыми; они требуют участия владельца/оператора и доступа к стенду.
+
+## Условия внешнего шага (история 21 октября)
 
 Владелец разрешил будни 07:00–09:00 MSK и выходные при свободных ресурсах. Созданы [расписания чата](../capacity-schedule.md); [watchdog](../capacity-watchdog.md) прошёл CPU-only timeout/SIGKILL на Bender. Отдельный образ и created-контейнеры [подготовлены](../benchmarks/capacity-preparation-2026-10-21.md), но реальная отмена и запуск GPU новой версии ещё не выполнены. Владелец подтвердил отсутствие отдельного хоста и второго reviewer и поручил использовать имеющееся. Подготовлен отдельный CPU smoke на Bender; полный staging/rollback остаётся незакрытым. Не создавать environments с вымышленным reviewer и не регистрировать production runner для обхода отсутствующей приёмки. Настройки GitHub в этой сверке только прочитаны.
 

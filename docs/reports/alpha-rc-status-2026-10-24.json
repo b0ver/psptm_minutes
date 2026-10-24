@@ -1,0 +1,50 @@
+{
+  "date": "2026-10-24",
+  "source_commit": "3fa09d44932720d1b8ab4d0100bf158305af6a5a",
+  "main_commit": "cd2e047943eba72652e79a565958113e9c6b5c54",
+  "pr": {
+    "url": "https://github.com/b0ver/psptm_minutes/pull/3",
+    "state": "OPEN",
+    "draft": true
+  },
+  "ci": {
+    "url": "https://github.com/b0ver/psptm_minutes/actions/runs/40097561349",
+    "conclusion": "success",
+    "integration_tests_passed": 265,
+    "integration_seconds": 19.61,
+    "warnings": 1,
+    "runtime_lock_audit": "no_known_vulnerabilities",
+    "agent_lock_audit": "no_known_vulnerabilities",
+    "synthetic_staging_upload_restart_restore": "passed",
+    "synthetic_backup_restore": "passed",
+    "recorder_controls_and_crash_recovery": "passed"
+  },
+  "local_worktree": {
+    "integration_tests_passed": 292,
+    "integration_seconds": 12.43,
+    "includes_additional_untracked_tests": true,
+    "laboratory_changes_preserved": true
+  },
+  "github_delivery": {
+    "environment_count": 0,
+    "self_hosted_runner_count": 0,
+    "production_opt_in_variable_http_status": 404,
+    "production_delivery_enabled": false
+  },
+  "external_acceptance": {
+    "ssh": "tailscale_check_required",
+    "server_cancellation": "not_accepted",
+    "new_observer_installed_on_bender": false,
+    "bounded_reduce_corpus_85_60_30": "not_started",
+    "human_e2e": "pending",
+    "production_data_restore": "pending",
+    "full_staging_promotion_and_version_rollback": "pending",
+    "validated_daily_capacity": false
+  },
+  "image_scope": {
+    "prepared_gpu_source": "ecd3d10b7ef6f1011dba65afaecca1aa09eb390e",
+    "prepared_images_security_gate_for_current_rc": "not_verified",
+    "current_three_registry_digest_release_manifest": "not_created"
+  },
+  "release_ready": false
+}
