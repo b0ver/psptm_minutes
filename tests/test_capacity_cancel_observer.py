@@ -17,7 +17,7 @@ def test_driver_sm_parser_preserves_unknown(body, expected):
     assert obs.pmon_compute(body) == expected
 
 
-@pytest.mark.parametrize('body', ['1 12 C 0', '0 12 X 0', '0 12 C NaN',
+@pytest.mark.parametrize('body', ['', '# header only', '1 12 C 0', '0 12 X 0', '0 12 C NaN',
                                   '0 12 C 101', '0 12 C 0\n0 12 C 1'])
 def test_ambiguous_driver_output_refused(body):
     with pytest.raises(obs.cw.Refused):

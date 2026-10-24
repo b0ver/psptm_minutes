@@ -80,3 +80,5 @@ Cancel/corpus jobs перепроверены: created, systemd units inactive; 
 - 23 октября 08:33 MSK: Tailscale/SSH восстановлены. Реальный synthetic streaming и остановка своего unit подтверждены; серверная отмена остаётся unaccepted (`post_cancel_process_ownership_ambiguous`). Позже модель освободилась естественно, GPU 0%, free VRAM 23848 MiB. Corpus не запускался; требуется диагностика observer и новая отдельная попытка. [Receipt](reports/graphics-watchdog-2026-10-23.json). Оба расписания обновлены без повторного старта завершённых jobs.
 
 - 24 октября: добавлен воспроизводимый read-only `capacity_cancel_observer.py`: exact PID cgroup/starttime, unknown SM fail-closed, 10 s непрерывного покоя, безопасный однократный receipt с частичными снимками. 290 локальных Docker-тестов passed (12.88 s); точный CI отдельно. SSH требует Tailscale check; инструмент не установлен на Bender и GPU-приёмка не выполнена. [Протокол](ollama-cancellation-acceptance.md).
+
+- Дополнительная проверка observer: пустой/header-only pmon не считается отсутствием compute; добавлены два отказных случая. Полный локальный Docker-набор **292 passed**, 12.13 s; тестовые контейнеры и сеть удалены.

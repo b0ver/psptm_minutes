@@ -20,12 +20,14 @@ except ImportError:
 
 def pmon_compute(output):
     result = {}
+    seen = False
     for line in output.splitlines():
         if not line.strip() or line.lstrip().startswith('#'):
             continue
         fields = line.split()
         if len(fields) < 4 or fields[0] != '0':
             raise cw.Refused('gpu_telemetry_ambiguous')
+        seen = True
         if fields[1:3] == ['-', '-']:
             continue
         if not fields[1].isdigit() or fields[2] not in ('G', 'C', 'C+G'):
@@ -38,6 +40,8 @@ def pmon_compute(output):
             if sm != '-' and (not sm.isdigit() or not 0 <= int(sm) <= 100):
                 raise cw.Refused('gpu_telemetry_ambiguous')
             result[pid] = None if sm == '-' else int(sm)
+    if not seen:
+        raise cw.Refused('gpu_telemetry_ambiguous')
     return result
 
 
