@@ -20,8 +20,8 @@
     "recorder_controls_and_crash_recovery": "passed"
   },
   "local_worktree": {
-    "integration_tests_passed": 342,
-    "integration_seconds": 13.63,
+    "integration_tests_passed": 364,
+    "integration_seconds": 12.91,
     "includes_additional_untracked_tests": true,
     "laboratory_changes_preserved": true
   },
@@ -35,12 +35,12 @@
     "ssh": "available_2026-10-24_21:17_MSK",
     "server_cancellation": "all_four_transport_profiles_accepted_and_natural_release_verified",
     "new_observer_installed_on_bender": true,
-    "bounded_reduce_corpus_85_60_30": "running",
+    "bounded_reduce_corpus_85_60_30": "interrupted_before_first_complete_sample",
     "human_e2e": "pending",
     "production_data_restore": "pending",
     "full_staging_promotion_and_version_rollback": "pending",
     "validated_daily_capacity": false,
-    "current_capacity_gate": "await_actual_corpus_result"
+    "current_capacity_gate": "independent_recap_queue_priority"
   },
   "image_scope": {
     "prepared_gpu_source": "ecd3d10b7ef6f1011dba65afaecca1aa09eb390e",
@@ -96,7 +96,7 @@
     "terminal_reason": "foreign_gpu_process"
   },
   "current_cancellation_evidence": "cancellation-profiles-2026-10-24.json",
-  "next_action": "Monitor exact current main unit and owned container IDs; do not start another corpus. Preserve safe aggregates and private evidence.",
+  "next_action": "After exact CI, deploy guard with read-only Recap priority gate in a new immutable directory; prepare one new job after confirming all old handles terminal.",
   "production_worker_pause_required": false,
   "latest_tool_ci": {
     "commit": "20d6869e90b1069adf18bab23f5fd6c8f6ace584",
@@ -112,7 +112,7 @@
     "unit": "minutes-capacity-29938a168bd54e6b",
     "orchestrator_unit": "minutes-capacity-orchestrator-29938a168bd54e6b",
     "measure_started_at": "2026-10-24T18:47:05.428182649Z",
-    "state": "running",
+    "state": "stopped_by_foreign_gpu_process",
     "source_files_verified": 72,
     "uid10001_storage_mount_and_app_model_path_probe": "passed",
     "input_durations_seconds": [
@@ -126,7 +126,9 @@
     "meeting_status_counts": {
       "processing": 1
     },
-    "validated_daily_capacity": false
+    "validated_daily_capacity": false,
+    "complete_samples": 0,
+    "result": "not_accepted"
   },
   "historical_main_attempts": [
     {
@@ -153,5 +155,14 @@
       "weights_changed": false,
       "volumes_removed": false
     }
-  ]
+  ],
+  "independent_gpu_consumer": {
+    "name": "recap-stt-1",
+    "project": "recap",
+    "service": "stt",
+    "ownership_proof": "driver PID cgroup matches exact Docker container",
+    "changed": false,
+    "queue_depth_at_diagnosis": 0,
+    "active_stt_leases_at_diagnosis": 0
+  }
 }

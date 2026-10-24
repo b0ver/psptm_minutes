@@ -104,7 +104,8 @@ def clock(monkeypatch):
     return now
 
 
-def test_production_work_interrupts_only_own_containers_before_unlock(job, monkeypatch):
+@pytest.mark.parametrize("busy_code", ["production_busy", "recap_busy", "recap_probe_unavailable"])
+def test_production_work_interrupts_only_own_containers_before_unlock(job, monkeypatch, busy_code):
     now = clock(monkeypatch)
     rows = {job[role]: row(job, role) for role in ('measure', 'database')}
     monkeypatch.setattr(cw, 'inspect', lambda identifier: copy.deepcopy(rows[identifier]))
@@ -125,9 +126,9 @@ def test_production_work_interrupts_only_own_containers_before_unlock(job, monke
     monkeypatch.setattr(cw, 'command', command)
     def resource_gate(job, starting):
         if not starting:
-            raise cw.Refused('production_busy')
+            raise cw.Refused(busy_code)
     monkeypatch.setattr(cw, 'resource_gate', resource_gate)
-    with pytest.raises(cw.Refused, match='production_busy'):
+    with pytest.raises(cw.Refused, match=busy_code):
         cw.supervise(job, cw.deadline(now).timestamp())
     assert stops == [job['measure'], job['database']]
     with Path(job['lab_lock']).open('r+') as other:

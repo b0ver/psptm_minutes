@@ -77,3 +77,14 @@ Guard проверяет ml-school-lab-worker-1 при каждом production p
 Queued, running и неизвестные состояния блокируют нагрузку. Состояния done и failed не блокируют ее. Недоступный контейнер или ошибка запроса также вызывает отказ. Guard не меняет лабораторную базу и контейнер.
 
 Локальный набор дал 337 passed за 13.20 s. Отдельный тест подтвердил неизменность файла SQLite после пробы. Новый guard еще требует CI перед модельным прогоном.
+
+
+## Recap: обнаруженный независимый GPU consumer
+
+24 октября в 21:50 МСК watchdog остановил текущий corpus с foreign_gpu_process. Причина подтверждена cgroup: дополнительный compute PID принадлежал recap-stt-1, project recap/service stt. Это отдельный рабочий потребитель GPU. Прогон остановился до завершения первого примера. Полных метрик корпуса нет. Его результат нельзя считать успехом STT или анализа. Все свои контейнеры завершились. Приватные logs/dump/data сохранены. Проект recap не изменялся.
+
+Read-only диагностика установила контракт GET http://127.0.0.1:18080/health: queue_depth, oldest_pending_sec и stt.active_leases. Эти счетчики происходят из очереди jobs. В момент диагностики все три равны нулю. Это снимок, а не гарантия отсутствия следующих задач. Проверка чужих GPU PID остается обязательной.
+
+В capacity_watchdog.py добавлен recap_idle. Он проверяет running/healthy и Compose labels bot/stt, точную loopback-привязку порта, db/ollama health, типы и значения счетчиков. Queue/backoff/active lease дают recap_busy. Ошибка, неизвестная схема или ответ больше 64 KiB дают recap_probe_unavailable. Проверка выполняется до запуска и при каждом production_idle во время inference и post-stop observation. Вызов только GET, timeout5s. Остановка и изменение Recap запрещены этим инструментом. Общий GPU lock не управляет независимыми producers Recap; при новой задаче свой прогон должен уступить.
+
+Локальный полный Docker/PostgreSQL-набор: 364 passed за 12.91 s, одно предупреждение Starlette. Контейнеры и сеть удалены. Тесты проверяют очередь без compute PID, malformed/oversize/недоступный health, identity и loopback, включение gate в admission, остановку только своих контейнеров с сохранением lock до cleanup. Новый точный commit еще требует CI и отдельного immutable каталога. Прежние guard/mounts не менять. Runtime image и модели не менялись.

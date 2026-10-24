@@ -131,3 +131,14 @@ CI 20d6869 прошел: https://github.com/b0ver/psptm_minutes/actions/runs/401
 Третья попытка prepared-current-3fa09d4-03 запущена. Unit minutes-capacity-29938a168bd54e6b, отдельный orchestrator minutes-capacity-orchestrator-29938a168bd54e6b. Проверены 72 файла чистых исходников, immutable image/model/tool hashes, три входа и 11 файлов STT-весов. Проверка app.settings.MODEL_PATH под UID 10001 подтвердила обязательные файлы модели. Образ не пересобирался. Веса не менялись. Перед стартом добавлен read-only preflight существующего guard; финальный admission внутри watchdog сохранен.
 
 Фактический старт measure: 2026-10-24T18:47:05.428182649Z. Последний снимок: measure running, DB healthy, одна собственная встреча processing, runtime resource gate passed. Это начало STT первого входа 84.66 минуты. Порядок остальных входов: 58.86 и 29.37 минуты. Результат корпуса еще отсутствует. Не перезапускать живой job. Проверять точные unit/PID/start ticks/container IDs. Полный успех, качество, суточная мощность, human E2E, рабочий restore и staging rollback остаются отдельными условиями.
+
+
+## Recap: обнаруженный независимый GPU consumer
+
+24 октября в 21:50 МСК watchdog остановил текущий corpus с foreign_gpu_process. Причина подтверждена cgroup: дополнительный compute PID принадлежал recap-stt-1, project recap/service stt. Это отдельный рабочий потребитель GPU. Прогон остановился до завершения первого примера. Полных метрик корпуса нет. Его результат нельзя считать успехом STT или анализа. Все свои контейнеры завершились. Приватные logs/dump/data сохранены. Проект recap не изменялся.
+
+Read-only диагностика установила контракт GET http://127.0.0.1:18080/health: queue_depth, oldest_pending_sec и stt.active_leases. Эти счетчики происходят из очереди jobs. В момент диагностики все три равны нулю. Это снимок, а не гарантия отсутствия следующих задач. Проверка чужих GPU PID остается обязательной.
+
+В capacity_watchdog.py добавлен recap_idle. Он проверяет running/healthy и Compose labels bot/stt, точную loopback-привязку порта, db/ollama health, типы и значения счетчиков. Queue/backoff/active lease дают recap_busy. Ошибка, неизвестная схема или ответ больше 64 KiB дают recap_probe_unavailable. Проверка выполняется до запуска и при каждом production_idle во время inference и post-stop observation. Вызов только GET, timeout5s. Остановка и изменение Recap запрещены этим инструментом. Общий GPU lock не управляет независимыми producers Recap; при новой задаче свой прогон должен уступить.
+
+Локальный полный Docker/PostgreSQL-набор: 364 passed за 12.91 s, одно предупреждение Starlette. Контейнеры и сеть удалены. Тесты проверяют очередь без compute PID, malformed/oversize/недоступный health, identity и loopback, включение gate в admission, остановку только своих контейнеров с сохранением lock до cleanup. Новый точный commit еще требует CI и отдельного immutable каталога. Прежние guard/mounts не менять. Runtime image и модели не менялись.

@@ -25,6 +25,8 @@ API = 'psptm-minutes-api-1'
 AGENT = 'psptm-minutes-telemost-agent-1'
 OLLAMA = 'ollama'
 LAB = 'ml-school-lab-worker-1'
+RECAP_BOT = 'recap-bot-1'
+RECAP_STT = 'recap-stt-1'
 INSPECT = ('{"id":{{json .Id}},"labels":{{json .Config.Labels}},'
            '"running":{{json .State.Running}},"status":{{json .State.Status}},'
            '"exit_code":{{json .State.ExitCode}},"health":'
@@ -156,6 +158,40 @@ def production_idle():
         raise Refused('production_probe_unavailable')
     if any(values):
         raise Refused('production_busy')
+    recap_idle()
+
+
+def recap_idle():
+    """Read-only priority gate for the observed independent Recap GPU consumer."""
+    try:
+        for name, service in ((RECAP_BOT, 'bot'), (RECAP_STT, 'stt')):
+            row = inspect(name)
+            labels = row.get('labels') or {}
+            if (not row['running'] or row['health'] != 'healthy'
+                    or labels.get('com.docker.compose.project') != 'recap'
+                    or labels.get('com.docker.compose.service') != service):
+                raise Refused('recap_probe_unavailable')
+        ports = json.loads(command(['docker', 'inspect', '--format',
+                                    '{{json .NetworkSettings.Ports}}', RECAP_BOT]))
+        if ports.get('8080/tcp') != [{'HostIp': '127.0.0.1', 'HostPort': '18080'}]:
+            raise Refused('recap_probe_unavailable')
+        with urllib.request.urlopen('http://127.0.0.1:18080/health', timeout=5) as response:
+            raw = response.read(65537)
+        if len(raw) > 65536:
+            raise Refused('recap_probe_unavailable')
+        value = json.loads(raw)
+        if value['db'] is not True or value['ollama'] is not True:
+            raise Refused('recap_probe_unavailable')
+        counts = [value['queue_depth'], value['oldest_pending_sec'],
+                  value['stt']['active_leases']]
+        if any(type(count) is not int or count < 0 for count in counts):
+            raise Refused('recap_probe_unavailable')
+        if any(counts):
+            raise Refused('recap_busy')
+    except Refused:
+        raise
+    except Exception:
+        raise Refused('recap_probe_unavailable') from None
 
 
 def ollama_models():
