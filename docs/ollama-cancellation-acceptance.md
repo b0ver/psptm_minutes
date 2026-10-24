@@ -63,3 +63,11 @@ Measure-клиент создаётся с runtime=runc и **без GPU DeviceRe
 Локальный полный Docker/PostgreSQL-набор 24 октября: **290 passed**, 12.88 s, одно предупреждение Starlette. Это локальное рабочее дерево с сохранёнными чужими изменениями; точный CI данного commit проверяется отдельно. Тесты наблюдателя используют синтетические telemetry/часы/cgroup и проверяют unknown SM, чужой/исчезнувший PID, непрерывность, timeout, сохранение частичных данных и запрет перезаписи. Реальный GPU/E2E этим не подтверждён.
 
 Повтор после отказа пустого/header-only pmon: **292 passed**, 12.13 s. Отсутствие строк телеметрии не трактуется как отсутствие вычислений.
+
+## Bender: подготовка вечером 24 октября
+
+SSH снова доступен. Observer из успешного CI `3fa09d4` установлен отдельно: `benchmarks/private/capacity/observer-3fa09d4/capacity_cancel_observer.py`, SHA256 `9683d198cbf1c574eb085fb5fb5f7d31dc81d86995af4aadfaaa1b267f097b28`; рядом проверенный watchdog с SHA256 `e8b6001aea3ecd47a176487d4c0a4869838873a7dc28641a8a7d7cf853cf7a96`. CPU help/import/parser проверены без моделей; пустой pmon отвергается, SM `-` сохраняется unknown. Старые mounts не менялись.
+
+После сверки terminal handles обеих старых попыток и created основного job подготовлена **одна** новая попытка `benchmarks/private/capacity/cancel-observer-3fa09d4-01/job.json`, unit `minutes-capacity-64af8b08b363474b`. Клиент и БД created, не запускались; новая собственная БД/tmpfs/случайный password и data volume. UID 10001 storage и импорт прежних readonly client/helper с image policy проверены CPU-only. Использован прежний immutable image ID из manifest только для диагностики отмены, не как security-прошедший новый RC.
+
+Watchdog check отказал `gpu_busy`: production idle, /api/ps пуст, lab.lock доступен, global GPU 0%, free VRAM 23494 MiB, но присутствует сторонний compute Python PID (394 MiB). Его не останавливать и не считать графическим фоном; даже idle CUDA-контекст блокирует initial gate. Новых модельных вызовов не было. [Receipt](reports/alpha-rc-status-2026-10-24.json). В следующее свободное окно проверять **эту** созданную попытку, не готовить дубль. После её штатного stop запускать установленный observer немедленно по основному протоколу.
