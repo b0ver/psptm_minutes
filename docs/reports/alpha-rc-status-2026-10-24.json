@@ -20,8 +20,8 @@
     "recorder_controls_and_crash_recovery": "passed"
   },
   "local_worktree": {
-    "integration_tests_passed": 364,
-    "integration_seconds": 12.91,
+    "integration_tests_passed": 375,
+    "integration_seconds": 13.01,
     "includes_additional_untracked_tests": true,
     "laboratory_changes_preserved": true
   },
@@ -35,12 +35,12 @@
     "ssh": "available_2026-10-24_21:17_MSK",
     "server_cancellation": "all_four_transport_profiles_accepted_and_natural_release_verified",
     "new_observer_installed_on_bender": true,
-    "bounded_reduce_corpus_85_60_30": "running_with_recap_priority_gate",
+    "bounded_reduce_corpus_85_60_30": "interrupted_before_first_complete_sample",
     "human_e2e": "pending",
     "production_data_restore": "pending",
     "full_staging_promotion_and_version_rollback": "pending",
     "validated_daily_capacity": false,
-    "current_capacity_gate": "await_actual_corpus_result"
+    "current_capacity_gate": "recap_periodic_gpu_healthcheck_requires_coordination"
   },
   "image_scope": {
     "prepared_gpu_source": "ecd3d10b7ef6f1011dba65afaecca1aa09eb390e",
@@ -96,7 +96,7 @@
     "terminal_reason": "foreign_gpu_process"
   },
   "current_cancellation_evidence": "cancellation-profiles-2026-10-24.json",
-  "next_action": "Monitor exact current main04 handles. Export only safe aggregate rows after completion. Never restart a live or consumed job.",
+  "next_action": "Owner decision on reviewed Recap shared-lock healthcheck proposal. No additional corpus job until the periodic GPU conflict is resolved.",
   "production_worker_pause_required": false,
   "latest_tool_ci": {
     "commit": "49350a73f4438b2d91f549387a9a248085e3e26b",
@@ -112,7 +112,7 @@
     "unit": "minutes-capacity-ecf31efb88164bba",
     "orchestrator_unit": "minutes-capacity-orchestrator-ecf31efb88164bba",
     "controller_sha256": "1af5be2ccf28a83a446ef659f7e09af710445f0645814446ea484c065150b4a4",
-    "state": "running",
+    "state": "terminal_foreign_recap_healthcheck",
     "measure_started_at": "2026-10-24T19:00:03.047211983Z",
     "watchdog_stop_at_epoch": 1792875586.132746,
     "runtime_resource_gate": "passed",
@@ -129,7 +129,10 @@
     ],
     "stt_weight_files_hashed": 11,
     "complete_samples": 0,
-    "validated_daily_capacity": false
+    "validated_daily_capacity": false,
+    "measure_exit": 137,
+    "database_exit": 0,
+    "result": "not_accepted"
   },
   "historical_main_attempts": [
     {
@@ -189,6 +192,13 @@
     "ownership_proof": "driver PID cgroup matches exact Docker container",
     "changed": false,
     "queue_depth_at_diagnosis": 0,
-    "active_stt_leases_at_diagnosis": 0
+    "active_stt_leases_at_diagnosis": 0,
+    "periodic_gpu_healthcheck_seconds": 120,
+    "healthcheck_command_verified": true,
+    "passive_gpu_healthcheck_pid_verified": true,
+    "queue_gate_alone_sufficient": false,
+    "project_changed": false,
+    "proposal": "docs/proposals/recap-healthcheck-coordination-2026-10-24.md",
+    "owner_approval": "pending"
   }
 }

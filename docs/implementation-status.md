@@ -151,3 +151,12 @@ CI 49350a7 прошел: https://github.com/b0ver/psptm_minutes/actions/runs/401
 Read-only production_idle с новым Recap gate прошел на Bender без вызовов модели. После проверки terminal handles попытки03 сохранены dump/logs/data и удалены только ее terminal контейнеры и пустые собственные сети. Новая попытка prepared-current-3fa09d4-04 использует свежие БД, пароль и данные. UID 10001, app.settings.MODEL_PATH, source72 и все входные hashes проверены заново.
 
 Unit minutes-capacity-ecf31efb88164bba и orchestrator minutes-capacity-orchestrator-ecf31efb88164bba активны. Фактический measure StartedAt 2026-10-24T19:00:03.047211983Z. Снимок 22:00:53 МСК: первая встреча processing, DB healthy, GPU93%, один compute PID собственного measure, runtime resource gate passed. Это подтверждение фактической STT-нагрузки. Это еще не успешный первый пример. Watchdog stop_at=1792875586.132746. Не запускать новый corpus и не повторять завершенную cancel-матрицу. Следующий шаг - получить итог этого unit и безопасные JSON-агрегаты. Общий lock не заставляет Recap откладывать его собственные задачи; наш guard уступает им, но не гарантирует исключительное резервирование GPU.
+
+
+## Корневая причина периодического Recap GPU-процесса
+
+Main04 завершен foreign_gpu_process: measure exit137, DB exit0. Метрик завершенного примера нет. Docker healthcheck Recap запускает python -m recap --smoke --only stt каждые120s. Его код загружает модель. Очередь при этом остается пустой. Пассивное наблюдение следующего GPU PID716927 подтвердило точную команду и cgroup. Поэтому новую capacity-попытку не запускать до согласованного устранения этого конфликта.
+
+Подготовлены helper scripts/ops/recap_gpu_healthcheck.py и proposal overlay docs/proposals/recap-stt-shared-gpu-healthcheck.yaml. Общий read-only flock сохраняется через exec исходного smoke. При занятой lease выполняется только CPU/API liveness с явным deferred GPU readiness. Ошибка исходного smoke не скрывается. В Recap ничего не применено. Все действия ограничены read-only диагностикой и CPU-проверками в отдельных контейнерах.
+
+Локально375 passed за13.01s. Синтетический реальный exec доказал удержание lease и сохранение exit0/7. Bender CPU-only proof подтвердил взаимную видимость read-only bind/host locks без изменения inode/mtime. Подробное предложение и условия безопасного применения: docs/proposals/recap-healthcheck-coordination-2026-10-24.md. Требуется разрешение владельца на изменение другого проекта согласно AGENTS.md.

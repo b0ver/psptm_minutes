@@ -1,0 +1,19 @@
+# PROPOSAL ONLY. Not deployed. Requires approval to change Recap.
+# Preserve and compare the current Recap configuration before applying.
+# Use --no-build. This is the currently running immutable image.
+services:
+  stt:
+    image: sha256:f4f016c8974e7eb42b9b292dd4a477f4a9b14c8823863ec032835c66503ee3cc
+    volumes:
+      - type: bind
+        source: ${RECAP_HEALTH_WRAPPER:?reviewed immutable helper required}
+        target: /run/recap_gpu_healthcheck.py
+        read_only: true
+        bind: {create_host_path: false}
+      - type: bind
+        source: /home/epopov/projects/psptm_minutes/benchmarks/qwen_lab/lab.lock
+        target: /run/shared-gpu-lab.lock
+        read_only: true
+        bind: {create_host_path: false}
+    healthcheck:
+      test: [CMD, python, -B, /run/recap_gpu_healthcheck.py, /run/shared-gpu-lab.lock]
