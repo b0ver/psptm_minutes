@@ -15,7 +15,7 @@ from app.llm_retry import inference_call
 KIT = Path(__file__).resolve().parents[1] / 'config' / 'meeting_kit'
 CATALOG = json.loads((KIT / 'templates.json').read_text())
 DEFAULT_TYPES = ['tldr', 'meeting_notes', 'action_items', 'key_meanings', 'chapters']
-VERSION = 'minutes-rc-v46-20261105-source-status-v6'
+VERSION = 'minutes-rc-v46-20261105-source-status-v7'
 MAX_PROMPT_CHARS = 45000
 MAX_SUMMARY_CHARS = 6000
 PARTITION_SCOPE = ('\nЭто отдельная часть длинной встречи. Статусы действуют только в пределах переданных фактов. '

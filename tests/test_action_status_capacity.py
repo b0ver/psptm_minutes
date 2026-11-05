@@ -57,7 +57,8 @@ class PacketOracle:
                    'roles': sorted({self.roles[span['source_id']] for span in positive}), 'support': support}
             if spec == REVIEW_SCHEMA:
                 row['verdict'] = 'confirmed'
-                return {'coverage': 'complete', 'missing_action_refs': [], 'uncertain_action_refs': [], 'results': [row]}
+                row['reason_code'] = 'window_assessment_supported'
+                return {'assessment_coverage': 'complete', 'unreviewed_action_refs': [], 'uncertain_assessment_refs': [], 'results': [row]}
             return {'results': [row]}
         source_id = list(self.roles)[-1]
         original = next(row for row in self.items if row['id'] == source_id)

@@ -211,3 +211,29 @@ V5 immutable runtimes/E2E сохранены. VERSIONv6 сбрасываетке
 Это структурная вместимость с известными аннотациямиfixtures, НЕ семантическая приемка.
 НужныновыйCI/staging,собственныйboundmanifest/cancellation,unchangedE2E,настоящие
 crosswindownativecontrols иисходные12+28fullsource/bodyreview. Productionнетронут.
+
+
+6 ноября: RCv6 faebede прошел focused E2E ad5e1e41a2783709 (12native/pending0/6reports),
+но ПЕРВЫЙ новый native longcontrol late_cancel НЕ ПРОШЕЛ после4completed/pending0.
+Отказ source_status_scan_window_coverage_not_confirmed, immutablecontainerexited1/units terminal,
+никакого идентичного повтора/переноса caches. Owncancel31186f54ee4049b1 принят33.63050985с,
+receiptc5782929c0480a4beae73e6140e5aad27a5a2749f5bcb467341aee96ab301e03/auth1.
+На пустом относительно задачи окне reviewer вернул presence=absent, но coverage=incomplete и
+missing_action_refs=[A00001], хотя строка оценки A00001 присутствовала. Это наблюдаемое
+расхождение и неоднозначность названия coverage/missing в протоколе. Семантическая причинность
+еще требует свежих controls, не объявляется доказанной по одной структуре.
+Agentcontrolaudit5b53ab068aecfb00c21c2ade6bab5848f3a271ffb524d3714934ccc1fbbf8d21.
+
+В новом source-status-v7 пространства разведены явно: assessment_coverage относится к полноте
+ОЦЕНКИ всех action_refs по текущему окну; unreviewed_action_refs — к непроверенным оценкам,
+а не к работам, проверенно отсутствующим в этом окне. Independentlyconfirmed absent допустим
+только после чтения всего окна, не по пустому scan; он не отменяет работу в других окнах.
+Новые поля обязательны, legacycoverage/missingnamespace НЕ принимается и не преобразуется.
+reason_code обязателен; confirmed требует window_assessment_supported. Все прежние exact refs,
+полные источники/окна/слова/цитаты/координаты/presence/role agreement/uncertain/rejected/kind/
+owner/final-source/native-admission/45000/32768/output/global64 gates сохранены.
+44readonlyDockerCPUtests прошли, включая legacy-response rejection и обязательный reason.
+Receipt e1f3fa0e02294eb3f3139ecc48fdb9950706bb13a3aeef570a90f288e2f27288.
+V6 сохранен, VERSIONv7 сбрасываеткеш. CPU/CI/короткийE2E/controls не заменяют исходные12+28
+и независимыйполныйreview, такжене заменяютv47 24+56. Новомуmanifestнужнасвояотмена.
+Productionнеизменен,приемканеослаблена.

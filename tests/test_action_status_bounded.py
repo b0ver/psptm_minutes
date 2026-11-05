@@ -37,7 +37,8 @@ class LedgerModel:
             row = {'action_ref': 'A00001', 'presence': 'present', 'roles': roles, 'support': support}
             if spec == REVIEW_SCHEMA:
                 row['verdict'] = 'confirmed'
-                value = {'coverage': 'complete', 'missing_action_refs': [], 'uncertain_action_refs': [], 'results': [row]}
+                row['reason_code'] = 'window_assessment_supported'
+                value = {'assessment_coverage': 'complete', 'unreviewed_action_refs': [], 'uncertain_assessment_refs': [], 'results': [row]}
             else:
                 value = {'results': [row]}
         elif spec == CLASSIFY_SCHEMA:
@@ -75,9 +76,9 @@ class BoundedApplicationStatus(unittest.TestCase):
             self.assertEqual(call['source_spans'][-1]['text'], ITEMS[-1]['text'])
 
     def test_coverage_uncertainty_and_unsupported_final_state_fail_closed(self):
-        for stage in ['coverage', 'final']:
+        for stage in ['assessment_coverage', 'final']:
             def mutate(value, packet, spec):
-                if stage == 'coverage' and spec == REVIEW_SCHEMA: value['coverage'] = 'uncertain'
+                if stage == 'assessment_coverage' and spec == REVIEW_SCHEMA: value['assessment_coverage'] = 'uncertain'
                 if stage == 'final' and spec == CHECK_SCHEMA:
                     value.update(verdict='uncertain', reason_code='insufficient_evidence')
             with self.subTest(stage=stage), self.assertRaises(ProcessingError):
@@ -95,6 +96,25 @@ class BoundedApplicationStatus(unittest.TestCase):
         model = LedgerModel()
         with self.assertRaises(ProcessingError): classify_actions(actions, ITEMS, model, validate, 45000)
         self.assertEqual(model.calls, [])
+
+    def test_legacy_inventory_coverage_namespace_cannot_replace_window_assessment(self):
+        def mutate(value, packet, spec):
+            if spec == REVIEW_SCHEMA:
+                value['coverage'] = value.pop('assessment_coverage')
+        model = LedgerModel(mutate)
+        with self.assertRaises(ProcessingError): classify_actions(ACTIONS, ITEMS, model, validate, 45000)
+        self.assertEqual(len(model.calls), 2)
+
+    def test_confirmed_requires_explicit_supported_window_assessment_reason(self):
+        for reason in [None, 'insufficient_context']:
+            def mutate(value, packet, spec):
+                if spec == REVIEW_SCHEMA:
+                    if reason is None: value['results'][0].pop('reason_code')
+                    else: value['results'][0]['reason_code'] = reason
+            model = LedgerModel(mutate)
+            with self.subTest(reason=reason), self.assertRaises(ProcessingError):
+                classify_actions(ACTIONS, ITEMS, model, validate, 45000)
+            self.assertEqual(len(model.calls), 2)
 
 
 if __name__ == '__main__':

@@ -24,14 +24,16 @@ REVIEW_ROW = {'type': 'object', 'additionalProperties': False,
                              'presence': ROW['properties']['presence'],
                              'roles': ROW['properties']['roles'],
                              'verdict': {'type': 'string', 'enum': ['confirmed', 'rejected', 'uncertain']},
+                             'reason_code': {'type': 'string', 'enum': ['window_assessment_supported',
+                                 'mention_found', 'roles_mismatch', 'insufficient_context']},
                              'support': SUPPORT},
-              'required': ['action_ref', 'presence', 'roles', 'verdict', 'support']}
+              'required': ['action_ref', 'presence', 'roles', 'verdict', 'reason_code', 'support']}
 REVIEW_SCHEMA = {'type': 'object', 'additionalProperties': False,
-    'properties': {'coverage': {'type': 'string', 'enum': ['complete', 'incomplete', 'uncertain']},
-                   'missing_action_refs': {'type': 'array', 'items': {'type': 'string'}, 'uniqueItems': True},
-                   'uncertain_action_refs': {'type': 'array', 'items': {'type': 'string'}, 'uniqueItems': True},
+    'properties': {'assessment_coverage': {'type': 'string', 'enum': ['complete', 'incomplete', 'uncertain']},
+                   'unreviewed_action_refs': {'type': 'array', 'items': {'type': 'string'}, 'uniqueItems': True},
+                   'uncertain_assessment_refs': {'type': 'array', 'items': {'type': 'string'}, 'uniqueItems': True},
                    'results': {'type': 'array', 'items': REVIEW_ROW}},
-    'required': ['coverage', 'missing_action_refs', 'uncertain_action_refs', 'results']}
+    'required': ['assessment_coverage', 'unreviewed_action_refs', 'uncertain_assessment_refs', 'results']}
 SCAN_SYSTEM = '''Прочитай ВСЕ переданные source_spans. Это часть полного источника, не весь разговор.
 Для КАЖДОГО action_ref проверь, есть ли в этой части упоминание именно этой работы.
 candidate — недоверенный указатель работы, не свидетельство существования или активности.
@@ -51,8 +53,21 @@ REVIEW_SYSTEM = '''Отдельно проверь ВСЕ source_spans и КАЖ
 Отсутствие упоминания нельзя вывести из пустого ответа scan: ищи пропущенные упоминания сам.
 Для present нужны дословные support этого окна и подтверждение всех заявленных ролей;
 absent требует проверенного отсутствия упоминаний именно этой работы во всем окне, support пуст.
-Неполнота — coverage incomplete, сомнение — uncertain. missing_action_refs и uncertain_action_refs
-должны явно перечислять затронутые работы. Для каждого action_ref дай verdict, свое presence и полный проверенный список roles.
+assessment_coverage относится к ПОЛНОТЕ ПРОВЕРКИ всех action_ref по этому окну,
+а НЕ к присутствию каждой работы в этом окне и НЕ к полноте исходного инвентаря.
+Окно может не содержать ни одной проверяемой работы: после независимого чтения ВСЕХ
+source_spans допустимы presence=absent, roles=[], support=[], verdict=confirmed,
+reason_code=window_assessment_supported для КАЖДОГО action_ref, assessment_coverage=complete,
+unreviewed_action_refs=[], uncertain_assessment_refs=[]. Это не отменяет работу в других окнах.
+Не требуй упоминания работы в каждом окне только из-за ее наличия в candidates.
+unreviewed_action_refs перечисляет только НЕПРОВЕРЕННЫЕ action_ref, а не проверенные absent.
+uncertain_assessment_refs перечисляет только оценки с недостаточным свидетельством/контекстом.
+assessment_coverage=incomplete при пропущенных проверках, uncertain при сомнении.
+Для каждого action_ref дай verdict, свое presence и полный проверенный список roles.
+confirmed требует reason_code=window_assessment_supported; mention_found означает найденное
+контрсвидетельство присутствия, roles_mismatch — несоответствие ролей, insufficient_context —
+невозможность вывода. Не подтверждай absent по одному лишь пустому ответу scan: самостоятельно
+проверь весь текст окна. Если присутствие, отсутствие или роли сомнительны, верни uncertain.
 Никакой итоговой активности и никакой приемки поручения этот этап не устанавливает.
 source_id/исходная строка, span_ref/часть и action_ref/работа различны. Координаты цитаты исходные.
 Верни только JSON по схеме.'''
@@ -167,12 +182,13 @@ def scan_all_windows(source, windows, candidates, llm, validate, fits, maximum_c
         calls += 1
         validate(reviewed, REVIEW_SCHEMA)
         secondary = _rows(reviewed, references)
-        if (reviewed['coverage'] != 'complete' or reviewed['missing_action_refs']
-                or reviewed['uncertain_action_refs']):
+        if (reviewed['assessment_coverage'] != 'complete' or reviewed['unreviewed_action_refs']
+                or reviewed['uncertain_assessment_refs']):
             raise SourceWindowError('source_status_scan_window_coverage_not_confirmed')
         for reference, item in secondary.items():
             _support(item['support'], window)
             if (item['verdict'] != 'confirmed' or item['presence'] != primary[reference]['presence']
+                    or item['reason_code'] != 'window_assessment_supported'
                     or len(set(item['roles'])) != len(item['roles'])
                     or set(item['roles']) != set(primary[reference]['roles'])
                     or item['presence'] == 'uncertain'
