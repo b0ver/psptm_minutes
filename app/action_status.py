@@ -195,8 +195,10 @@ def classify_actions(actions, items, llm, validate, maximum_chars):
 
     def window_fits(window):
         user = json.dumps({'source_spans': window, 'candidates': candidates}, ensure_ascii=False)
-        # Reserve room for opposed evidence and full neighboring windows. No source is discarded.
-        return len(user) <= maximum_chars // 4 and fits(SCAN_SYSTEM, user, SCAN_SCHEMA)
+        # An obligation, cancellation and resumption can occupy distant windows with neighbors.
+        # Smaller scan packets reserve space for their union; the final actual packet is still checked.
+        # No source is discarded, and the same global call budget can still refuse an oversized plan.
+        return len(user) <= maximum_chars // 6 and fits(SCAN_SYSTEM, user, SCAN_SCHEMA)
 
     try:
         windows = plan_windows(items, window_fits, maximum_windows)
