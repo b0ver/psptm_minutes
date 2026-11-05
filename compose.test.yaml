@@ -1,4 +1,4 @@
-name: psptm-minutes-tests
+name: psptm-minutes-rc-v46-tests
 services:
   db:
     image: postgres:16.10-alpine@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297
@@ -16,6 +16,7 @@ services:
   tests:
     build: {context: ., target: test}
     environment:
+      PYTHONPATH: /app:/app/scripts/ops
       DB_HOST: db
       DB_PASSWORD_FILE: /app/tests/db-password
       DATA_DIR: /tmp/minutes-data

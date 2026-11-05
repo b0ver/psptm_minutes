@@ -15,6 +15,7 @@ from app.db import Session, Meeting, RecordingImport, Action, Audit, Outbox
 from app.registry import action_dict, audit, locked_action, approve, change_status
 from app.schemas import EditAction, Approval, ChangeStatus
 from app import reports
+from app.meeting_dates import dates
 from app.settings import DATA_DIR
 
 
@@ -78,7 +79,10 @@ def health():
 @app.get("/api/meetings")
 def meetings():
     with Session() as s:
-        return [{"id": m.id, "title": m.title, "status": m.status, "error_code": m.error_code, "created_at": m.created_at} for m in s.scalars(select(Meeting).order_by(Meeting.created_at.desc()).limit(100))]
+        items = list(s.scalars(select(Meeting).order_by(Meeting.created_at.desc()).limit(100)))
+        timestamps = dates(s, items)
+        return [{"id": m.id, "title": m.title, "status": m.status, "error_code": m.error_code,
+                 **timestamps[m.id]} for m in items]
 
 
 @app.post("/api/meetings", status_code=201)
@@ -183,6 +187,7 @@ def meeting(meeting_id: str):
         from app.meeting_context import data,annotate
         context=data(s,m.id)
         return {"recording_complete": receipt.complete if receipt else True, "id": m.id, "title": m.title, "status": m.status, "error_code": m.error_code, "transcript": annotate(m.transcript,context) if m.transcript else m.transcript, "minutes": m.minutes,"telemost_context":context,
+                **dates(s, [m])[m.id],
                 "actions": [action_dict(a) for a in s.scalars(select(Action).where(Action.meeting_id == m.id))],
                 "analysis": reports.state(s, m.id)}
 

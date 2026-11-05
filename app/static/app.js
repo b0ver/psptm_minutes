@@ -16,6 +16,15 @@ async function api(path, options={}) {
 }
 const json = (method, body) => ({method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
 function badge(status) { return node('span',labels[status]||status,'badge '+status); }
+const meetingTimeFormat=new Intl.DateTimeFormat('ru-RU',{timeZone:'Europe/Moscow',day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hourCycle:'h23'});
+function meetingTime(value){if(!value)return '';const date=new Date(value);return Number.isNaN(date.getTime())?'':meetingTimeFormat.format(date)+' МСК';}
+function meetingDateLabel(m){
+  const started=meetingTime(m.recording_started_at);
+  if(started)return 'Запись: '+started;
+  if(/^\d{4}-\d{2}-\d{2}$/.test(m.meeting_date||'')){const [y,month,day]=m.meeting_date.split('-');return `Встреча: ${day}.${month}.${y} · время не указано`;}
+  const added=meetingTime(m.created_at);
+  return added?'Добавлено: '+added:'Дата и время записи не указаны';
+}
 function uploadAccess(){ $('upload-button').disabled=busy;$('recording').disabled=busy;$('upload').querySelectorAll('input').forEach(input=>input.disabled=busy);$('upload').setAttribute('aria-busy',String(busy));if(!busy)$('upload-button').textContent='Загрузить и обработать'; }
 function sizeLabel(bytes){const units=['Б','КиБ','МиБ','ГиБ','ТиБ'];let unit=0;while(bytes>=1024&&unit<units.length-1){bytes/=1024;unit++;}return new Intl.NumberFormat('ru',{maximumFractionDigits:1}).format(bytes)+' '+units[unit];}
 function uploadState(stage,loaded=0,total=0){
@@ -48,7 +57,7 @@ async function refresh(){
   if(busy)return;
   const meetings=await api('meetings');
   $('meeting-list').replaceChildren();
-  for(const m of meetings){const b=node('button',undefined,'meeting');b.append(node('strong',m.title),node('br'),badge(m.status));b.onclick=()=>openMeeting(m.id).catch(e=>notify(e.message));$('meeting-list').append(b);}
+  for(const m of meetings){const b=node('button',undefined,'meeting');b.append(node('strong',m.title),node('span',meetingDateLabel(m),'meeting-date'),badge(m.status));b.onclick=()=>openMeeting(m.id).catch(e=>notify(e.message));$('meeting-list').append(b);}
   if(!meetings.length)$('meeting-list').append(node('p','Загруженных встреч пока нет.','muted'));
 }
 function field(label, type, value){const l=node('label',label);const input=node(type==='textarea'?'textarea':'input');if(type!=='textarea')input.type=type;input.value=value||'';l.append(input);return [l,input];}
@@ -71,6 +80,8 @@ function taskCard(a, full=true){
 }
 async function openMeeting(id){
   selected=id;const m=await api('meetings/'+id);const detail=$('detail');detail.className='panel';detail.replaceChildren(node('h2',m.title),badge(m.status));
+  detail.append(node('p',meetingDateLabel(m),'muted'));
+  if(m.recording_started_at||m.meeting_date){const added=meetingTime(m.created_at);if(added)detail.append(node('p','Добавлено: '+added,'muted'));}
   if(m.recording_complete===false)detail.append(node('p','Неполная запись: выводы относятся только к сохранённой части встречи.','muted'));
   if(m.error_code){const message=m.error_code==='unverified_action_candidates'?'Некоторые предложенные поручения не прошли проверку цитат и не добавлены в реестр. Проверьте поручения по транскрипту.':(m.transcript?'Транскрипт сохранён. Не удалось составить протокол: ':'Не удалось обработать запись: ')+m.error_code;detail.append(node('p',message,'muted'));}
   if(m.minutes){detail.append(node('p','Черновик протокола. Проверьте по записи перед использованием.','muted'),node('div',m.minutes,'minutes'));}

@@ -15,7 +15,7 @@ from app.llm_retry import inference_call
 KIT = Path(__file__).resolve().parents[1] / 'config' / 'meeting_kit'
 CATALOG = json.loads((KIT / 'templates.json').read_text())
 DEFAULT_TYPES = ['tldr', 'meeting_notes', 'action_items', 'key_meanings', 'chapters']
-VERSION = 'meeting-kit-v2-bounded-merge'
+VERSION = 'minutes-rc-v46-20261105-exact-source'
 MAX_PROMPT_CHARS = 45000
 MAX_SUMMARY_CHARS = 6000
 PARTITION_SCOPE = ('\nЭто отдельная часть длинной встречи. Статусы действуют только в пределах переданных фактов. '
@@ -189,17 +189,33 @@ def split_lines(items, budget=4500):
 
 
 def quote_source(quote, items):
-    q = normalize(quote or '')
-    if not q:
+    """Require one exact source occurrence; ambiguity never selects the first row."""
+    if not isinstance(quote, str) or not quote.strip():
         return None
-    for item in items:
-        if q in normalize(item['text']):
-            return item
-    for i in range(len(items) - 1):
-        # Check boundaries only after individual lines, preserving the actual source time.
-        if q in normalize(items[i]['text'] + ' ' + items[i + 1]['text']):
-            return items[i]
-    return None
+    matches = []
+    for index, item in enumerate(items):
+        offset = item['text'].find(quote)
+        while offset >= 0:
+            matches.append((index, offset, item))
+            offset = item['text'].find(quote, offset + 1)
+    # Preserve the existing adjacent-row case without accepting matches wholly
+    # contained in either row twice. No punctuation/case/whitespace rewriting.
+    for index in range(len(items) - 1):
+        left, right = items[index], items[index + 1]
+        joined = left['text'] + ' ' + right['text']
+        offset = joined.find(quote)
+        while offset >= 0:
+            if offset < len(left['text']) and offset + len(quote) > len(left['text']) + 1:
+                matches.append((index, offset, left))
+            offset = joined.find(quote, offset + 1)
+    return matches[0][2] if len(matches) == 1 else None
+
+
+def source_field_present(value, evidence):
+    """A literal field must be a whole name/phrase, not part of another word."""
+    if not isinstance(value, str) or not value.strip() or not isinstance(evidence, str):
+        return False
+    return re.search(r'(?<!\w)' + re.escape(value) + r'(?!\w)', evidence) is not None
 
 
 def verify_facts(facts, items, llm, meta):
@@ -235,17 +251,17 @@ def verify_facts(facts, items, llm, meta):
                 continue
             item = {**item, 'timestamp': timestamp(source['start']), 'verified': True}
             person = 'assignee' if kind == 'action_items' else 'owner'
-            if item.get(person) and normalize(item[person]) not in normalize(item['evidence']):
+            if item.get(person) and not source_field_present(item[person], item['evidence']):
                 item[person] = None
             if kind == 'action_items':
                 item['due_date'] = None
-                if item.get('due_raw') and normalize(item['due_raw']) not in normalize(item['evidence']):
+                if item.get('due_raw') and not source_field_present(item['due_raw'], item['evidence']):
                     item['due_raw'] = None
-                if item.get('assigned_by') and normalize(item['assigned_by']) not in normalize(item['evidence']):
+                if item.get('assigned_by') and not source_field_present(item['assigned_by'], item['evidence']):
                     item['assigned_by'] = None
             kept.append(item)
         facts[kind] = kept
-    facts['quotes'] = [{**q, 'speaker': q['speaker'] if q.get('speaker') and normalize(q['speaker']) in normalize(q['quote']) else None, 'timestamp': timestamp(src['start'])} for q in facts['quotes'] if (src := quote_source(q['quote'], items))]
+    facts['quotes'] = [{**q, 'speaker': q['speaker'] if q.get('speaker') and source_field_present(q['speaker'], q['quote']) else None, 'timestamp': timestamp(src['start'])} for q in facts['quotes'] if (src := quote_source(q['quote'], items))]
     facts['rejected_items'] = rejected
     facts['_meta'] = meta
     return facts

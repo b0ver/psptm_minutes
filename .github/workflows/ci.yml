@@ -20,7 +20,7 @@ jobs:
       - name: Integration tests with isolated PostgreSQL
         run: docker compose -f compose.test.yaml up --build --abort-on-container-exit --exit-code-from tests
       - name: Capacity supervisor Docker metadata without GPU
-        run: python3 scripts/ops/capacity_inspect_probe.py psptm-minutes-tests-tests
+        run: python3 scripts/ops/capacity_inspect_probe.py psptm-minutes-rc-v46-tests-tests
       - name: Benchmark contracts
         run: python3 -m unittest discover -s benchmarks/tests -v
       - name: Compile operational tools
@@ -46,7 +46,7 @@ jobs:
           docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges minutes-recorder:ci python probe.py
       - name: Audit pinned runtime dependencies
         run: |
-          docker run --rm --user root --entrypoint sh psptm-minutes-tests-tests -c \
+          docker run --rm --user root --entrypoint sh psptm-minutes-rc-v46-tests-tests -c \
             'pip install --quiet pip-audit==2.9.0 && pip-audit --no-deps --disable-pip -r /app/requirements.lock && pip-audit --no-deps --disable-pip -r /app/integrations/telemost/requirements.lock'
       - name: Validate Compose without real credentials
         run: |
@@ -57,3 +57,23 @@ jobs:
       - name: Cleanup
         if: always()
         run: docker compose -f compose.test.yaml down --volumes
+
+  rc-staging:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/rc/minutes-v46-20261105'
+    needs: tests
+    runs-on: ubuntu-24.04
+    environment: minutes-rc-staging
+    permissions:
+      contents: read
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Deploy exact RC to ephemeral CPU staging and verify persistence
+        run: bash scripts/ops/staging-smoke-drill.sh
+      - name: Verify synthetic recovery of database, recording and credential
+        run: bash scripts/ops/restore-drill.sh
+      - name: Record promotion limits
+        run: echo 'CPU staging only. No model calls, production promotion or quality acceptance.'
