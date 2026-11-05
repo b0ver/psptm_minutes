@@ -119,7 +119,7 @@ def verify_support(support, lookup):
         seen.add((span['source_id'], quote))
 
 
-def classify_actions(actions, items, llm, validate, maximum_chars):
+def classify_actions_full_source(actions, items, llm, validate, maximum_chars):
     """No report/summary/participant inference; never clip away later cancellation."""
     if not actions:
         return [], [], []
@@ -158,6 +158,65 @@ def classify_actions(actions, items, llm, validate, maximum_chars):
         audit.append({'action_ref': candidate['action_ref'], 'source_hash': digest(source),
                       'candidate_hash': digest(candidate), 'classification': result,
                       'opposed_verdict': check['verdict'], 'opposed_review': check})
+        if result['state'] == 'active':
+            if item['kind'] == 'предложено':
+                raise ProcessingError('analysis_action_status_kind_conflict')
+            active.append(item)
+        else:
+            context.append({'task': item['task'], 'activity_state': result['state'],
+                            'original_quote': item['evidence'], 'source_evidence': result['support']})
+    return active, context, audit
+
+
+def classify_actions(actions, items, llm, validate, maximum_chars):
+    """Use full source when it fits; otherwise scan every lossless source window."""
+    if not actions:
+        return [], [], []
+    fits = getattr(llm, 'status_packet_fits', None)
+    if not callable(fits):
+        # Offline test doubles retain the original contract; real LocalLLM always admits natively.
+        return classify_actions_full_source(actions, items, llm, validate, maximum_chars)
+    source = [{'source_id': row['id'], 'start': row['start'], 'end': row['end'], 'text': row['text']} for row in items]
+    candidates = [{'action_ref': f'A{i + 1:05d}', 'task': row['task'], 'original_quote': row['evidence'],
+                   'original_quote_source_spans': original_quote_spans(row['evidence'], source)}
+                  for i, row in enumerate(actions)]
+    if all(fits(CLASSIFY_SYSTEM, json.dumps({'source': source, 'candidate': candidate}, ensure_ascii=False), CLASSIFY_SCHEMA)
+           for candidate in candidates):
+        return classify_actions_full_source(actions, items, llm, validate, maximum_chars)
+    from app.status_windows import plan_windows, SourceWindowError
+    from app.status_scan import scan_all_windows, SCAN_SYSTEM, SCAN_SCHEMA
+    from app.status_finalize import finalize
+    consumed = getattr(llm, 'native_calls', None)
+    if type(consumed) is not int or not 0 <= consumed < 64:
+        raise ProcessingError('analysis_action_status_call_accounting_unavailable')
+    maximum_windows = (64 - consumed - 2 * len(candidates)) // 2
+    if maximum_windows < 1:
+        raise ProcessingError('analysis_native_call_budget_exceeded')
+
+    def window_fits(window):
+        user = json.dumps({'source_spans': window, 'candidates': candidates}, ensure_ascii=False)
+        # Reserve room for opposed evidence and full neighboring windows. No source is discarded.
+        return len(user) <= maximum_chars // 4 and fits(SCAN_SYSTEM, user, SCAN_SCHEMA)
+
+    try:
+        windows = plan_windows(items, window_fits, maximum_windows)
+        ledger = scan_all_windows(items, windows, candidates, llm, validate, fits, 64 - consumed)
+        # Retries in earlier stages and in the scan count toward the same global transport budget.
+        actual_prior = llm.native_calls - ledger['model_calls']
+        contract = {'STATE_RULES': STATE_RULES, 'CLASSIFY_SCHEMA': CLASSIFY_SCHEMA,
+                    'CHECK_SCHEMA': CHECK_SCHEMA, 'verify_support': verify_support}
+        final = finalize(items, windows, candidates, ledger,
+                         {candidate['action_ref']: item['kind'] for candidate, item in zip(candidates, actions)},
+                         llm, validate, fits, contract, consumed_before_scan=actual_prior, maximum_calls=64)
+    except SourceWindowError as error:
+        raise ProcessingError(str(error)) from None
+    active, context, audit = [], [], []
+    for item, candidate, row in zip(actions, candidates, final['classifications']):
+        result, check = row['classification'], row['opposed_review']
+        audit.append({'action_ref': candidate['action_ref'], 'source_hash': digest(source),
+                      'candidate_hash': digest(candidate), 'classification': result,
+                      'opposed_verdict': check['verdict'], 'opposed_review': check,
+                      'bounded_scan_ledger': ledger, 'status_component_only': True})
         if result['state'] == 'active':
             if item['kind'] == 'предложено':
                 raise ProcessingError('analysis_action_status_kind_conflict')

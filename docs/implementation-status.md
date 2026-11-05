@@ -165,3 +165,27 @@ Main04 завершен foreign_gpu_process: measure exit137, DB exit0. Метр
 ## CI подготовленного healthcheck helper
 
 Commit 8b846720d70c015d682d1ce4d2b15fe280448a8f прошел CI: https://github.com/b0ver/psptm_minutes/actions/runs/40124283349. Чистый checkout: 348 passed за20.52s. Оба Python audit без известных уязвимостей. Synthetic staging/restore, recorder и остальные gates прошли. Это проверка helper и регрессий, а не разрешение на изменение Recap. Владелец еще не подтвердил применение. Новые GPU-попытки не запускались. Сам Recap не менялся. Goal остается незавершенным: корпус, human E2E/качество, рабочий restore и full staging rollback не приняты.
+
+
+5 ноября: отдельная разработка source-status-v5, предшественник c31 сохранен в истории
+и локальной archive/rc-source-status-v4-c31e5c9. В приложение интегрирован полный lossless
+scan всех окон/всех action_refs, отдельная проверка полноты каждого окна и финальные
+classification/opposed по полным релевантным и соседним окнам в исходном порядке.
+Короткий источник продолжает проходить прежнюю полную source-only проверку.
+Старые statusdefinitions/schema/literal/owner/kind gates сохранены. Неполный журнал,
+uncertain/rejected/поддельная цитата/непомещающийся релевантный контекст отказывают.
+Общий лимит64 относится ко всем native HTTP-попыткам одного LocalLLM, включая retries
+предыдущих этапов; бюджет не сбрасывается перед status. Каждый настоящий payload
+проверяется conservative actual9b counter вместе с schema и реальным opposed evidence.
+32768/12000/6000/45000 не расширены; source не обрезается. Проверяется фактический
+prompt_eval_count/eval_count/done/nontruncation, отсутствие метрик блокирует прием.
+Tokenizer assets из actual9b GGUF vocabulary/merges; различие EOS/padding и происхождение
+HFtemplate27b явно описаны, полной идентичности токенайзеров не утверждаем.
+Dockerfile явно обеспечивает чтение только публичных app/config assets непривилегированным
+процессом, независимо от umask архивирования. Секреты в образ не добавлены.
+41readonlyDockerCPUtest прошел на отдельном образе a4b25cd4c32082d97e25ae7e0255ead6121021ac115aa55ac3948f9f615c8976.
+Receipt6339797741e041a340614c0f31542a578850b139cc14eb8d32ddf5dfc0b2f189.
+Это структурные тесты actualapp integration/nativebudget, не семантическая приемка.
+Полный integrationCI/staging, новая профильная cancellation, freshnativecrosswindowcontrols,
+неизмененный модельныйE2E и исходные12+28fullreview еще обязательны. Ничего не допущено
+к production. Отдельный v47 24+56 продолжает guardedcoordinator; его acceptance не заменяет RCquality.

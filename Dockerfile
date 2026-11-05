@@ -7,6 +7,7 @@ RUN useradd --uid 10001 --create-home minutes && mkdir /data && chown minutes:mi
 FROM dependencies AS runtime
 COPY app ./app
 COPY config ./config
+RUN chmod -R a+rX /app/app /app/config
 USER minutes
 CMD ["uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "8080", "--no-access-log"]
 
@@ -28,5 +29,6 @@ ENV LD_LIBRARY_PATH=/usr/local/lib/python3.12/site-packages/nvidia/cublas/lib:/u
     NVIDIA_VISIBLE_DEVICES=all NVIDIA_DRIVER_CAPABILITIES=compute,utility
 COPY app ./app
 COPY config ./config
+RUN chmod -R a+rX /app/app /app/config
 USER minutes
 CMD ["python", "-m", "app.worker"]

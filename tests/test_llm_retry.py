@@ -16,7 +16,7 @@ def sleeps(monkeypatch):
     return values
 
 
-def client(monkeypatch, statuses, *, headers=None, incomplete=False):
+def client(monkeypatch, statuses, *, headers=None, incomplete=False, usage=None):
     posts = []
     monkeypatch.setattr(reports, 'validate_endpoint', lambda *args: None)
     monkeypatch.setattr(reports, 'verify_model', lambda *args: None)
@@ -29,6 +29,7 @@ def client(monkeypatch, statuses, *, headers=None, incomplete=False):
             raise status
         return httpx.Response(status, headers=headers or {}, json={
             'done': True, 'done_reason': 'length' if incomplete else 'stop',
+            **({'prompt_eval_count': 20, 'eval_count': 5} if usage is None else usage),
             'message': {'content': '# Synthetic report'}})
     llm.client = httpx.Client(base_url='http://local', transport=httpx.MockTransport(respond))
     return llm, posts
@@ -107,3 +108,27 @@ def test_long_retry_after_fails_instead_of_retrying_early(monkeypatch, sleeps):
 def test_http_date_retry_after_and_malformed_header():
     assert 0 < llm_retry.retry_after_seconds(format_datetime(datetime.now(timezone.utc) + timedelta(seconds=20))) <= 20
     assert llm_retry.retry_after_seconds('invalid') is None
+
+
+def test_global_budget_counts_transport_retries_without_reset(monkeypatch, sleeps):
+    llm, posts = client(monkeypatch, [503])
+    llm.native_calls = 63
+    try:
+        with pytest.raises(ProcessingError, match='analysis_native_call_budget_exceeded'):
+            llm.chat('system', 'input')
+        assert llm.native_calls == 64 and len(posts) == 1
+        assert sleeps == [1]
+    finally:
+        llm.close()
+
+
+@pytest.mark.parametrize('usage', [{}, {'prompt_eval_count': True, 'eval_count': 1},
+    {'prompt_eval_count': 20, 'eval_count': 6001}, {'prompt_eval_count': 32760, 'eval_count': 20}])
+def test_missing_or_overflowed_native_usage_is_never_accepted(monkeypatch, sleeps, usage):
+    llm, posts = client(monkeypatch, [200], usage=usage)
+    try:
+        with pytest.raises(ProcessingError, match='analysis_native_usage_unverified'):
+            llm.chat('system', 'input')
+        assert len(posts) == 1 and not sleeps
+    finally:
+        llm.close()

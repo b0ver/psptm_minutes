@@ -15,7 +15,7 @@ from app.llm_retry import inference_call
 KIT = Path(__file__).resolve().parents[1] / 'config' / 'meeting_kit'
 CATALOG = json.loads((KIT / 'templates.json').read_text())
 DEFAULT_TYPES = ['tldr', 'meeting_notes', 'action_items', 'key_meanings', 'chapters']
-VERSION = 'minutes-rc-v46-20261105-source-status-v4'
+VERSION = 'minutes-rc-v46-20261105-source-status-v5'
 MAX_PROMPT_CHARS = 45000
 MAX_SUMMARY_CHARS = 6000
 PARTITION_SCOPE = ('\nЭто отдельная часть длинной встречи. Статусы действуют только в пределах переданных фактов. '
@@ -116,11 +116,42 @@ def validate_json(value, spec):
             validate_json(item, spec.get('items', {}))
 
 
+MAX_NATIVE_CALLS = 64
+
+
+def native_payload(system, user, spec=None):
+    payload = {'model': OLLAMA_MODEL, 'stream': False, 'think': False,
+               'options': {'num_ctx': 32768, 'num_predict': 12000 if spec else 6000, 'temperature': 0},
+               'messages': [{'role': 'system', 'content': system}, {'role': 'user', 'content': user}]}
+    if spec:
+        payload['format'] = {k: v for k, v in spec.items() if k not in ('$schema', '$id', 'title')}
+    return payload
+
+
+def native_payload_admission(payload):
+    from app.native_status_context import admission
+    if payload['model'] != 'qwen3.5:9b':
+        raise ProcessingError('analysis_native_model_unqualified')
+    system, user = (row['content'] for row in payload['messages'])
+    # Conservatively charge the entire actual grammar in addition to decoded messages.
+    user += '\n' + json.dumps(payload.get('format', {}), ensure_ascii=False)
+    try:
+        return admission(payload['model'], system, user, payload['options']['num_predict'], payload['options']['num_ctx'])
+    except (ValueError, KeyError, OSError):
+        raise ProcessingError('analysis_native_counter_unavailable') from None
+
+
 class LocalLLM:
     def __init__(self):
         validate_endpoint(OLLAMA_URL)
         self.client = httpx.Client(base_url=OLLAMA_URL, timeout=600, trust_env=False, follow_redirects=False)
         self.policy = model_policy()
+        self.native_calls = 0
+
+    def status_packet_fits(self, system, user, spec):
+        if len(system) + len(user) > MAX_PROMPT_CHARS:
+            return False
+        return native_payload_admission(native_payload(system, user, spec))['admitted'] is True
 
     def close(self):
         self.client.close()
@@ -128,14 +159,16 @@ class LocalLLM:
     def chat(self, system, user, spec=None):
         if len(system) + len(user) > MAX_PROMPT_CHARS:
             raise ProcessingError('analysis_context_too_large')
-        payload = {'model': OLLAMA_MODEL, 'stream': False, 'think': False,
-                   'options': {'num_ctx': 32768, 'num_predict': 12000 if spec else 6000, 'temperature': 0},
-                   'messages': [{'role': 'system', 'content': system}, {'role': 'user', 'content': user}]}
-        if spec:
-            payload['format'] = {k: v for k, v in spec.items() if k not in ('$schema', '$id', 'title')}
+        payload = native_payload(system, user, spec)
+        admission = native_payload_admission(payload)
+        if not admission['admitted']:
+            raise ProcessingError('analysis_native_context_too_large')
         def request():
             # Recheck locality/digest on each attempt; generation has no external side effects.
             verify_model(self.client, OLLAMA_MODEL, self.policy)
+            if self.native_calls >= MAX_NATIVE_CALLS:
+                raise ProcessingError('analysis_native_call_budget_exceeded')
+            self.native_calls += 1  # Count every HTTP attempt, including transport retries.
             response = self.client.post('/api/chat', json=payload)
             response.raise_for_status()
             return response
@@ -143,6 +176,13 @@ class LocalLLM:
         data = response.json()
         if not data.get('done') or data.get('done_reason') == 'length':
             raise ProcessingError('analysis_output_incomplete')
+        observed = [data.get('prompt_eval_count'), data.get('eval_count')]
+        if (any(type(value) is not int or value < 0 for value in observed)
+                or observed[0] <= 0
+                or observed[0] > admission['native_content_token_envelope'] + admission['chat_envelope_allowance']
+                or sum(observed) >= payload['options']['num_ctx']
+                or observed[1] > payload['options']['num_predict']):
+            raise ProcessingError('analysis_native_usage_unverified')
         content = re.sub(r'<think>.*?</think>', '', data['message']['content'], flags=re.S).strip()
         if spec:
             try:
