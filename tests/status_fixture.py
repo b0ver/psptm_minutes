@@ -5,7 +5,8 @@ from app.action_status import CLASSIFY_SCHEMA, CHECK_SCHEMA
 
 def status_fixture(user, spec):
     if spec == CHECK_SCHEMA:
-        return {'verdict': 'confirmed'}
+        return {'verdict': 'confirmed', 'reason_code': 'state_supported',
+                'support': json.loads(user)['classification']['support']}
     if spec == CLASSIFY_SCHEMA:
         value = json.loads(user)
         quote = value['candidate']['original_quote']

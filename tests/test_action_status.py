@@ -22,7 +22,8 @@ class Model:
     def chat(self, system, user, spec):
         self.calls.append((system, json.loads(user), spec))
         if spec == CHECK_SCHEMA:
-            return {'verdict': self.verdict}
+            return {'verdict': self.verdict, 'reason_code': 'state_supported' if self.verdict == 'confirmed' else 'state_contradicted',
+                    'support': json.loads(user)['classification']['support']}
         assert spec == CLASSIFY_SCHEMA
         return {'state': self.state, 'support': self.support if self.support is not None else [
             {'source_id': 'L00002', 'quote': 'Отменяем подготовку отчета.'}]}
@@ -39,7 +40,7 @@ def test_cancellation_is_context_not_proposed_or_active_action():
     assert audit[0]['opposed_verdict'] == 'confirmed' and len(model.calls) == 2
     for _, user, _ in model.calls:
         assert len(user['source']) == 3
-        assert set(user['candidate']) == {'action_ref', 'task', 'original_quote'}
+        assert set(user['candidate']) == {'action_ref', 'task', 'original_quote', 'original_quote_source_spans'}
         assert 'note' not in user['candidate'] and 'report' not in user
 
 
@@ -99,3 +100,41 @@ def test_non_active_context_has_separate_bounded_render_channel():
     assert not result['action_items'] and result['action_context'][0]['activity_state'] == 'cancelled'
     _, user = reports.render_prompt('action_items', result, {})
     assert 'action_context' in user and 'cancelled' in user
+
+
+def test_adjacent_original_quote_preserves_exact_source_spans_in_both_requests():
+    source = reports.lines([{'start': 0, 'end': 1, 'text': 'Передать результат.'},
+                            {'start': 2, 'end': 3, 'text': 'Беру эту работу.'}])
+    action = {**ACTION, 'evidence': 'Передать результат. Беру эту работу.'}
+    model = Model('active', [{'source_id': 'L00002', 'quote': 'Беру эту работу.'}])
+    active, _, _ = run(model, source=source, action=action)
+    assert active == [action]
+    for _, request, _ in model.calls:
+        spans = request['candidate']['original_quote_source_spans']
+        assert len(spans) == 2 and ' '.join(x['quote'] for x in spans) == action['evidence']
+        for span, row in zip(spans, source):
+            assert span['source_id'] == row['id']
+            assert row['text'][span['start_char']:span['end_char']] == span['quote']
+
+
+@pytest.mark.parametrize('quote', ['Отчет. Отчет.', 'Отчет!'])
+def test_unbound_or_ambiguous_original_quote_fails_before_model_call(quote):
+    model = Model()
+    source = reports.lines([{'start': i, 'end': i + 1, 'text': 'Отчет.'} for i in range(3)])
+    with pytest.raises(ProcessingError) as error:
+        run(model, source=source, action={**ACTION, 'evidence': quote})
+    assert error.value.code == 'analysis_action_status_original_quote_ungrounded'
+    assert not model.calls
+
+
+@pytest.mark.parametrize('support,reason', [([], 'state_supported'),
+    ([{'source_id': 'L00002', 'quote': 'Не существующая реплика'}], 'state_supported'),
+    ([{'source_id': 'L00002', 'quote': 'Отменяем подготовку отчета.'}], 'state_contradicted')])
+def test_confirmed_without_literal_positive_review_cannot_pass(support, reason):
+    class Unsupported(Model):
+        def chat(self, system, user, spec):
+            if spec == CHECK_SCHEMA:
+                return {'verdict': 'confirmed', 'reason_code': reason, 'support': support}
+            return super().chat(system, user, spec)
+    with pytest.raises(ProcessingError):
+        run(Unsupported())
