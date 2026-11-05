@@ -62,6 +62,10 @@ class BoundedLLM:
     def chat(self, system, user, spec=None):
         assert len(system) + len(user) <= reports.MAX_PROMPT_CHARS
         self.calls.append((system, user, spec))
+        from app.action_status import CLASSIFY_SCHEMA, CHECK_SCHEMA
+        from status_fixture import status_fixture
+        if spec in (CLASSIFY_SCHEMA, CHECK_SCHEMA):
+            return status_fixture(user, spec)
         if spec and set(spec['properties']) == {'summary'}:
             return {'summary': 'Синтетический общий обзор.'}
         if spec:

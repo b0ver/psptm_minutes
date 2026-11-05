@@ -15,7 +15,7 @@ from app.llm_retry import inference_call
 KIT = Path(__file__).resolve().parents[1] / 'config' / 'meeting_kit'
 CATALOG = json.loads((KIT / 'templates.json').read_text())
 DEFAULT_TYPES = ['tldr', 'meeting_notes', 'action_items', 'key_meanings', 'chapters']
-VERSION = 'minutes-rc-v46-20261105-exact-source'
+VERSION = 'minutes-rc-v46-20261105-source-status-v2'
 MAX_PROMPT_CHARS = 45000
 MAX_SUMMARY_CHARS = 6000
 PARTITION_SCOPE = ('\nЭто отдельная часть длинной встречи. Статусы действуют только в пределах переданных фактов. '
@@ -261,6 +261,9 @@ def verify_facts(facts, items, llm, meta):
                     item['assigned_by'] = None
             kept.append(item)
         facts[kind] = kept
+    from app.action_status import classify_actions
+    facts['action_items'], facts['action_context'], facts['_action_status_reviews'] = classify_actions(
+        facts['action_items'], items, llm, validate_json, MAX_PROMPT_CHARS)
     facts['quotes'] = [{**q, 'speaker': q['speaker'] if q.get('speaker') and source_field_present(q['speaker'], q['quote']) else None, 'timestamp': timestamp(src['start'])} for q in facts['quotes'] if (src := quote_source(q['quote'], items))]
     facts['rejected_items'] = rejected
     facts['_meta'] = meta
@@ -404,6 +407,10 @@ def render_prompt(name, facts, meta, partitioned=False):
     sections = '\n'.join(f"## {s['title']}\nФормат: {s['format']}. Колонки: {', '.join(s.get('columns', []))}. {s['instruction']}" for s in template['sections'])
     system, user = prompt('10_render_report.md', meta, template_name=template['name'], template_description=template['description'], template_sections=sections,
                           facts_json=json.dumps(facts, ensure_ascii=False), transcript_block='')
+    system += ('\naction_items содержит только подтвержденные действующие поручения. '
+               'action_context содержит отмененные, завершенные, исторические и предложенные действия. '
+               'Сохраняй их как контекст с явным статусом, вне списка действующих поручений. '
+               'Не превращай action_context обратно в action_items.')
     return system + (PARTITION_SCOPE if partitioned else ''), user
 
 

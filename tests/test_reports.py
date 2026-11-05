@@ -100,6 +100,10 @@ def test_exact_evidence_required_even_after_model_verdict():
     facts['action_items']=[item,{**item,'evidence':'Выдуманная цитата'}]
     class Verifier(FakeLLM):
         def chat(self,*args):
+            from app.action_status import CLASSIFY_SCHEMA, CHECK_SCHEMA
+            from status_fixture import status_fixture
+            if args[2] in (CLASSIFY_SCHEMA, CHECK_SCHEMA):
+                return status_fixture(args[1], args[2])
             return {'verdict':'подтверждено','reason':'test','corrected':None,'evidence':'Выдуманная цитата'}
     items=reports.lines([{'start':5,'end':9,'text':'Иван, сделай отчёт к пятнице.'}])
     result=reports.verify_facts(facts,items,Verifier(),{'meeting_title':'test'})
