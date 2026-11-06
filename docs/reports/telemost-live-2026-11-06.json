@@ -34,7 +34,7 @@
   "second_profile_automatic_rollover": "failed_native_rotation_failed",
   "offline_lifecycle_cases_passed": 15,
   "offline_end_during_retry_passed": true,
-  "offline_main_loop_cases_passed": 10,
+  "offline_main_loop_cases_passed": 18,
   "host_end_reason": "meeting_ended",
   "host_end_import_once": true,
   "host_end_import_bytes_match": true,
@@ -113,5 +113,18 @@
     "old_code": "reproduced_9_unrequested_clicks",
     "fixed_code": "passed_zero_unrequested_clicks",
     "live_causality": "not_proven"
+  },
+  "native_mixer_bridge_offline": {
+    "before_fix": "reproduced_audio_gap_after_source_disconnect",
+    "fixed_mix_rollovers": 2,
+    "fixed_audio_seconds": 13.2,
+    "fixed_max_silence_seconds": 0.0,
+    "muted_source_not_restored": true,
+    "unrelated_output_disconnected": true,
+    "cancel_and_end_release_bridge": true,
+    "failed_restart_stops_inactive_capture": true,
+    "participant_stop_does_not_restart": true,
+    "audio_diagnostic_ignored_before_and_during_video_recording": true,
+    "real_long_acceptance": "pending"
   }
 }

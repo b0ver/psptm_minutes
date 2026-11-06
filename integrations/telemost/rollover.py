@@ -29,6 +29,8 @@ async def rotate(page, frame, leave, stop, deadline, start_native, stop_native):
         if stop.is_set() or time.time() >= deadline or not await leave.is_visible():
             await prepare_stop(page)
             return False
+        if not any([await scope.evaluate('() => window.__agentCanContinueRollover?.() || false') for scope in page.frames]):
+            return False  # A participant's stop must not become our restart.
         started = await start_native(page, frame)
         return started is not False
 

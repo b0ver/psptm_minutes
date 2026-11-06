@@ -574,6 +574,11 @@ async def run(sid):
                         continued = await rotate(page, frame, leave, stop, float('inf'),
                                                  start_next_recording, stop_native_recording)
                     except Exception:
+                        for scope in page.frames:
+                            try:
+                                await scope.evaluate('() => window.__agentAbortRollover?.()')
+                            except Exception:
+                                pass
                         recording_issue = 'native_rotation_failed'
                         rotation_failed = True
                         persist(sid, capture_health='rotation_failed', recording_issue=recording_issue,

@@ -21,7 +21,7 @@ function finish(){
 }
 legacy.onclick=finish;
 function begin(){
-  window.startClicks++; if(Date.now()<(window.readyAt||0))return;window.__agentNativeRecordingActive=true; window.armedAtStart=window.__agentCheckpointArmed===true;
+  window.startClicks++; if(Date.now()<(window.readyAt||0))return;window.__agentNativeRecordingActive=true; window.armedAtStart=window.__agentCheckpointArmed===true && window.__agentExpectedRecordingVideo===true;
   start.hidden=true; menu.hidden=true;
   if(window.layout==='menu'){legacy.hidden=false; return;}
   if(window.layout==='missing')return;

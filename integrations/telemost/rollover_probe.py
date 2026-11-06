@@ -30,7 +30,7 @@ document.querySelector('#join').onclick=()=>{document.querySelector('#join').hid
 document.querySelector('#more').onclick=()=>{menu.hidden=!menu.hidden};
 document.querySelector('#begin').onclick=()=>beginRecording();
 document.querySelector('#end').onclick=()=>endRecording();
-let audio, dest, wave, recorder, chunks;
+let audio, dest, wave, otherWave, recorder, chunks;
 window.starts=0;
 async function beginRecording(){
   if(Date.now()<(window.__probeIgnoreRestartUntil||0))return;
@@ -39,10 +39,34 @@ async function beginRecording(){
     wave=audio.createOscillator();wave.frequency.value=440;wave.connect(dest);wave.start();
     await audio.resume();
   }
-  const nativeStream=new MediaStream(dest.stream.getTracks().map(t=>t.clone()));
-  recorder=new MediaRecorder(nativeStream,{mimeType:'audio/webm;codecs=opus'});
+  let nativeInput, mutedInput, otherAnalyser;
+  let nativeStream;
+  if(window.__probeDisconnectNativeMix){
+    const nativeDestination=audio.createMediaStreamDestination();
+    nativeInput=audio.createGain();wave.connect(nativeInput);nativeInput.connect(nativeDestination);
+    if(window.__probeMutedMixInput){
+      if(!otherWave){otherWave=audio.createOscillator();otherWave.frequency.value=880;otherWave.start()}
+      mutedInput=audio.createGain();otherWave.connect(mutedInput);mutedInput.connect(nativeDestination);mutedInput.disconnect();
+    }
+    if(window.__probeOtherOutput){
+      const otherSink=audio.createMediaStreamDestination();nativeInput.connect(otherSink);
+      otherAnalyser=audio.createAnalyser();audio.createMediaStreamSource(otherSink.stream).connect(otherAnalyser);
+      const silent=audio.createGain();silent.gain.value=0;otherAnalyser.connect(silent);silent.connect(audio.destination);
+    }
+    nativeStream=new MediaStream(nativeDestination.stream.getTracks());
+  }else nativeStream=new MediaStream(dest.stream.getTracks().map(t=>t.clone()));
+  const canvas=document.createElement('canvas');canvas.width=16;canvas.height=16;
+  const painter=canvas.getContext('2d');painter.fillRect(0,0,16,16);
+  const video=canvas.captureStream(5);video.getTracks().forEach(t=>nativeStream.addTrack(t));
+  let shade=0;const videoTimer=setInterval(()=>{painter.fillStyle=shade++%2?'black':'white';painter.fillRect(0,0,16,16)},100);
+  if(window.__probeAudioDiagnostic){const d=new MediaRecorder(dest.stream);d.start();setTimeout(()=>d.stop(),300)}
+  recorder=new MediaRecorder(nativeStream,{mimeType:'video/webm'});
   chunks=[]; recorder.ondataavailable=e=>chunks.push(e.data);
   recorder.onstop=()=>{
+    clearInterval(videoTimer);
+    if(window.__probeAudioDiagnostic){const d=new MediaRecorder(dest.stream);d.start();setTimeout(()=>d.stop(),300)}
+    nativeInput?.disconnect();mutedInput?.disconnect();
+    if(otherAnalyser)setTimeout(()=>{const a=new Float32Array(otherAnalyser.fftSize);otherAnalyser.getFloatTimeDomainData(a);(window.__probeOtherLevels||=[]).push(Math.sqrt(a.reduce((s,x)=>s+x*x,0)/a.length))},500);
     nativeStream.getTracks().forEach(t=>t.stop());
     const a=document.createElement('a'); a.download='native.webm';
     a.href=URL.createObjectURL(new Blob(chunks,{type:'audio/webm'}));a.click();
@@ -53,6 +77,7 @@ async function beginRecording(){
 function endRecording(){
   recorder.stop();end.hidden=true;begin.hidden=false;
   if(window.__probeCancelRetry)window.__probeIgnoreRestartUntil=Date.now()+10000;
+  else if(window.__probeDisconnectNativeMix)window.__probeIgnoreRestartUntil=Date.now()+1500;
 }
 if(window.__probeCloseTrap){
  window.__probeCloseTrapClicks=0;
@@ -60,6 +85,7 @@ if(window.__probeCloseTrap){
  unrelated.textContent='Закрыть окно';unrelated.onclick=()=>{window.__probeCloseTrapClicks++;if(recorder?.state==='recording')endRecording()};document.body.append(unrelated);
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape')menu.hidden=true});
+//# sourceURL=https://fixture.invalid/static/recorder-fixture.js
 </script>'''
 
 
@@ -80,6 +106,25 @@ def check_audio(path, minimum_seconds=4):
     return {'audio_seconds': round(duration, 3), 'max_silence_seconds': round(max_silence, 3)}
 
 
+def assert_extra_tone_absent(path):
+    energy_total, tone_total, elapsed = 0.0, 0.0, 0.0
+    with av.open(str(path)) as media:
+        for frame in media.decode(audio=0):
+            elapsed += frame.samples/frame.sample_rate
+            if elapsed < .5:
+                continue
+            values=memoryview(frame.planes[0]).cast('f')[:frame.samples]
+            energy=sum(x*x for x in values)
+            coefficient=2*math.cos(2*math.pi*880/frame.sample_rate)
+            q1=q2=0.0
+            for x in values:
+                q0=x+coefficient*q1-q2
+                q2,q1=q1,q0
+            tone_total += 2*(q1*q1+q2*q2-coefficient*q1*q2)/len(values)
+            energy_total += energy
+    assert energy_total and tone_total/energy_total < .02, 'A disconnected source was restored'
+
+
 async def case(mode):
     with tempfile.TemporaryDirectory(prefix='rollover-probe-') as temp:
         sid = '00000000-0000-0000-0000-000000000031'
@@ -93,6 +138,8 @@ async def case(mode):
         service.stops[sid] = asyncio.Event()
         imports = []
         close_clicks = []
+        other_levels = []
+        seen_starts = []
         live_pages = []
         clock_offset = [0]
         original = httpx.AsyncClient
@@ -126,9 +173,17 @@ async def case(mode):
                         await request.fulfill(status=200, content_type='text/html; charset=utf-8', body=body, headers=headers)
                     await context.route('**/*', route)
                     await context.add_init_script('window.__agentCheckpointTimeslice = 250')
+                    if mode in {'native_mix_disconnect','muted_mix_input','other_output_disconnect','cancel_mix_during_retry','ended_mix_during_retry','failure_after_native_stop','unrequested_stop_before_rotation','audio_diagnostic'}:
+                        await context.add_init_script('window.__probeDisconnectNativeMix = true')
+                    if mode == 'audio_diagnostic':
+                        await context.add_init_script('window.__probeAudioDiagnostic = true')
+                    if mode == 'muted_mix_input':
+                        await context.add_init_script('window.__probeMutedMixInput = true')
+                    if mode == 'other_output_disconnect':
+                        await context.add_init_script('window.__probeOtherOutput = true')
                     if mode == 'unrelated_close':
                         await context.add_init_script('window.__probeCloseTrap = true')
-                    if mode in {'cancel_during_retry','ended_during_retry'}:
+                    if mode in {'cancel_during_retry','ended_during_retry','cancel_mix_during_retry','ended_mix_during_retry'}:
                         await context.add_init_script('window.__probeCancelRetry = true')
                     return context
                 browser.new_context = new_context
@@ -145,6 +200,18 @@ async def case(mode):
             async def rotation(*args, **kwargs):
                 if mode == 'failure':
                     raise RuntimeError('synthetic rotation failure')
+                if mode == 'unrequested_stop_before_rotation':
+                    async def external_stop(frame, leave, reason):
+                        await frame.evaluate('endRecording()')
+                        await frame.wait_for_function('()=>window.__agentNativeRecordingActive===false',timeout=5000)
+                    return await actual_rotate(*args[:-1],external_stop,**kwargs)
+                if mode == 'failure_after_native_stop':
+                    original_stop=args[-1]
+                    async def stop_then_fail(frame, leave, reason):
+                        await original_stop(frame,leave,reason)
+                        await frame.wait_for_function('()=>window.__agentContinuousCapture.heldNativeInputs>0')
+                        raise RuntimeError('synthetic failure after native mixer teardown')
+                    return await actual_rotate(*args[:-1],stop_then_fail,**kwargs)
                 return await actual_rotate(*args, **kwargs)
 
             actual_rotate = service.rotate
@@ -156,10 +223,10 @@ async def case(mode):
                 frame=next(child for child in page.frames if '/private-join/' in child.url)
                 if mode == 'unrelated_close':
                     close_clicks.append(await frame.evaluate('window.__probeCloseTrapClicks'))
-                if mode == 'cancel_during_retry':
+                if mode in {'cancel_during_retry','cancel_mix_during_retry'}:
                     service.stops[sid].set()
                     return
-                if mode == 'ended_during_retry':
+                if mode in {'ended_during_retry','ended_mix_during_retry'}:
                     await frame.evaluate('''() => {
                       const toast=document.createElement('div');toast.className='Orb-Snackbar-Body';
                       toast.textContent='Организатор завершил встречу для всех';document.body.append(toast);
@@ -185,6 +252,10 @@ async def case(mode):
                 if mode == 'transient_ui':
                     await frame.evaluate('document.querySelector("#leave").hidden=false')
                 await asyncio.sleep(6)
+                if mode == 'other_output_disconnect':
+                    other_levels.extend(await frame.evaluate('window.__probeOtherLevels || []'))
+                if mode == 'unrequested_stop_before_rotation':
+                    seen_starts.append(await frame.evaluate('window.starts'))
                 service.stops[sid].set()
 
             stopper = asyncio.create_task(stop_later())
@@ -211,29 +282,40 @@ async def case(mode):
             print('synthetic_diagnostics', state.get('error_code'), state.get('diagnostic_flags'),
                   (Path(temp)/sid/'controls.json').read_text() if (Path(temp)/sid/'controls.json').exists() else 'no_controls')
         folder = Path(temp) / sid
-        if mode == 'failure':
+        if mode in {'failure','failure_after_native_stop'}:
             assert state['status'] == 'uploaded', state.get('error_code')
             assert not state['recording_complete'] and imports == [1]
             assert state['end_reason'] == 'user_stop'
+            if mode == 'failure_after_native_stop':
+                audio=check_audio(folder/'continuous.webm',2)
+                assert audio['audio_seconds']<6,'Failed rollover kept capturing'
             return {'mode': mode, 'saved_incomplete': True, 'imports': 1}
         assert state['status'] == 'uploaded', state.get('error_code')
         if mode == 'unrelated_close':
             assert close_clicks == [0], ('Unrequested generic close', close_clicks)
-        assert state['native_rotations'] >= (0 if mode in {'cancel_during_retry','ended_during_retry'} else 1), state['native_rotations']
-        assert state['recording_complete'] == (mode != 'native_stop'), mode
+        if mode == 'other_output_disconnect':
+            assert other_levels and max(other_levels)<0.01, ('Unrelated output remained connected',other_levels)
+        assert state['native_rotations'] >= (0 if mode in {'cancel_during_retry','ended_during_retry','cancel_mix_during_retry','ended_mix_during_retry','unrequested_stop_before_rotation'} else 1), state['native_rotations']
+        assert state['recording_complete'] == (mode not in {'native_stop','unrequested_stop_before_rotation'}), mode
         assert state['capture_discontinuities'] == 0
+        if mode == 'unrequested_stop_before_rotation':
+            assert seen_starts==[1],('Restarted a participant stop',seen_starts)
+        if mode == 'native_stop':
+            assert state['native_stop_diagnostic']['callsite']['script'] == 'recorder-fixture.js'
         assert state['recording_file'] == 'continuous.webm'
         assert imports == [1], 'Multiple meeting imports'
         assert len(list(folder.glob('native-*.webm'))) == state['native_rotations']
         assert (folder / 'recording.webm').is_file()
-        audio = check_audio(folder / 'continuous.webm', 3 if mode in {'cancel_during_retry','ended_during_retry'} else 4)
-        assert state['end_reason']==('chat_stop' if mode=='chat' else 'meeting_ended' if mode=='ended_during_retry' else 'user_stop')
+        if mode == 'muted_mix_input':
+            assert_extra_tone_absent(folder / 'continuous.webm')
+        audio = check_audio(folder / 'continuous.webm', 3 if mode in {'cancel_during_retry','ended_during_retry','cancel_mix_during_retry','ended_mix_during_retry'} else 2 if mode=='unrequested_stop_before_rotation' else 4)
+        assert state['end_reason']==('chat_stop' if mode=='chat' else 'meeting_ended' if mode in {'ended_during_retry','ended_mix_during_retry'} else 'user_stop')
         return {'mode': mode, 'rotations': state['native_rotations'], 'imports': len(imports), 'end_reason':state['end_reason'], **audio}
 
 
 async def main():
     results=[]
-    for mode in ('normal', 'failure', 'native_stop', 'transient_ui', 'advisory_expired', 'chat','strict_csp','cancel_during_retry','ended_during_retry','unrelated_close'):
+    for mode in ('normal', 'failure', 'native_stop', 'transient_ui', 'advisory_expired', 'chat','strict_csp','cancel_during_retry','ended_during_retry','unrelated_close','native_mix_disconnect','muted_mix_input','other_output_disconnect','cancel_mix_during_retry','ended_mix_during_retry','failure_after_native_stop','unrequested_stop_before_rotation','audio_diagnostic'):
         print(json.dumps({'event':'offline_case_started','mode':mode}),flush=True)
         results.append(await case(mode))
     print(json.dumps({'status': 'passed', 'scope': 'offline_synthetic_only', 'cases': results}))

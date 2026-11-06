@@ -32,7 +32,7 @@ async def start_native_recording(page, frame, should_stop=None):
             raise PWTimeout('native_start_command_unavailable')
         await asyncio.sleep(.1)
     for scope in page.frames:
-        await scope.evaluate('() => {window.__agentCheckpointArmed = true}')
+        await scope.evaluate('() => {window.__agentCheckpointArmed = true; window.__agentExpectedRecordingVideo = true}')
     stop = stop_recording_control(frame)
     deadline = time.monotonic() + 20
     attempts, next_attempt, revealed_legacy = 0, 0, False
@@ -68,5 +68,5 @@ async def stop_native_recording(frame, leave, end_reason):
         if not await stop.is_visible():
             await frame.locator('button[aria-label="Ещё"]').last.evaluate('(button) => button.click()')
         await stop.wait_for(state='visible', timeout=15000)
-        await stop.evaluate('(element) => element.click()')
+        await stop.evaluate('(element, rotation) => {if (rotation) window.__agentConfirmNativeRotationStop?.(); element.click()}', end_reason == 'native_rotation')
         await stop.wait_for(state='hidden', timeout=15000)
