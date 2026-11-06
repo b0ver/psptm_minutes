@@ -340,6 +340,20 @@ async def run(sid):
                 network_errors.append({'host': host, 'code': code.group() if code else 'request_failed'})
         page.on('requestfailed', failed_request)
         page.on('pageerror', lambda error: browser_errors.append(type(error).__name__))
+        console_codes = set()
+        def classify_console_error(message):
+            if message.type != 'error':
+                return
+            # Never persist console text: it can contain meeting content.
+            known = {'QuotaExceededError': 'quota_exceeded', 'FILE_ERROR_NO_SPACE': 'no_space',
+                     'Failed to write blobs': 'blob_write_failed',
+                     'ERR_INSUFFICIENT_RESOURCES': 'insufficient_resources',
+                     'OutOfMemoryError': 'out_of_memory'}
+            found = {code for token, code in known.items() if token in message.text}
+            if found - console_codes:
+                console_codes.update(found)
+                persist(sid, native_console_codes=sorted(console_codes))
+        page.on('console', classify_console_error)
 
         async def dismiss_promos():
             next_preview = 0
@@ -529,8 +543,17 @@ async def run(sid):
                     # Do not restart a participant's native stop, and do not
                     # leave the room. Wait for the owner's explicit exit rule.
                     recording_issue = recording_issue or 'native_recording_stopped'
+                    diagnostic = await (capture_frame or frame).evaluate('() => window.__agentContinuousCapture?.nativeStopDiagnostic || {}')
+                    safe_diagnostic = {
+                        'trigger': diagnostic.get('trigger') if diagnostic.get('trigger') in {'native_event', 'agent_rotation', 'agent_stop', 'page_stop'} else 'unknown',
+                        'error': diagnostic.get('error') if diagnostic.get('error') in {'none', 'other', 'UnknownError', 'InvalidModificationError', 'SecurityError', 'NotSupportedError', 'OutOfMemoryError'} else 'unknown',
+                        'pagehide': diagnostic.get('pagehide') is True,
+                    }
+                    storage = [await scope.evaluate('() => ({errors: window.__agentContinuousCapture?.storageErrors || [], blob: window.__agentContinuousCapture?.blobWriteFailed === true})') for scope in page.frames]
+                    safe_diagnostic['storage_errors'] = sorted({code for item in storage for code in item.get('errors', []) if code in {'QuotaExceededError', 'UnknownError', 'DataError', 'AbortError', 'ConstraintError', 'InvalidStateError', 'TransactionInactiveError', 'other'}})
+                    safe_diagnostic['blob_write_failed'] = any(item.get('blob') is True for item in storage)
                     persist(sid, capture_health='native_stopped', recording_issue=recording_issue,
-                            recording_complete=False)
+                            recording_complete=False, native_stop_diagnostic=safe_diagnostic)
                     continue
                 last_ack = checkpoint.get('lastAck', started * 1000) / 1000
                 health = 'unavailable' if checkpoint['state'] in {'unsupported', 'idle'} else ('failed' if checkpoint['state'] == 'failed' else ('delayed' if time.time() - last_ack > 45 else 'healthy'))

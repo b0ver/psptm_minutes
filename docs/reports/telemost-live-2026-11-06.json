@@ -62,5 +62,24 @@
     "old_code": "reproduced_capture_final_while_primary_recording",
     "fixed_code": "passed",
     "live_causality": "not_proven"
+  },
+  "scope_profile_2e2c253": {
+    "recording_result": "failed_before_first_rotation",
+    "native_stopped_observed_seconds": 1718,
+    "native_rotations": 0,
+    "stayed_after_native_stop": true,
+    "native_downloads": 0,
+    "native_storage_metadata": "recoverable",
+    "native_storage_backends": 2,
+    "oom_kill_count": 0,
+    "storage_free_sufficient": true,
+    "live_root_cause": "not_established",
+    "65_minute_presence_test": "running"
+  },
+  "synthetic_storage_probe": {
+    "incognito_written_mb": 640,
+    "persistent_written_mb": 640,
+    "both_succeeded": true,
+    "live_root_cause_proven": false
   }
 }

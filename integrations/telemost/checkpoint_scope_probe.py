@@ -8,6 +8,8 @@ async def main():
   browser=await p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'],env={**os.environ,'XDG_CONFIG_HOME':'/tmp/checkpoint-scope'})
   try:
    page=await browser.new_page()
+   await page.route('**/*',lambda route:route.fulfill(status=200,content_type='text/html',body='<title>Synthetic capture test</title>'))
+   await page.goto('https://fixture.invalid/')
    packets=[]
    await page.expose_binding('agentCheckpoint',lambda source,packet:packets.append(packet))
    await page.add_script_tag(content=Path('/agent/checkpoint.js').read_text())
@@ -23,10 +25,19 @@ async def main():
    state=await page.evaluate('()=>({capture:window.__agentCheckpoint.state,nativeActive:window.__agentNativeRecordingActive,primary:primary.state})')
    assert state=={'capture':'recording','nativeActive':True,'primary':'recording'},state
    assert not any(packet.get('final') for packet in packets),'Secondary recorder finalized capture'
+   storage_errors=await page.evaluate('''async()=>{
+    const db=await new Promise((ok,no)=>{const r=indexedDB.open('session-1',1);r.onupgradeneeded=()=>r.result.createObjectStore('chunks');r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
+    await new Promise((ok,no)=>{const tx=db.transaction('chunks','readwrite');tx.objectStore('chunks').add(new Blob(['first']),1);tx.oncomplete=ok;tx.onerror=no});
+    await new Promise(ok=>{const tx=db.transaction('chunks','readwrite');tx.objectStore('chunks').add(new Blob(['duplicate']),1);tx.onabort=ok});
+    db.close();return window.__agentContinuousCapture.storageErrors;
+   }''')
+   assert storage_errors==['ConstraintError'],storage_errors
    await page.evaluate('primary.stop()')
    await page.wait_for_function('()=>window.__agentCheckpoint.state==="final"')
+   diagnostic=await page.evaluate('window.__agentContinuousCapture.nativeStopDiagnostic')
+   assert diagnostic=={'trigger':'page_stop','error':'none','pagehide':False},diagnostic
    assert sum(bool(packet.get('final')) for packet in packets)==1
-   print(json.dumps({'status':'passed','secondary_stop_ignored':True,'primary_stop_finalized_once':True}))
+   print(json.dumps({'status':'passed','secondary_stop_ignored':True,'primary_stop_finalized_once':True,'storage_error_code_observed':True}))
   finally:await browser.close()
 
 if __name__=='__main__':asyncio.run(main())

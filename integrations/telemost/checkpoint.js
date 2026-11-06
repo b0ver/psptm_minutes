@@ -6,7 +6,29 @@
   let mirror, chain = Promise.resolve(), sequence = 0, failed = false;
   let audioContext, destination, input, inputStream, rotating = false, stopping = false;
   let generation = 0, activeNative;
+  let nativeStopCommand, nativeError, pagehideSeen = false;
+  window.addEventListener('pagehide', () => {pagehideSeen = true;});
   const capture = window.__agentContinuousCapture = {rotations: 0, discontinuities: 0};
+  // Observe only Telemost recording databases. Keep codes, never records or text.
+  const storageErrors = new Set();
+  capture.storageErrors = [];
+  if (window.IDBFactory) {
+    const openDatabase = IDBFactory.prototype.open;
+    IDBFactory.prototype.open = function(...args) {
+      const request = openDatabase.apply(this, args);
+      if (/^session-[0-9]+$/.test(String(args[0]))) request.addEventListener('success', () => {
+        request.result.addEventListener('error', event => {
+          const error = event.target?.error;
+          const name = error?.name;
+          const code = ['QuotaExceededError', 'UnknownError', 'DataError', 'AbortError', 'ConstraintError', 'InvalidStateError', 'TransactionInactiveError'].includes(name) ? name : 'other';
+          storageErrors.add(code);
+          capture.storageErrors = [...storageErrors];
+          if (/Failed to write blobs|FILE_ERROR_NO_SPACE/.test(error?.message || '')) capture.blobWriteFailed = true;
+        });
+      });
+      return request;
+    };
+  }
   const releaseInput = () => {
     input?.disconnect();
     inputStream?.getTracks().forEach(track => track.stop());
@@ -50,9 +72,19 @@
       // Only an explicitly armed rollover may replace the primary recorder.
       if (mirror && (!rotating || stopping || failed || mirror.state !== 'recording')) return;
       activeNative = this;
+      nativeStopCommand = undefined;
+      nativeError = undefined;
+      this.addEventListener('error', event => {
+        if (this !== activeNative) return;
+        const name = event.error?.name;
+        nativeError = ['UnknownError', 'InvalidModificationError', 'SecurityError', 'NotSupportedError', 'OutOfMemoryError'].includes(name) ? name : 'other';
+      });
       window.__agentNativeRecordingActive = true;
       const onNativeStop = () => {
-        if (this === activeNative) window.__agentNativeRecordingActive = false;
+        if (this === activeNative) {
+          window.__agentNativeRecordingActive = false;
+          capture.nativeStopDiagnostic = {trigger: nativeStopCommand || 'native_event', error: nativeError || 'none', pagehide: pagehideSeen};
+        }
         if (this === activeNative && !rotating && mirror?.state !== 'inactive') mirror?.stop();
       };
       this.addEventListener('stop', onNativeStop, {once: true});
@@ -117,6 +149,7 @@
       if (mirror?.state === 'paused') mirror.resume();
     }
     stop() {
+      if (this === activeNative) nativeStopCommand = rotating ? 'agent_rotation' : stopping ? 'agent_stop' : 'page_stop';
       super.stop();
     }
   }
