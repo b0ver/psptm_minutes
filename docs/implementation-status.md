@@ -265,3 +265,29 @@ v8 сохранен в archive/rc-source-status-v8-4f467c4 и своем immutab
 Новый v9 еще требует полного integration CI, exact-image CPU qualification, собственного
 frozen manifest и настоящей отмены, неизмененного focused E2E, четырех fresh native controls,
 исходных 12+28 и независимого полного review. Production не изменен.
+
+
+## RC source-status-v10: смысл ролей речевых актов
+
+v9 focused E2E прошел 12 native запросов, но первый late_cancel control отказал после
+трех завершенных HTTP200/done/stop ответов. Discovery и matching добавили completion
+к будущему обязательству, а opposed не подтвердил эту роль. Прежний agreement gate
+отклонил расхождение. Аудит b83ae528ca767ccf1a4b5cc8bc3e505c2a07807aefea436e6d82fa9ded98deff
+связал одинаковое исходное окно во всех трех запросах, неизмененную публичную fixture
+и readonly повторную реконструкцию собственной cancellation v9. Failed control не повторялся.
+
+В отдельном v10 три промпта используют общую таблицу ролей. Completion требует фактически
+выполненной работы или результата. Принятие обязательства, обещание и назначение срока
+не доказывают выполнения. Assignment требует свидетельства поручения, а не только
+готовности исполнителя. Все прямо подтвержденные роли сохраняются; сомнение не заменяется
+набором возможных ролей. Уточнение не принимает работу и не устанавливает итоговый статус.
+
+Исполняемые функции/классы, role enums, schemas, STATE_RULES и все source/owner/literal/kind/
+coverage/agreement/native/global64/context gates сохранены. Новые проверки сравнивают
+точный текст функций и контрактов с v9, независимо от различий ast.dump Python3.12/3.14.
+Отдельный negative test требует прежнего отказа при несовпадении completion, без удаления роли.
+VERSIONv10 сбрасывает старый кеш. v9 сохранен в archive/rc-source-status-v9-fb7517c.
+
+Это кандидат на исправление протокола. Causal и semantic успех еще требуют новой собственной
+cancellation, unchanged focused E2E, четырех fresh native controls и полного original12+28
+с независимым full-source/body review. Scope/gold, веса и production не изменены.

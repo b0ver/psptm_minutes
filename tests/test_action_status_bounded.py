@@ -155,6 +155,16 @@ class BoundedApplicationStatus(unittest.TestCase):
             classify_actions(ACTIONS, ITEMS, model, validate, 45000)
         self.assertEqual(model.calls, [])
 
+    def test_disagreement_on_completion_role_is_rejected_without_dropping_the_role(self):
+        def mutate(value, packet, spec):
+            if spec == SCAN_SCHEMA:
+                value['results'][0]['roles'].append('completion')
+        model = LedgerModel(mutate)
+        with self.assertRaisesRegex(ProcessingError, 'scan_opposed_review_not_confirmed'):
+            classify_actions(ACTIONS, ITEMS, model, validate, 45000)
+        self.assertEqual(len(model.calls), 3)
+        self.assertIn('completion', model.calls[2]['scan']['results'][0]['roles'])
+
 
 if __name__ == '__main__':
     unittest.main()
