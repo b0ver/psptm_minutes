@@ -454,7 +454,9 @@ async def run(sid):
                 pass
         recording_issue = None
         try:
-            await start_native_recording(page, frame)
+            if await start_native_recording(page, frame, should_stop=stop.is_set) is False:
+                persist(sid, status='cancelled', error_code='cancelled_before_recording')
+                return
         except Exception:
             recording_issue = 'recording_start_failed'
         started = time.time()
@@ -473,6 +475,7 @@ async def run(sid):
                     pass
         persist(sid, status='recording', recording_started_at=started)
         native_started, rotations, discontinuities = started, 0, 0
+        rotation_attempted = False
         persist(sid, native_rotations=0, capture_discontinuities=0,
                 recording_issue=recording_issue, recording_complete=not bool(recording_issue))
         await capture_preview(page, sid)
@@ -528,14 +531,19 @@ async def run(sid):
                 captures = [await scope.evaluate('() => window.__agentContinuousCapture || {}')
                             for scope in page.frames]
                 rotations = max(rotations, sum(c.get('rotations', 0) for c in captures))
+                if rotations != sessions[sid].get('native_rotations'):
+                    persist(sid, native_rotations=rotations)
                 discontinuities = max(discontinuities, sum(c.get('discontinuities', 0) for c in captures))
                 if discontinuities != sessions[sid].get('capture_discontinuities'):
                     persist(sid, capture_discontinuities=discontinuities, recording_complete=False)
                 if not rotation_failed and time.time() - native_started >= ROTATE_AFTER_SECONDS:
+                    rotation_attempted = True
                     persist(sid, capture_health='rotating')
                     try:
+                        async def start_next_recording(page, frame):
+                            return await start_native_recording(page, frame, should_stop=stop.is_set)
                         continued = await rotate(page, frame, leave, stop, float('inf'),
-                                                 start_native_recording, stop_native_recording)
+                                                 start_next_recording, stop_native_recording)
                     except Exception:
                         recording_issue = 'native_rotation_failed'
                         rotation_failed = True
@@ -566,7 +574,11 @@ async def run(sid):
         try:
             capture_scope = capture_frame or frame
             await capture_scope.evaluate('() => window.__agentFinalizeCheckpoint?.()')
-            await capture_scope.wait_for_function('window.__agentCheckpoint?.state === "final" || window.__agentCheckpoint?.state === "failed" || window.__agentCheckpoint?.state === "idle" || window.__agentCheckpoint?.state === "unsupported"', timeout=15000)
+            final_deadline = time.monotonic() + 15
+            while time.monotonic() < final_deadline:
+                if await capture_scope.evaluate('() => ["final", "failed", "idle", "unsupported"].includes(window.__agentCheckpoint?.state)'):
+                    break
+                await asyncio.sleep(.1)
         except Exception:
             pass
         async def wait_downloads():
@@ -578,7 +590,7 @@ async def run(sid):
         if download_errors:
             raise AgentError(download_errors[0])
         file = DATA / sid / 'recording.webm'
-        if rotations:
+        if rotations or (rotation_attempted and checkpoints.summary()['chunks']):
             file = DATA / sid / 'continuous.webm'
             try:
                 result = await asyncio.to_thread(checkpoints.assemble, file)

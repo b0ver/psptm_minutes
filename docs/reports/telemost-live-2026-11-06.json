@@ -1,0 +1,34 @@
+{
+  "date": "2026-11-06",
+  "scope": "isolated_local_cpu_real_telemost",
+  "production_changed": false,
+  "original_long_profile_commit": "100150bc8a141f04b8a98e2b85d6510201de343d",
+  "original_long_automatic_rollover": "failed_native_rotation_failed",
+  "stayed_in_call_beyond_30_minutes": true,
+  "stayed_after_recording_failure": true,
+  "original_long_test_had_manual_interventions": true,
+  "synthetic_tone_detected_in_saved_audio": true,
+  "guest_chat": "requires_account_login",
+  "current_end_profile_commit": "9148255380da1160d10be8fb7125cf5f3d3ffe72",
+  "host_end_validation": "pending_user_action",
+  "fixed_controls_sha256": "65583453176e3d4ce02d93fcd4bf71fe30ad155709c2121fe93de7f8ad09e3c9",
+  "fixed_controls_real_short_cycles": [
+    {
+      "confirmed": true,
+      "seconds": 2.809
+    },
+    {
+      "confirmed": true,
+      "seconds": 2.573
+    }
+  ],
+  "fixed_full_long_automatic_rollover": "not_accepted",
+  "local_integration_passed": 362,
+  "local_controls_cases_passed": 5,
+  "offline_strict_csp_passed": true,
+  "offline_cancel_between_parts_passed": true,
+  "model_acceptance_verified": false,
+  "registry_release_bundle_promoted": false,
+  "release_allowed": false,
+  "private_evidence_policy": "No meeting link, participant names, audio, video or conversation content in this receipt."
+}

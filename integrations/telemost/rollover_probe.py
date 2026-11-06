@@ -19,16 +19,21 @@ import service
 
 
 HTML = '''<!doctype html><meta charset="utf-8"><input type="text">
-<button onclick="this.hidden=true;document.querySelector('#leave').hidden=false">Подключиться</button>
+<button id="join">Подключиться</button>
 <button id="leave" hidden aria-label="Выйти из встречи">Выйти</button>
 <button aria-label="Участники">Участники 2</button>
-<button aria-label="Ещё" onclick="menu.hidden=!menu.hidden">Ещё</button>
-<div id="menu" hidden><button id="begin" onclick="beginRecording()">Записать на компьютер</button></div>
-<button id="end" hidden aria-label="Остановить запись на компьютер" onclick="endRecording()">Запись</button>
+<button id="more" aria-label="Ещё">Ещё</button>
+<div id="menu" hidden><button id="begin">Записать на компьютер</button></div>
+<button id="end" hidden aria-label="Остановить запись на компьютер">Запись</button>
 <script>
+document.querySelector('#join').onclick=()=>{document.querySelector('#join').hidden=true;document.querySelector('#leave').hidden=false};
+document.querySelector('#more').onclick=()=>{menu.hidden=!menu.hidden};
+document.querySelector('#begin').onclick=()=>beginRecording();
+document.querySelector('#end').onclick=()=>endRecording();
 let audio, dest, wave, recorder, chunks;
 window.starts=0;
 async function beginRecording(){
+  if(Date.now()<(window.__probeIgnoreRestartUntil||0))return;
   if(!audio){
     audio=new AudioContext(); dest=audio.createMediaStreamDestination();
     wave=audio.createOscillator();wave.frequency.value=440;wave.connect(dest);wave.start();
@@ -47,12 +52,13 @@ async function beginRecording(){
 }
 function endRecording(){
   recorder.stop();end.hidden=true;begin.hidden=false;
+  if(window.__probeCancelRetry)window.__probeIgnoreRestartUntil=Date.now()+10000;
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape')menu.hidden=true});
 </script>'''
 
 
-def check_audio(path):
+def check_audio(path, minimum_seconds=4):
     """Detect silent frames at the boundaries, not just container duration."""
     duration, silent_run, max_silence, samples = 0.0, 0.0, 0.0, 0
     with av.open(str(path)) as media:
@@ -64,7 +70,7 @@ def check_audio(path):
             samples += frame.samples
             silent_run = silent_run + seconds if rms < 0.01 else 0.0
             max_silence = max(max_silence, silent_run)
-    assert samples and duration > 4, 'Audio after the first file is missing'
+    assert samples and duration > minimum_seconds, 'Audio after the first file is missing'
     assert max_silence < 0.15, 'Audio gap at a native file boundary'
     return {'audio_seconds': round(duration, 3), 'max_silence_seconds': round(max_silence, 3)}
 
@@ -107,9 +113,15 @@ async def case(mode):
                     context.on('page', lambda page: live_pages.append(page))
                     async def route(request):
                         body = '<iframe src="/private-join/test"></iframe>' if '/private-join/' not in request.request.url else HTML
-                        await request.fulfill(status=200, content_type='text/html; charset=utf-8', body=body)
+                        headers={}
+                        if mode=='strict_csp':
+                            body=body.replace('<script>','<script nonce="test-fixture">')
+                            headers['Content-Security-Policy']="script-src 'nonce-test-fixture' blob:; object-src 'none'"
+                        await request.fulfill(status=200, content_type='text/html; charset=utf-8', body=body, headers=headers)
                     await context.route('**/*', route)
                     await context.add_init_script('window.__agentCheckpointTimeslice = 250')
+                    if mode=='cancel_during_retry':
+                        await context.add_init_script('window.__probeCancelRetry = true')
                     return context
                 browser.new_context = new_context
                 return browser
@@ -134,6 +146,9 @@ async def case(mode):
                 await asyncio.sleep(4)
                 page=live_pages[0]
                 frame=next(child for child in page.frames if '/private-join/' in child.url)
+                if mode == 'cancel_during_retry':
+                    service.stops[sid].set()
+                    return
                 if mode == 'native_stop':
                     await frame.evaluate('endRecording()')
                 elif mode == 'transient_ui':
@@ -170,6 +185,9 @@ async def case(mode):
                     await asyncio.wait_for(service.run(sid), timeout=45)
                     if stopper.done():
                         await stopper
+                except asyncio.TimeoutError:
+                    print(json.dumps({'event':'offline_case_timeout','mode':mode,**{k:state.get(k) for k in ('status','error_code','recording_issue','native_rotations','capture_health')}}),flush=True)
+                    raise
                 finally:
                     stopper.cancel()
         if state['status'] not in {'uploaded','partial_saved'}:
@@ -182,20 +200,23 @@ async def case(mode):
             assert state['end_reason'] == 'user_stop'
             return {'mode': mode, 'saved_incomplete': True, 'imports': 1}
         assert state['status'] == 'uploaded', state.get('error_code')
-        assert state['native_rotations'] >= 1, state['native_rotations']
+        assert state['native_rotations'] >= (0 if mode=='cancel_during_retry' else 1), state['native_rotations']
         assert state['recording_complete'] == (mode != 'native_stop'), mode
         assert state['capture_discontinuities'] == 0
         assert state['recording_file'] == 'continuous.webm'
         assert imports == [1], 'Multiple meeting imports'
         assert len(list(folder.glob('native-*.webm'))) == state['native_rotations']
         assert (folder / 'recording.webm').is_file()
-        audio = check_audio(folder / 'continuous.webm')
+        audio = check_audio(folder / 'continuous.webm', 3 if mode=='cancel_during_retry' else 4)
         assert state['end_reason']==('chat_stop' if mode=='chat' else 'user_stop')
         return {'mode': mode, 'rotations': state['native_rotations'], 'imports': len(imports), 'end_reason':state['end_reason'], **audio}
 
 
 async def main():
-    results = [await case(mode) for mode in ('normal', 'failure', 'native_stop', 'transient_ui', 'advisory_expired', 'chat')]
+    results=[]
+    for mode in ('normal', 'failure', 'native_stop', 'transient_ui', 'advisory_expired', 'chat','strict_csp','cancel_during_retry'):
+        print(json.dumps({'event':'offline_case_started','mode':mode}),flush=True)
+        results.append(await case(mode))
     print(json.dumps({'status': 'passed', 'scope': 'offline_synthetic_only', 'cases': results}))
 
 

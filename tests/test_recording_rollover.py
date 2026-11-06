@@ -98,6 +98,17 @@ def test_rotation_timeout_is_bounded(monkeypatch):
     asyncio.run(run())
 
 
+def test_rotation_does_not_report_an_unstarted_next_file():
+    async def run():
+        async def stop_native(*args):
+            pass
+        async def start_native(*args):
+            return False
+        assert not await rollover.rotate(Page(), object(), Leave(), asyncio.Event(),
+                                         time.time()+60, start_native, stop_native)
+    asyncio.run(run())
+
+
 @pytest.mark.parametrize('command', ['/stop', 'останови запись', 'стоп запись'])
 def test_private_chat_stop_controls_only_the_owners_active_session(command):
     from uuid import uuid4

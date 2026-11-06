@@ -29,7 +29,7 @@ async def rotate(page, frame, leave, stop, deadline, start_native, stop_native):
         if stop.is_set() or time.time() >= deadline or not await leave.is_visible():
             await prepare_stop(page)
             return False
-        await start_native(page, frame)
-        return True
+        started = await start_native(page, frame)
+        return started is not False
 
     return await asyncio.wait_for(change_part(), timeout=ROTATION_TIMEOUT_SECONDS)

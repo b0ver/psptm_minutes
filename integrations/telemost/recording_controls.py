@@ -1,4 +1,6 @@
 """Native recorder controls across Telemost toolbar and menu layouts."""
+import asyncio
+import time
 try:
     from .states import CONTROLS
 except ImportError:
@@ -13,20 +15,47 @@ def stop_recording_control(frame):
     ).filter(visible=True).first
 
 
-async def start_native_recording(page, frame):
+async def start_native_recording(page, frame, should_stop=None):
+    from playwright.async_api import TimeoutError as PWTimeout
+    cancelled = should_stop or (lambda: False)
+    if cancelled():
+        return False
     more = frame.locator('button[aria-label="Ещё"]').last
-    await more.evaluate('(button) => button.click()')
-    record = frame.get_by_text(CONTROLS['start_recording'], exact=True)
-    await record.wait_for(state='visible', timeout=15000)
+    record = frame.get_by_text(CONTROLS['start_recording'], exact=True).filter(visible=True).first
+    if not await record.is_visible():
+        await more.evaluate('(button) => button.click()')
+    deadline = time.monotonic() + 15
+    while not await record.is_visible():
+        if cancelled():
+            return False
+        if time.monotonic() >= deadline:
+            raise PWTimeout('native_start_command_unavailable')
+        await asyncio.sleep(.1)
     for scope in page.frames:
         await scope.evaluate('() => {window.__agentCheckpointArmed = true}')
-    await record.evaluate('(element) => element.click()')
     stop = stop_recording_control(frame)
-    if not await stop.is_visible():
-        await more.evaluate('(button) => button.click()')
-    # Confirm the actual stop command; a successful start click is insufficient.
-    await stop.wait_for(state='visible', timeout=20000)
-    await page.keyboard.press('Escape')
+    deadline = time.monotonic() + 20
+    attempts, next_attempt, revealed_legacy = 0, 0, False
+    while time.monotonic() < deadline:
+        active = await frame.evaluate('() => window.__agentNativeRecordingActive')
+        if await stop.is_visible() and active is not False:
+            await page.keyboard.press('Escape')
+            return True
+        if cancelled():
+            return False
+        now = time.monotonic()
+        # Telemost takes only the leading start action while the previous
+        # recording finishes saving. Retry the visible UI command, never a
+        # recorder API or a disabled/revoked control.
+        if active is not True and attempts < 5 and now >= next_attempt and await record.is_visible() and await record.is_enabled():
+            await record.evaluate('(element) => element.click()')
+            attempts += 1
+            next_attempt = now + 2
+        elif attempts and not revealed_legacy and not await record.is_visible() and not await stop.is_visible() and now >= next_attempt - 1:
+            await more.evaluate('(button) => button.click()')
+            revealed_legacy = True
+        await asyncio.sleep(.1)
+    raise PWTimeout('native_recording_start_not_confirmed')
 
 
 async def stop_native_recording(frame, leave, end_reason):
@@ -40,3 +69,4 @@ async def stop_native_recording(frame, leave, end_reason):
             await frame.locator('button[aria-label="Ещё"]').last.evaluate('(button) => button.click()')
         await stop.wait_for(state='visible', timeout=15000)
         await stop.evaluate('(element) => element.click()')
+        await stop.wait_for(state='hidden', timeout=15000)
