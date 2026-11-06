@@ -21,11 +21,13 @@ try:
     from .devices import mute_devices
     from .checkpoints import Checkpoints, CheckpointError, atomic
     from .states import Status, TERMINAL, CONTROLS
+    from .rollover import ROTATE_AFTER_SECONDS, ROTATION_TIMEOUT_SECONDS, rotate, prepare_stop
 except ImportError:
     from recording_controls import start_native_recording, stop_native_recording
     from devices import mute_devices
     from checkpoints import Checkpoints, CheckpointError, atomic
     from states import Status, TERMINAL, CONTROLS
+    from rollover import ROTATE_AFTER_SECONDS, ROTATION_TIMEOUT_SECONDS, rotate, prepare_stop
 
 DATA = Path(os.environ.get('AGENT_DATA_DIR', '/data/telemost'))
 API = os.environ.get('MINUTES_API_URL', 'http://api:8080')
@@ -85,7 +87,7 @@ def persist(sid, **updates):
 
 def public(sid):
     s = sessions[sid]
-    return {k: s.get(k) for k in ['id', 'title','title_source','camera_off', 'status', 'error_code', 'created_at', 'updated_at', 'recording_started_at', 'duration_minutes', 'meeting_id', 'bytes', 'has_preview', 'end_reason', 'recording_complete', 'chunks', 'checkpoint_bytes', 'last_checkpoint_at', 'capture_health', 'recovered_audio_seconds', 'retryable']}
+    return {k: s.get(k) for k in ['id', 'title','title_source','camera_off', 'status', 'error_code', 'created_at', 'updated_at', 'recording_started_at', 'duration_minutes', 'meeting_id', 'bytes', 'has_preview', 'end_reason', 'recording_complete', 'chunks', 'checkpoint_bytes', 'last_checkpoint_at', 'capture_health', 'recovered_audio_seconds', 'retryable', 'native_rotations', 'capture_discontinuities', 'recording_issue', 'chat_control_available']}
 
 
 @asynccontextmanager
@@ -176,7 +178,7 @@ async def stop(sid: str):
         raise HTTPException(404, 'Сессия не найдена')
     if sid in stops and sessions[sid]['status'] not in TERMINAL and sessions[sid]['status'] != 'uploading':
         stops[sid].set()
-        if sessions[sid]['status'] in {'starting', 'opening', 'preparing', 'waiting_host', 'joined'}:
+        if sessions[sid]['status'] in {'starting', 'opening', 'preparing', 'waiting_host'}:
             persist(sid, status='cancelled', error_code='cancelled_before_recording')
             tasks[sid].cancel()
         else:
@@ -322,6 +324,7 @@ async def run(sid):
         await context.expose_binding('agentCheckpoint', checkpoint_binding)
         await context.add_init_script(path=str(Path(__file__).with_name('checkpoint.js')))
         await context.add_init_script(path=str(Path(__file__).with_name('meeting_observer.js')))
+        await context.add_init_script(path=str(Path(__file__).with_name('lifecycle.js')))
         # Only synthetic devices exist in the container; host devices are not mounted.
         await context.grant_permissions(['microphone', 'camera'])
         page = await context.new_page()
@@ -353,17 +356,19 @@ async def run(sid):
         promo_task = asyncio.create_task(dismiss_promos())
 
         # Keep native download alive and save it immediately; path never comes from remote filename.
-        downloaded = asyncio.Event()
+        new_download = asyncio.Event()
         download_errors = []
-        async def save(download):
+        async def save(download, index):
             try:
-                await download.save_as(str(DATA / sid / 'recording.webm'))
+                name = 'recording.webm' if index == 0 else f'native-{index:03d}.webm'
+                await download.save_as(str(DATA / sid / name))
             except Exception:
                 download_errors.append('recording_download_failed')
-            finally:
-                downloaded.set()
         download_tasks = []
-        page.on('download', lambda d: download_tasks.append(asyncio.create_task(save(d))))
+        def on_download(download):
+            download_tasks.append(asyncio.create_task(save(download, len(download_tasks))))
+            new_download.set()
+        page.on('download', on_download)
         phase = 'navigation'
         persist(sid, status='opening')
         await page.goto(state['url'], wait_until='domcontentloaded', timeout=60000)
@@ -398,12 +403,18 @@ async def run(sid):
         phase = 'admission'
         admission_ms = 180000 if state.get('admission_deadline') is None else max(1, int((state['admission_deadline'] - time.time()) * 1000))
         await leave.wait_for(timeout=admission_ms)
-        await mute_devices([frame],require_camera=True)
+        try:
+            await mute_devices([frame],require_camera=False)
+        except Exception:
+            pass  # Synthetic tracks are already disabled by the init script.
         persist(sid, status='joined')
         # Cloud summarization onboarding may cover the call controls briefly.
         close = frame.locator('button[aria-label="Закрыть окно"]')
-        if await close.is_visible():
-            await close.evaluate('(button) => button.click()')
+        try:
+            if await close.is_visible():
+                await close.evaluate('(button) => button.click()')
+        except Exception:
+            pass
         # Meeting name is exposed by Telemost's call-information popup.
         share=frame.locator('[data-testid="share-button"]')
         try:
@@ -413,8 +424,11 @@ async def run(sid):
                 await frame.evaluate('()=>window.__agentSampleMeeting?.()')
                 await page.keyboard.press('Escape')
         except Exception:
-            await page.keyboard.press('Escape')
-        observed=await frame.evaluate('()=>window.__agentMeetingObserver || {}')
+            pass
+        try:
+            observed=await frame.evaluate('()=>window.__agentMeetingObserver || {}')
+        except Exception:
+            observed={}
         if state.get('title_from_telemost',True):
             room_title=observed.get('title')
             named=bool(room_title and room_title.strip() not in {'Яндекс Телемост','Звонок в Яндекс Телемосте'})
@@ -422,58 +436,119 @@ async def run(sid):
                 room_title='Телемост · '+state['url'].rsplit('/',1)[-1]
             persist(sid,title=room_title[:200],title_source='telemost' if named else 'meeting_link')
         phase = 'record_start'
-        if state.get('recording_deadline') is not None and time.time() >= state['recording_deadline']:
-            raise AgentError('scheduled_recording_deadline_passed')
-        await start_native_recording(page, frame)
+        if stop.is_set():
+            persist(sid, status='cancelled', error_code='cancelled_before_recording')
+            return
+        # Keep the room open even when recorder controls fail after admission.
+        try:
+            chat = frame.get_by_role('button', name='Чат', exact=True).or_(
+                frame.get_by_role('button', name='Чат встречи', exact=True)).first
+            if await chat.is_visible():
+                await chat.evaluate('(button) => button.click()')
+        except Exception:
+            pass
+        for scope in page.frames:
+            try:
+                await scope.evaluate('() => window.__agentArmCommands?.()')
+            except Exception:
+                pass
+        recording_issue = None
+        try:
+            await start_native_recording(page, frame)
+        except Exception:
+            recording_issue = 'recording_start_failed'
         started = time.time()
-        origins=[await scope.evaluate('()=>window.__agentRecordingStartedAt || null') for scope in page.frames]
+        origins=[]
+        for scope in page.frames:
+            try:
+                origins.append(await scope.evaluate('()=>window.__agentRecordingStartedAt || null'))
+            except Exception:
+                pass
         native_start=next((value for value in origins if value),None)
         if native_start:
-            for scope in page.frames:await scope.evaluate('(at)=>{window.__agentRecordingStartedAt=at}',native_start)
+            for scope in page.frames:
+                try:
+                    await scope.evaluate('(at)=>{window.__agentRecordingStartedAt=at}',native_start)
+                except Exception:
+                    pass
         persist(sid, status='recording', recording_started_at=started)
+        native_started, rotations, discontinuities = started, 0, 0
+        persist(sid, native_rotations=0, capture_discontinuities=0,
+                recording_issue=recording_issue, recording_complete=not bool(recording_issue))
         await capture_preview(page, sid)
         phase = 'recording'
-        end_reason = 'max_duration'
-        alone_since = None
-        while not stop.is_set() and time.time() - started < state['duration_minutes'] * 60:
-            if state.get('recording_deadline') is not None and time.time() >= state['recording_deadline']:
-                end_reason = 'calendar_end'
-                break
+        end_reason = 'user_stop'
+        rotation_failed = False
+        while True:
             try:
                 await asyncio.wait_for(stop.wait(), timeout=3)
-                end_reason = 'user_stop'
                 break
             except asyncio.TimeoutError:
                 pass
-            if not await leave.is_visible():
-                end_reason = 'meeting_ended_or_removed'
-                break
-            await mute_devices([frame],require_camera=True)
+            if not browser.is_connected() or page.is_closed():
+                raise AgentError('browser_crash')  # The browser has actually gone away.
             try:
-                observed=await frame.evaluate('()=>{window.__agentSampleMeeting?.();return window.__agentMeetingObserver || {}}')
-                paused=any([await scope.evaluate('()=>!!window.__agentRecordingHadPause') for scope in page.frames])
-                observed['timing_reliable']=bool(native_start and not paused)
-                if not observed['timing_reliable']:observed['turns']=[]
-                if observed.get('source')=='telemost_ui':persist(sid,meeting_context=observed,camera_off=True)
-            except Exception:pass  # Metadata collection must not lose a native recording.
-            checkpoint = await (capture_frame or frame).evaluate('() => window.__agentCheckpoint || {state: "unsupported"}')
-            last_ack = checkpoint.get('lastAck', started * 1000) / 1000
-            health = 'unavailable' if checkpoint['state'] in {'unsupported', 'idle'} else ('failed' if checkpoint['state'] == 'failed' else ('delayed' if time.time() - last_ack > 45 else 'healthy'))
-            if health != sessions[sid].get('capture_health'):
-                persist(sid, capture_health=health)
-            if checkpoint['state'] == 'final':
-                end_reason = 'native_recording_stopped'
-                break
-            participants = frame.get_by_role('button', name=CONTROLS['participants'], exact=True)
-            count_text = await participants.inner_text(timeout=3000)
-            count = re.search(r'\d+', count_text)
-            if count and int(count.group()) <= 1:
-                alone_since = alone_since or time.time()
-                if time.time() - alone_since > 60:
-                    end_reason = 'alone'
+                lifecycle = [await scope.evaluate('() => {window.__agentArmCommands?.();return window.__agentSampleLifecycle?.() || {}}')
+                             for scope in page.frames]
+                reason = next((item.get('reason') for item in lifecycle
+                               if item.get('reason') in {'meeting_ended', 'removed', 'chat_stop'}), None)
+                if reason:
+                    end_reason = reason
                     break
-            else:
-                alone_since = None
+                persist(sid, chat_control_available=any(item.get('chat_available') for item in lifecycle))
+                # A missing toolbar can be a reconnect or a new frame. It is not
+                # a reason to disconnect our guest or infer the end of a call.
+                if not await leave.is_visible():
+                    current = next((child for child in page.frames if '/private-join/' in child.url), None)
+                    if current:
+                        frame = current
+                        leave = frame.get_by_role('button', name=CONTROLS['leave'], exact=True)
+                    persist(sid, capture_health='ui_unavailable')
+                    continue
+                await mute_devices([frame], require_camera=False)
+                try:
+                    observed = await frame.evaluate('()=>{window.__agentSampleMeeting?.();return window.__agentMeetingObserver || {}}')
+                    paused = any([await scope.evaluate('()=>!!window.__agentRecordingHadPause') for scope in page.frames])
+                    observed['timing_reliable'] = bool(native_start and not paused)
+                    if not observed['timing_reliable']: observed['turns'] = []
+                    if observed.get('source') == 'telemost_ui': persist(sid, meeting_context=observed)
+                except Exception:
+                    pass
+                checkpoint = await (capture_frame or frame).evaluate('() => window.__agentCheckpoint || {state: "unsupported"}')
+                if checkpoint['state'] == 'final':
+                    # Do not restart a participant's native stop, and do not
+                    # leave the room. Wait for the owner's explicit exit rule.
+                    recording_issue = recording_issue or 'native_recording_stopped'
+                    persist(sid, capture_health='native_stopped', recording_issue=recording_issue,
+                            recording_complete=False)
+                    continue
+                last_ack = checkpoint.get('lastAck', started * 1000) / 1000
+                health = 'unavailable' if checkpoint['state'] in {'unsupported', 'idle'} else ('failed' if checkpoint['state'] == 'failed' else ('delayed' if time.time() - last_ack > 45 else 'healthy'))
+                persist(sid, capture_health='rotation_failed' if rotation_failed else health)
+                captures = [await scope.evaluate('() => window.__agentContinuousCapture || {}')
+                            for scope in page.frames]
+                rotations = max(rotations, sum(c.get('rotations', 0) for c in captures))
+                discontinuities = max(discontinuities, sum(c.get('discontinuities', 0) for c in captures))
+                if discontinuities != sessions[sid].get('capture_discontinuities'):
+                    persist(sid, capture_discontinuities=discontinuities, recording_complete=False)
+                if not rotation_failed and time.time() - native_started >= ROTATE_AFTER_SECONDS:
+                    persist(sid, capture_health='rotating')
+                    try:
+                        continued = await rotate(page, frame, leave, stop, float('inf'),
+                                                 start_native_recording, stop_native_recording)
+                    except Exception:
+                        recording_issue = 'native_rotation_failed'
+                        rotation_failed = True
+                        persist(sid, capture_health='rotation_failed', recording_issue=recording_issue,
+                                recording_complete=False)
+                        continue
+                    if continued:
+                        rotations += 1
+                        native_started = time.time()
+                        persist(sid, native_rotations=rotations, capture_health='healthy')
+            except Exception:
+                # Temporary UI/metadata errors must not close a live browser.
+                persist(sid, capture_health='ui_unavailable')
         phase = 'finalization'
         try:
             observed=await frame.evaluate('()=>{window.__agentStopMeetingObserver?.();return window.__agentMeetingObserver || {}}')
@@ -483,23 +558,43 @@ async def run(sid):
             if observed.get('source')=='telemost_ui':persist(sid,meeting_context=observed)
         except Exception:pass
         persist(sid, status='finishing', end_reason=end_reason)
-        await stop_native_recording(frame, leave, end_reason)
+        try:
+            await prepare_stop(page)
+            await stop_native_recording(frame, leave, end_reason)
+        except Exception:
+            recording_issue = recording_issue or 'recording_stop_failed'
         try:
             capture_scope = capture_frame or frame
             await capture_scope.evaluate('() => window.__agentFinalizeCheckpoint?.()')
             await capture_scope.wait_for_function('window.__agentCheckpoint?.state === "final" || window.__agentCheckpoint?.state === "failed" || window.__agentCheckpoint?.state === "idle" || window.__agentCheckpoint?.state === "unsupported"', timeout=15000)
         except Exception:
             pass
-        await asyncio.wait_for(downloaded.wait(), timeout=90)
+        async def wait_downloads():
+            while len(download_tasks) < rotations + 1:
+                await new_download.wait()
+                new_download.clear()
+            await asyncio.gather(*download_tasks)
+        await asyncio.wait_for(wait_downloads(), timeout=90)
         if download_errors:
             raise AgentError(download_errors[0])
         file = DATA / sid / 'recording.webm'
+        if rotations:
+            file = DATA / sid / 'continuous.webm'
+            try:
+                result = await asyncio.to_thread(checkpoints.assemble, file)
+            except CheckpointError:
+                raise AgentError('continuous_recording_invalid') from None
+            if not result['checkpoint_final']:
+                raise AgentError('continuous_recording_not_final')
+            captures = [await scope.evaluate('() => window.__agentContinuousCapture || {}')
+                        for scope in page.frames]
+            discontinuities = max(discontinuities, sum(c.get('discontinuities', 0) for c in captures))
+            persist(sid, capture_discontinuities=discontinuities)
         if not file.is_file() or not file.stat().st_size:
             raise AgentError('empty_recording_file')
-        persist(sid, status='saved', recording_file='recording.webm', recording_complete=end_reason not in {'meeting_ended_or_removed', 'native_recording_stopped'}, bytes=file.stat().st_size)
-        await cleanup_and_import(sid, file,
-                                 end_reason not in {'meeting_ended_or_removed', 'native_recording_stopped'},
-                                 browser)
+        complete = not discontinuities and not recording_issue and end_reason != 'removed'
+        persist(sid, status='saved', recording_file=file.name, recording_complete=complete, bytes=file.stat().st_size)
+        await cleanup_and_import(sid, file, complete, browser)
         browser = None
     except AgentError as e:
         if str(e) == 'cancelled_before_join':

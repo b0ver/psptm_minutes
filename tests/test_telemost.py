@@ -53,6 +53,16 @@ def test_unknown_report_type_rejected_before_browser(agent):
     assert result.status_code==422 and not service.sessions
 
 
+def test_stop_after_admission_finishes_instead_of_cancelling_browser_task(agent):
+    result=agent.post('/sessions',json={'url':'https://telemost.yandex.ru/j/1234567890','recording_authorized':True})
+    sid=result.json()['id']
+    service.sessions[sid]['status']='joined'
+    task=service.tasks[sid]
+    stopped=agent.post('/sessions/'+sid+'/stop')
+    assert stopped.json()['status']=='stopping'
+    assert not task.cancelled()
+
+
 def test_proxy_failure_does_not_expose_internal_exception(client, monkeypatch):
     from app import api
     async def unavailable(*args, **kwargs):

@@ -30,8 +30,10 @@ async def start_native_recording(page, frame):
 
 
 async def stop_native_recording(frame, leave, end_reason):
-    if end_reason in {'meeting_ended_or_removed', 'native_recording_stopped'}:
+    if end_reason in {'meeting_ended_or_removed', 'native_recording_stopped', 'meeting_ended', 'removed'}:
         return
+    if await frame.evaluate('() => window.__agentNativeRecordingActive') is False:
+        return  # Cancellation may arrive between native files.
     if await leave.is_visible():
         stop = stop_recording_control(frame)
         if not await stop.is_visible():
