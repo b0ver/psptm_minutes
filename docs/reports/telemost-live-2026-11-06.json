@@ -10,7 +10,7 @@
   "synthetic_tone_detected_in_saved_audio": true,
   "guest_chat": "requires_account_login",
   "current_end_profile_commit": "9148255380da1160d10be8fb7125cf5f3d3ffe72",
-  "host_end_validation": "pending_user_action",
+  "host_end_validation": "passed_for_9148255",
   "fixed_controls_sha256": "65583453176e3d4ce02d93fcd4bf71fe30ad155709c2121fe93de7f8ad09e3c9",
   "fixed_controls_real_short_cycles": [
     {
@@ -34,5 +34,16 @@
   "second_profile_automatic_rollover": "failed_native_rotation_failed",
   "offline_lifecycle_cases_passed": 15,
   "offline_end_during_retry_passed": true,
-  "offline_main_loop_cases_passed": 9
+  "offline_main_loop_cases_passed": 9,
+  "host_end_reason": "meeting_ended",
+  "host_end_import_once": true,
+  "host_end_import_bytes_match": true,
+  "operator_stop_import_once": true,
+  "operator_stop_import_bytes_match": true,
+  "live_imports_marked_incomplete": true,
+  "test_stack_stopped": true,
+  "private_volumes_retained": true,
+  "fixed_profile_code_ci_sha": "bb28c491c81f337c774be6c9aede463aaa267167",
+  "fixed_profile_code_ci_url": "https://github.com/b0ver/psptm_minutes/actions/runs/42266348379",
+  "fixed_profile_code_ci_status": "success"
 }
