@@ -291,3 +291,30 @@ VERSIONv10 сбрасывает старый кеш. v9 сохранен в arch
 Это кандидат на исправление протокола. Causal и semantic успех еще требуют новой собственной
 cancellation, unchanged focused E2E, четырех fresh native controls и полного original12+28
 с независимым full-source/body review. Scope/gold, веса и production не изменены.
+
+
+## RC source-status-v11: однозначная цитата и граница упоминания работы
+
+v10 focused E2E прошел 12 native запросов. Первый long late_cancel control завершился
+после одного HTTP200/done/stop ответа с source_status_inventory_source_act_literal_not_unique.
+Первая цитата была уникальной; вторая встречалась 115 раз в том же span_ref. Неизмененная
+проверка отказала, не назначая произвольную позицию. Аудит
+0a6f6fb77ac1ae3b4b47403f8530730bff92de86ae57b441b31dd7ff61dc69d5 подтвердил неизмененную fixture,
+source-only input без candidate и readonly реконструкцию собственной cancellation v10.
+Все 13 actual payloads/native usage отдельно проверены в readonly контейнере exact v10 image.
+Failed control, probe и прошедший E2E не повторяются; v10 сохранен отдельно.
+
+В новом v11 только discovery SYSTEM уточняет: упоминание должно обозначать конкретную
+работу, результат, рабочую потребность или предложение. Тема, объект или справочное описание
+сами по себе не создают работу; именная рабочая потребность по-прежнему допустима.
+Цитата должна встречаться ровно один раз внутри указанного span_ref. При повторах модель
+должна расширить дословный контекст внутри того же span либо вернуть uncertain, сохранив
+каждое слово и пробел. Код не расширяет цитату, не выбирает позицию и не фильтрует работы.
+
+Исполняемые функции, схемы, decoder, offsets/unique-quote, source/owner/literal/kind/status,
+coverage/agreement/native/context/global64 и STATE_RULES сохранены. Два новых negative/roundtrip
+CPU cases проверяют отказ на повторной цитате и сохранение всех повторов в однозначном
+контексте без приемки действия. 44 development readonly CPU tests прошли. VERSIONv11 исключает
+старый кеш. Семантическая причинность и полный scope еще требуют own manifest cancellation,
+unchanged E2E, fresh4 native controls, original12+28 и independent full-source/body review.
+Production, веса, scope/gold и frozen предшественники не менялись.

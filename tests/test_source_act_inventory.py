@@ -61,3 +61,18 @@ class SourceOnlyDiscovery(unittest.TestCase):
  def test_forged_or_nonincrementing_native_counter_refuses(self):
   self.client.chat.side_effect=lambda *args:self.value
   with self.assertRaises(InventoryError):self.run_window()
+
+ def test_repeated_literal_in_same_span_is_not_assigned_an_arbitrary_occurrence(self):
+  text='Нейтральное описание объекта. '*4
+  self.window[0]['text']=text;self.window[0]['end_char']=10+len(text)
+  self.value['acts'][0].update(quote='Нейтральное описание объекта.',roles=['reference'])
+  with self.assertRaisesRegex(InventoryError,'source_act_literal_not_unique'):self.run_window()
+
+ def test_expanded_exact_unique_context_preserves_every_repetition_without_accepting_an_action(self):
+  text='Контекст. '+('Нейтральное описание объекта. '*4)
+  self.window[0]['text']=text;self.window[0]['end_char']=10+len(text)
+  self.value['acts'][0].update(quote=text,roles=['reference'])
+  result=self.run_window()
+  self.assertEqual(result['source_acts'][0]['quote'],text)
+  self.assertEqual((result['source_acts'][0]['start_char'],result['source_acts'][0]['end_char']),(10,10+len(text)))
+  self.assertFalse(result['action_quality_accepted']);self.assertTrue(result['candidate_matching_still_required'])
