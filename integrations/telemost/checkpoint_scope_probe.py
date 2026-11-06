@@ -35,7 +35,7 @@ async def main():
    await page.evaluate('primary.stop()')
    await page.wait_for_function('()=>window.__agentCheckpoint.state==="final"')
    diagnostic=await page.evaluate('window.__agentContinuousCapture.nativeStopDiagnostic')
-   assert diagnostic=={'trigger':'page_stop','error':'none','pagehide':False},diagnostic
+   assert diagnostic=={'trigger':'page_stop','error':'none','pagehide':False,'callsite':None},diagnostic
    assert sum(bool(packet.get('final')) for packet in packets)==1
    print(json.dumps({'status':'passed','secondary_stop_ignored':True,'primary_stop_finalized_once':True,'storage_error_code_observed':True}))
   finally:await browser.close()

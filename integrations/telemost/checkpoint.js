@@ -6,7 +6,7 @@
   let mirror, chain = Promise.resolve(), sequence = 0, failed = false;
   let audioContext, destination, input, inputStream, rotating = false, stopping = false;
   let generation = 0, activeNative;
-  let nativeStopCommand, nativeError, pagehideSeen = false;
+  let nativeStopCommand, nativeStopCallsite, nativeError, pagehideSeen = false;
   window.addEventListener('pagehide', () => {pagehideSeen = true;});
   const capture = window.__agentContinuousCapture = {rotations: 0, discontinuities: 0};
   // Observe only Telemost recording databases. Keep codes, never records or text.
@@ -73,6 +73,7 @@
       if (mirror && (!rotating || stopping || failed || mirror.state !== 'recording')) return;
       activeNative = this;
       nativeStopCommand = undefined;
+      nativeStopCallsite = undefined;
       nativeError = undefined;
       this.addEventListener('error', event => {
         if (this !== activeNative) return;
@@ -83,7 +84,7 @@
       const onNativeStop = () => {
         if (this === activeNative) {
           window.__agentNativeRecordingActive = false;
-          capture.nativeStopDiagnostic = {trigger: nativeStopCommand || 'native_event', error: nativeError || 'none', pagehide: pagehideSeen};
+          capture.nativeStopDiagnostic = {trigger: nativeStopCommand || 'native_event', error: nativeError || 'none', pagehide: pagehideSeen, callsite: nativeStopCallsite || null};
         }
         if (this === activeNative && !rotating && mirror?.state !== 'inactive') mirror?.stop();
       };
@@ -149,7 +150,13 @@
       if (mirror?.state === 'paused') mirror.resume();
     }
     stop() {
-      if (this === activeNative) nativeStopCommand = rotating ? 'agent_rotation' : stopping ? 'agent_stop' : 'page_stop';
+      if (this === activeNative) {
+        nativeStopCommand = rotating ? 'agent_rotation' : stopping ? 'agent_stop' : 'page_stop';
+        // Retain only a public JS filename and numeric source coordinates.
+        // Do not retain URLs, paths, function arguments, or the stack itself.
+        const site = String(new Error().stack || '').split('\n').map(line => line.match(/\b([A-Za-z0-9._-]{1,120}\.js):(\d+):(\d+)\)?$/)).find(Boolean);
+        nativeStopCallsite = site ? {script: site[1], line: Number(site[2]), column: Number(site[3])} : undefined;
+      }
       super.stop();
     }
   }

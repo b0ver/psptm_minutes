@@ -34,14 +34,13 @@
   "second_profile_automatic_rollover": "failed_native_rotation_failed",
   "offline_lifecycle_cases_passed": 15,
   "offline_end_during_retry_passed": true,
-  "offline_main_loop_cases_passed": 9,
+  "offline_main_loop_cases_passed": 10,
   "host_end_reason": "meeting_ended",
   "host_end_import_once": true,
   "host_end_import_bytes_match": true,
   "operator_stop_import_once": true,
   "operator_stop_import_bytes_match": true,
   "live_imports_marked_incomplete": true,
-  "test_stack_stopped": true,
   "private_volumes_retained": true,
   "fixed_profile_code_ci_sha": "bb28c491c81f337c774be6c9aede463aaa267167",
   "fixed_profile_code_ci_url": "https://github.com/b0ver/psptm_minutes/actions/runs/42266348379",
@@ -74,12 +73,45 @@
     "oom_kill_count": 0,
     "storage_free_sufficient": true,
     "live_root_cause": "not_established",
-    "65_minute_presence_test": "running"
+    "65_minute_presence_test": "passed",
+    "explicit_operator_stop_seconds": 3902,
+    "browser_connection_verified_seconds": 3943,
+    "stayed_after_native_failure_seconds_at_stop": 2184,
+    "import_once": true,
+    "import_bytes_match": true,
+    "import_complete": false,
+    "stack_stopped": true
   },
   "synthetic_storage_probe": {
     "incognito_written_mb": 640,
     "persistent_written_mb": 640,
     "both_succeeded": true,
     "live_root_cause_proven": false
+  },
+  "original_test_stack_stopped": true,
+  "diagnostic_profile_3ac3ddf": {
+    "recording_result": "failed_before_first_rotation",
+    "native_stop_detected_seconds": 1376,
+    "native_stop_diagnostic": {
+      "trigger": "page_stop",
+      "error": "none_observed",
+      "pagehide": false,
+      "storage_errors": [],
+      "blob_write_failed": false
+    },
+    "cause_in_page_code": "not_established",
+    "native_rotations": 0,
+    "recovered_audio_seconds": 1364.64,
+    "import_once": true,
+    "import_bytes_match": true,
+    "import_complete": false,
+    "stack_stopped": true,
+    "ci_status": "success",
+    "ci_url": "https://github.com/b0ver/psptm_minutes/actions/runs/42295454347"
+  },
+  "generic_close_regression": {
+    "old_code": "reproduced_9_unrequested_clicks",
+    "fixed_code": "passed_zero_unrequested_clicks",
+    "live_causality": "not_proven"
   }
 }

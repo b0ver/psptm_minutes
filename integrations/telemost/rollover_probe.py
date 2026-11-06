@@ -54,6 +54,11 @@ function endRecording(){
   recorder.stop();end.hidden=true;begin.hidden=false;
   if(window.__probeCancelRetry)window.__probeIgnoreRestartUntil=Date.now()+10000;
 }
+if(window.__probeCloseTrap){
+ window.__probeCloseTrapClicks=0;
+ const unrelated=document.createElement('button');unrelated.setAttribute('aria-label','Закрыть окно');
+ unrelated.textContent='Закрыть окно';unrelated.onclick=()=>{window.__probeCloseTrapClicks++;if(recorder?.state==='recording')endRecording()};document.body.append(unrelated);
+}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')menu.hidden=true});
 </script>'''
 
@@ -87,6 +92,7 @@ async def case(mode):
         }
         service.stops[sid] = asyncio.Event()
         imports = []
+        close_clicks = []
         live_pages = []
         clock_offset = [0]
         original = httpx.AsyncClient
@@ -120,6 +126,8 @@ async def case(mode):
                         await request.fulfill(status=200, content_type='text/html; charset=utf-8', body=body, headers=headers)
                     await context.route('**/*', route)
                     await context.add_init_script('window.__agentCheckpointTimeslice = 250')
+                    if mode == 'unrelated_close':
+                        await context.add_init_script('window.__probeCloseTrap = true')
                     if mode in {'cancel_during_retry','ended_during_retry'}:
                         await context.add_init_script('window.__probeCancelRetry = true')
                     return context
@@ -146,6 +154,8 @@ async def case(mode):
                 await asyncio.sleep(4)
                 page=live_pages[0]
                 frame=next(child for child in page.frames if '/private-join/' in child.url)
+                if mode == 'unrelated_close':
+                    close_clicks.append(await frame.evaluate('window.__probeCloseTrapClicks'))
                 if mode == 'cancel_during_retry':
                     service.stops[sid].set()
                     return
@@ -207,6 +217,8 @@ async def case(mode):
             assert state['end_reason'] == 'user_stop'
             return {'mode': mode, 'saved_incomplete': True, 'imports': 1}
         assert state['status'] == 'uploaded', state.get('error_code')
+        if mode == 'unrelated_close':
+            assert close_clicks == [0], ('Unrequested generic close', close_clicks)
         assert state['native_rotations'] >= (0 if mode in {'cancel_during_retry','ended_during_retry'} else 1), state['native_rotations']
         assert state['recording_complete'] == (mode != 'native_stop'), mode
         assert state['capture_discontinuities'] == 0
@@ -221,7 +233,7 @@ async def case(mode):
 
 async def main():
     results=[]
-    for mode in ('normal', 'failure', 'native_stop', 'transient_ui', 'advisory_expired', 'chat','strict_csp','cancel_during_retry','ended_during_retry'):
+    for mode in ('normal', 'failure', 'native_stop', 'transient_ui', 'advisory_expired', 'chat','strict_csp','cancel_during_retry','ended_during_retry','unrelated_close'):
         print(json.dumps({'event':'offline_case_started','mode':mode}),flush=True)
         results.append(await case(mode))
     print(json.dumps({'status': 'passed', 'scope': 'offline_synthetic_only', 'cases': results}))

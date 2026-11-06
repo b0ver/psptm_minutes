@@ -359,8 +359,11 @@ async def run(sid):
             next_preview = 0
             while True:
                 try:
-                    for scope in page.frames:
-                        for label in ('Закрыть ознакомление', 'Закрыть окно'):
+                    # An unrelated close button can stop recording or leave a
+                    # call. Onboarding is the only dialog we dismiss, before
+                    # recording starts. Recording controls have their own flow.
+                    for scope in page.frames if sessions[sid]['status'] in {'preparing', 'waiting_host', 'joined'} else []:
+                        for label in ('Закрыть ознакомление',):
                             close = scope.locator('button[aria-label="' + label + '"]')
                             if await close.is_visible() and await close.is_enabled():
                                 await close.evaluate('(button) => button.click()')
@@ -426,13 +429,6 @@ async def run(sid):
         except Exception:
             pass  # Synthetic tracks are already disabled by the init script.
         persist(sid, status='joined')
-        # Cloud summarization onboarding may cover the call controls briefly.
-        close = frame.locator('button[aria-label="Закрыть окно"]')
-        try:
-            if await close.is_visible():
-                await close.evaluate('(button) => button.click()')
-        except Exception:
-            pass
         # Meeting name is exposed by Telemost's call-information popup.
         share=frame.locator('[data-testid="share-button"]')
         try:
@@ -549,6 +545,9 @@ async def run(sid):
                         'error': diagnostic.get('error') if diagnostic.get('error') in {'none', 'other', 'UnknownError', 'InvalidModificationError', 'SecurityError', 'NotSupportedError', 'OutOfMemoryError'} else 'unknown',
                         'pagehide': diagnostic.get('pagehide') is True,
                     }
+                    site = diagnostic.get('callsite')
+                    if isinstance(site, dict) and re.fullmatch(r'[A-Za-z0-9._-]{1,120}\.js', str(site.get('script', ''))) and all(type(site.get(k)) is int and 0 < site[k] < 100_000_000 for k in ('line', 'column')):
+                        safe_diagnostic['callsite'] = {k: site[k] for k in ('script', 'line', 'column')}
                     storage = [await scope.evaluate('() => ({errors: window.__agentContinuousCapture?.storageErrors || [], blob: window.__agentContinuousCapture?.blobWriteFailed === true})') for scope in page.frames]
                     safe_diagnostic['storage_errors'] = sorted({code for item in storage for code in item.get('errors', []) if code in {'QuotaExceededError', 'UnknownError', 'DataError', 'AbortError', 'ConstraintError', 'InvalidStateError', 'TransactionInactiveError', 'other'}})
                     safe_diagnostic['blob_write_failed'] = any(item.get('blob') is True for item in storage)
