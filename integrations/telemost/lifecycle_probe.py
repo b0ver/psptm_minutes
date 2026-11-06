@@ -1,6 +1,7 @@
 """Synthetic DOM contract, not an assertion about current Telemost selectors."""
 import asyncio
 import json
+import os
 from pathlib import Path
 
 from playwright.async_api import async_playwright
@@ -35,7 +36,9 @@ async def case(browser, mode):
 
 async def main():
     async with async_playwright() as p:
-        browser=await p.chromium.launch(executable_path='/usr/bin/chromium')
+        browser=await p.chromium.launch(executable_path='/usr/bin/chromium',
+            env={**os.environ, 'XDG_CONFIG_HOME':'/tmp/lifecycle-probe-config',
+                 'XDG_CACHE_HOME':'/tmp/lifecycle-probe-cache'})
         try:
             cases=[await case(browser,mode) for mode in ('history','old_time','unknown_time','quote','heading_in_chat','ordinary','transient','command','ended','removed')]
         finally:
