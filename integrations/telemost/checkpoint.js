@@ -46,6 +46,9 @@
     start(...args) {
       super.start(...args);
       if (!window.__agentCheckpointArmed || !this.stream.getAudioTracks().length) return;
+      // Diagnostics and other recorders on the page do not own this capture.
+      // Only an explicitly armed rollover may replace the primary recorder.
+      if (mirror && (!rotating || stopping || failed || mirror.state !== 'recording')) return;
       activeNative = this;
       window.__agentNativeRecordingActive = true;
       const onNativeStop = () => {
@@ -54,7 +57,6 @@
       };
       this.addEventListener('stop', onNativeStop, {once: true});
       if (mirror) {
-        if (!rotating || stopping || failed || mirror.state !== 'recording') return;
         connectInput(this.stream);
         rotating = false;
         capture.rotations++;

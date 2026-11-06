@@ -45,5 +45,22 @@
   "private_volumes_retained": true,
   "fixed_profile_code_ci_sha": "bb28c491c81f337c774be6c9aede463aaa267167",
   "fixed_profile_code_ci_url": "https://github.com/b0ver/psptm_minutes/actions/runs/42266348379",
-  "fixed_profile_code_ci_status": "success"
+  "fixed_profile_code_ci_status": "success",
+  "fixed_full_long_attempt_9460202": {
+    "status": "failed_before_first_rotation",
+    "native_stop_detected_seconds": 977,
+    "rotations": 0,
+    "recording_complete": false,
+    "recovered_audio_seconds": 960.9,
+    "explicit_test_controller_stop": true,
+    "import_once": true,
+    "import_bytes_match": true,
+    "live_root_cause": "not_established",
+    "production_changed": false
+  },
+  "secondary_recorder_regression": {
+    "old_code": "reproduced_capture_final_while_primary_recording",
+    "fixed_code": "passed",
+    "live_causality": "not_proven"
+  }
 }
