@@ -5,18 +5,20 @@ import importlib
 import json
 import unittest
 from pathlib import Path
-from app.source_act_inventory import ROLE_RULES, SYSTEM
+from app.source_act_inventory import ROLE_RULES
+from app.source_unit_protocol import SYSTEM
 from app.status_scan import SCAN_SYSTEM, REVIEW_SYSTEM
 
-EXPECTED = {'source_act_inventory': '002b46e19fcb3e47441ccfdd0ec2dddec746b50b649e6cf52aabf00fa7b86e2e', 'status_scan': 'a41eea31fb85dc1f2101947b1bbc7ffdc99785dcc3a7724839520f71b9cc7d17', 'status_packets': '44b82ca937d23853b1227452716d2d293b0cadc1742e3e22517d5084cc5fd343', 'status_finalize': '7249f4d9b5aafcfc6fdc2d062cd25a0050070d34f39d4d6e85fffa23ec959262', 'source_wire': '3953aa74250738e25e16e548b6c2da84b6d12602e704baa5ebbe156188a8c42d', 'action_status': '7139a4b539b6a8f9082104e857805d6f4b40a00bbd0a7f7eb21f41f091d18617', 'reports': '87af817be45cd583574a5c1ecb6de3101fe9f597ff638a31da71dddf92172f40'}
+ALLOWED_PROTOCOL_FUNCTIONS = {'status_scan': ['scan_all_windows'], 'status_packets': ['prepare'], 'status_finalize': ['finalize'], 'action_status': ['classify_actions']}
+EXPECTED = {'source_act_inventory': '002b46e19fcb3e47441ccfdd0ec2dddec746b50b649e6cf52aabf00fa7b86e2e', 'status_scan': 'cacd05696d6bf7b0969ca3051f4d432c7a68845661e0d17940d3c78c5e66780c', 'status_packets': '55930422787a428199a272fb3c71462ed0924982b2bdb9d18240ddaf72d8348b', 'status_finalize': 'a8a28e5a45fcee00bbb295ac59009fb5ed366d6c42cfb507945116fa058c563d', 'source_wire': '3953aa74250738e25e16e548b6c2da84b6d12602e704baa5ebbe156188a8c42d', 'action_status': '4fea43b477acc0abf81aea83a0b1b576ee90c8fb9dd0e022eb14f8c46e6b38ba', 'reports': '87af817be45cd583574a5c1ecb6de3101fe9f597ff638a31da71dddf92172f40'}
 
 class SourceRoleContract(unittest.TestCase):
-    def test_all_executable_functions_and_classes_match_exact_v9_predecessor(self):
+    def test_unchanged_acceptance_functions_and_client_match_exact_v11_predecessor(self):
         for name, expected in EXPECTED.items():
             module = importlib.import_module('app.' + name)
             text = Path(module.__file__).read_text()
             tree = ast.parse(text)
-            executable = [ast.get_source_segment(text, node) for node in tree.body if isinstance(node, (ast.FunctionDef, ast.ClassDef))]
+            executable = [ast.get_source_segment(text, node) for node in tree.body if isinstance(node, (ast.FunctionDef, ast.ClassDef)) and node.name not in ALLOWED_PROTOCOL_FUNCTIONS.get(name, [])]
             self.assertEqual(hashlib.sha256(json.dumps(executable, ensure_ascii=False).encode()).hexdigest(), expected, name)
 
     def test_all_three_stages_share_explicit_work_completion_and_commitment_definitions(self):

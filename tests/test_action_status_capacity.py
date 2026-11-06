@@ -4,8 +4,9 @@ import unittest
 from app import reports
 from app.action_status import classify_actions, CLASSIFY_SCHEMA, CHECK_SCHEMA
 from app.status_scan import SCAN_SCHEMA, REVIEW_SCHEMA
-from app.source_act_inventory import SCHEMA as INVENTORY_SCHEMA
+from app.source_unit_protocol import SCHEMA as INVENTORY_SCHEMA
 from app.source_wire import unpack
+from source_unit_fixture import source_spans, inventory_value
 from app.ai import ProcessingError
 
 
@@ -51,12 +52,9 @@ class PacketOracle:
         self.native_calls += 1
         packet = json.loads(user); self.packets.append(packet)
         if spec == INVENTORY_SCHEMA:
-            spans = unpack(packet)
-            return {'source_reading': 'complete', 'acts': [
-                {'span_ref': row['span_ref'], 'quote': row['text'], 'roles': [self.roles[row['source_id']]]}
-                for row in spans if row['source_id'] in self.roles]}
+            return inventory_value(packet, self.roles)
         if spec in [SCAN_SCHEMA, REVIEW_SCHEMA]:
-            spans = unpack({key: packet[key] for key in ['source_columns', 'source_spans']})
+            spans = source_spans(packet)
             positive = [row for row in spans if row['source_id'] in self.roles]
             support = [{'span_ref': row['span_ref'], 'start_char': row['start_char'],
                         'end_char': row['end_char'], 'quote': row['text']} for row in positive]

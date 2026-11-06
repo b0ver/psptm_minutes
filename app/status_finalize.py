@@ -3,6 +3,7 @@ import json
 from copy import deepcopy
 from app.status_windows import SourceWindowError
 from app.status_packets import prepare, opposed_packet
+from app.source_unit_protocol import PIPELINE_REVISION
 
 CLASSIFY_PREFIX = '''Установи итоговое состояние candidate по source_spans в исходном порядке.
 Это полные релевантные окна и соседние окна, НЕ полный разговор. Остальные окна были
@@ -63,7 +64,7 @@ def finalize(source, windows, candidates, ledger, kinds, llm, validate, fits, co
         raise SourceWindowError('source_status_final_global_call_budget_invalid')
     system = CLASSIFY_PREFIX + contract['STATE_RULES']
     check_system = CHECK_PREFIX + contract['STATE_RULES']
-    inventory = ledger.get('pipeline_revision') == 'source_only_packed_v1'
+    inventory = ledger.get('pipeline_revision') == PIPELINE_REVISION
     if inventory:
         from app.source_wire import SYSTEM_SUFFIX
         system += '\n' + SYSTEM_SUFFIX

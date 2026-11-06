@@ -167,7 +167,7 @@ def scan_all_windows(source, windows, candidates, llm, validate, fits, maximum_c
         raise SourceWindowError('source_status_scan_call_budget_exceeded')
     if inventory:
         from app.source_wire import pack, SYSTEM_SUFFIX
-        from app.source_act_inventory import discover_window, InventoryError
+        from app.source_unit_protocol import discover, UnitProtocolError, PIPELINE_REVISION
         before = getattr(llm, 'native_calls', None)
         if type(before) is not int or before < 0 or before + maximum_calls > 64:
             raise SourceWindowError('source_status_scan_native_counter_unbound')
@@ -208,8 +208,8 @@ def scan_all_windows(source, windows, candidates, llm, validate, fits, maximum_c
         if inventory:
             used = llm.native_calls
             try:
-                discovery = discover_window(window, llm, validate, fits, used, ceiling, packed=True)
-            except InventoryError as error:
+                discovery = discover(window, llm, validate, fits, used, ceiling)
+            except UnitProtocolError as error:
                 raise SourceWindowError('source_status_inventory_' + str(error)) from None
             attempts.append(llm.native_calls - used)
             calls += attempts[-1]
@@ -269,7 +269,7 @@ def scan_all_windows(source, windows, candidates, llm, validate, fits, maximum_c
             'all_source_spans_preserved': True, 'final_reconciliation_required': True,
             'action_quality_accepted': False}
     if inventory:
-        output.update(pipeline_revision='source_only_packed_v1', native_calls_before=before,
+        output.update(pipeline_revision=PIPELINE_REVISION, native_calls_before=before,
                       native_calls_after=llm.native_calls)
     return output
 

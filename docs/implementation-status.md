@@ -318,3 +318,36 @@ CPU cases проверяют отказ на повторной цитате и 
 старый кеш. Семантическая причинность и полный scope еще требуют own manifest cancellation,
 unchanged E2E, fresh4 native controls, original12+28 и independent full-source/body review.
 Production, веса, scope/gold и frozen предшественники не менялись.
+
+
+## RC source-status-v12: явная привязка предварительных упоминаний к исходным участкам
+
+v11 отказал на первом long control: source_only_reading_uncertain. Данные и ошибка
+сохранены; старые control/probe/E2E не повторяются. Новый discovery wire показывает весь
+исходный текст как последовательность unit_refs/text. Разбиение сохраняет все символы,
+пробелы, Unicode, порядок, времена, parent span/source IDs и наличие speaker_hint.
+Модель выбирает существующие соседние unit_refs одного исходного span. Код восстанавливает
+именно выбранное вхождение и точные координаты, не ищет первый совпавший substring.
+
+Это новый промежуточный протокол, новая схема и decoder. Они не определяют тождество
+работы, владельца или итоговую активность. Пустой discovery не доказывает отсутствие.
+Все окна и action_refs проходят прежние matching и independent opposed. Финальное
+согласование сохраняет целиком все релевантные и соседние окна в исходном порядке.
+Прежняя unique/literal проверка окончательных action evidence и support не заменяется
+предварительными unit_refs: отдельный negative test требует прежнего отказа для повторной
+финальной цитаты. Source/owner/kind/status/field/report и uncertain/rejected gates сохранены.
+
+Ledger/replay явно переключены на source_only_units_v1: discovery проверяется по фактическим
+unit wire/schema/system/SHA, matching/opposed по собственным исходным пакетам. Чужой plan,
+поддельные/несоседние/cross-span ссылки и старый discovery ledger отклоняются без конверсии.
+Финальная проверка повторно декодирует весь журнал. Общий 64-native-attempt budget,
+все retries и 32768/12000/6000/45000 limits сохранены. LocalLLM и исходные acceptance helpers
+сравниваются с точным v11; измененные orchestration функции названы отдельно. Не заявляется
+AST-равенство всего нового протокола старому. VERSIONv12 исключает старый кеш.
+
+60 readonly development CPU tests прошли, включая actual application wiring, ledger tamper,
+legacy rejection, old final uniqueness, native counter/retries и четыре публичные capacity
+fixtures. Capacity остается нижней границей для одного действия без предыдущих вызовов:
+не доказывает full-app емкость или семантику. Новому image/manifest нужны полные CPU/CI,
+своя genuine cancellation, unchanged focused E2E, четыре fresh native controls, original12+28
+и independent full-source/body review. v11 сохранен отдельно. Production и веса не изменены.

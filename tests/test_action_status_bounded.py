@@ -4,8 +4,9 @@ import json
 import unittest
 from app.action_status import classify_actions, CLASSIFY_SCHEMA, CHECK_SCHEMA
 from app.status_scan import SCAN_SCHEMA, REVIEW_SCHEMA
-from app.source_act_inventory import SCHEMA as INVENTORY_SCHEMA
+from app.source_unit_protocol import SCHEMA as INVENTORY_SCHEMA
 from app.source_wire import unpack
+from source_unit_fixture import source_spans, inventory_value
 from app.ai import ProcessingError
 
 ITEMS = [{'id': 'L00001', 'start': 0, 'end': 1, 'text': 'Принимаю задачу.'},
@@ -32,13 +33,9 @@ class LedgerModel:
         self.calls.append(packet)
         self.native_calls += 1
         if spec == INVENTORY_SCHEMA:
-            spans = unpack(packet)
-            value = {'source_reading': 'complete', 'acts': [
-                {'span_ref': span['span_ref'], 'quote': span['text'],
-                 'roles': ['cancellation'] if span['source_id'] == 'L00002' else ['assignment']}
-                for span in spans]}
+            value = inventory_value(packet, {'L00001': 'assignment', 'L00002': 'cancellation'})
         elif spec in [SCAN_SCHEMA, REVIEW_SCHEMA]:
-            spans = unpack({key: packet[key] for key in ['source_columns', 'source_spans']})
+            spans = source_spans(packet)
             support = [{'span_ref': row['span_ref'], 'start_char': row['start_char'],
                         'end_char': row['end_char'], 'quote': row['text']} for row in spans]
             roles = ['assignment', 'cancellation'] if len(spans) == 2 else ['assignment']
@@ -78,7 +75,7 @@ class BoundedApplicationStatus(unittest.TestCase):
         model = LedgerModel()
         classify_actions(ACTIONS, items, model, validate, 45000)
         for call in model.calls:
-            spans = unpack({key: call[key] for key in ['source_columns', 'source_spans']})
+            spans = source_spans(call)
             self.assertEqual(spans[-1]['speaker_hint'], 'Synthetic observer')
             self.assertEqual(spans[-1]['start'], 2)
             self.assertEqual(spans[-1]['end'], 3)
@@ -129,9 +126,9 @@ class BoundedApplicationStatus(unittest.TestCase):
         import hashlib
         model = LedgerModel(consumed=8)
         _, _, audit = classify_actions(ACTIONS, ITEMS, model, validate, 45000)
-        self.assertEqual(set(model.calls[0]), {'source_columns', 'source_spans'})
+        self.assertEqual(set(model.calls[0]), {'source_columns', 'unit_columns', 'source_spans', 'unit_plan_sha256'})
         ledger = audit[0]['bounded_scan_ledger']
-        self.assertEqual(ledger['pipeline_revision'], 'source_only_packed_v1')
+        self.assertEqual(ledger['pipeline_revision'], 'source_only_units_v1')
         self.assertEqual((ledger['native_calls_before'], ledger['native_calls_after']), (8, 11))
         self.assertEqual(ledger['model_calls'], 3)
         record = ledger['windows'][0]

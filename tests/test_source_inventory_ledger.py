@@ -3,8 +3,9 @@ import copy
 import json
 import unittest
 from app import action_status as contract
-from app.source_act_inventory import SCHEMA as DISCOVERY_SCHEMA
+from app.source_unit_protocol import SCHEMA as DISCOVERY_SCHEMA
 from app.source_wire import unpack
+from source_unit_fixture import source_spans, inventory_value
 from app.status_scan import scan_all_windows, SCAN_SCHEMA, REVIEW_SCHEMA
 from app.status_packets import prepare
 from app.status_finalize import finalize, CLASSIFY_PREFIX
@@ -34,13 +35,12 @@ class SourceInventoryLedger(unittest.TestCase):
                 self.native_calls += 2 if retry and not self.packets else 1
                 packet = json.loads(user)
                 self.packets.append((schema, packet))
-                spans = unpack({key: packet[key] for key in ['source_columns', 'source_spans']})
+                spans = source_spans(packet)
                 positive = [row for row in spans if row['source_id'] != 'L00002']
                 roles = lambda row: ['assignment'] if row['source_id'] == 'L00001' else ['cancellation']
                 if schema == DISCOVERY_SCHEMA:
                     outer.assertNotIn('candidates', packet)
-                    return {'source_reading': 'complete', 'acts': [
-                        {'span_ref': row['span_ref'], 'quote': row['text'], 'roles': roles(row)} for row in positive]}
+                    return inventory_value(packet, {row['source_id']: roles(row) for row in positive})
                 if schema in (SCAN_SCHEMA, REVIEW_SCHEMA):
                     value = {'action_ref': 'A00001', 'presence': 'present' if positive else 'absent',
                              'roles': sorted({role for row in positive for role in roles(row)}),
@@ -86,7 +86,7 @@ class SourceInventoryLedger(unittest.TestCase):
             ledger = copy.deepcopy(original)
             row = ledger['windows'][0]
             if mutation == 'hash': row['scan_packet_sha256'] = '0' * 64
-            elif mutation == 'quote': row['source_inventory']['source_model_response']['acts'][0]['quote'] = 'Выдумка.'
+            elif mutation == 'quote': row['source_inventory']['source_model_response']['acts'][0]['unit_refs'] = ['FOREIGN']
             elif mutation == 'attempts': row['native_attempts'][0] = 0
             elif mutation == 'system': row['opposed_system_sha256'] = '0' * 64
             else: ledger['windows'].pop()
@@ -132,3 +132,16 @@ class SourceInventoryLedger(unittest.TestCase):
         with self.assertRaisesRegex(SourceWindowError, 'counter_provenance'):
             self.final(client, ledger)
         self.assertEqual(len(client.packets), 9)
+
+    def test_legacy_discovery_revision_and_foreign_unit_plan_are_not_converted(self):
+        client = self.client()
+        original = self.scan(client)
+        for kind in ['revision', 'unit_plan']:
+            ledger = copy.deepcopy(original)
+            if kind == 'revision':
+                ledger['pipeline_revision'] = 'source_only_packed_v1'
+            else:
+                ledger['windows'][0]['source_inventory']['source_model_response']['unit_plan_sha256'] = '0' * 64
+            with self.subTest(kind=kind), self.assertRaises(SourceWindowError):
+                self.final(client, ledger)
+            self.assertEqual(len(client.packets), 9)

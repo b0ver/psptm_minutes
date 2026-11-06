@@ -3,13 +3,14 @@ import json
 from copy import deepcopy
 from app.status_windows import SourceWindowError
 from app.status_scan import scan_all_windows, digest, SCAN_SCHEMA, REVIEW_SCHEMA
+from app.source_unit_protocol import PIPELINE_REVISION
 
 
 def prepare(source, windows, candidates, ledger, validate, fits, system, schema, maximum_calls):
     revision = ledger.get('pipeline_revision')
-    if revision not in (None, 'source_only_packed_v1'):
+    if revision not in (None, PIPELINE_REVISION):
         raise SourceWindowError('source_status_final_pipeline_revision_changed')
-    inventory = revision == 'source_only_packed_v1'
+    inventory = revision == PIPELINE_REVISION
     if (ledger.get('source_hash') != digest(source) or ledger.get('candidates_hash') != digest(candidates)
             or ledger.get('action_quality_accepted') is not False
             or ledger.get('final_reconciliation_required') is not True
@@ -17,7 +18,7 @@ def prepare(source, windows, candidates, ledger, validate, fits, system, schema,
         raise SourceWindowError('source_status_final_ledger_provenance_changed')
     if inventory:
         from app.source_wire import pack
-        from app.source_act_inventory import SCHEMA as INVENTORY_SCHEMA
+        from app.source_unit_protocol import SCHEMA as INVENTORY_SCHEMA, plan as unit_plan
         if (type(ledger.get('model_calls')) is not int
                 or ledger['model_calls'] < 3 * len(windows)
                 or type(ledger.get('native_calls_before')) is not int
@@ -40,7 +41,7 @@ def prepare(source, windows, candidates, ledger, validate, fits, system, schema,
             record = ledger['windows'][index]
             packet = json.loads(user)
             if inventory:
-                expected = pack(windows[index])
+                expected = unit_plan(windows[index])['wire'] if phase == 0 else pack(windows[index])
                 if phase != 0:
                     expected.update(candidates=candidates, source_acts=record['source_inventory']['source_acts'])
                 if opposed:
