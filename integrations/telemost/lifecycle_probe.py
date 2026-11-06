@@ -18,6 +18,20 @@ async def case(browser, mode):
     await page.evaluate('''mode => {
       if(mode==='removed'){heading.textContent='Вас исключили из встречи';return;}
       if(mode==='ended'){heading.textContent='Встреча завершена';return;}
+      if(mode==='current_ended'){
+        const toast=document.createElement('div');toast.className='Orb-Snackbar-Body';
+        toast.textContent='Организатор завершил встречу для всех';document.body.append(toast);return;
+      }
+      if(mode==='call_title'){
+        const leave=document.createElement('button');leave.setAttribute('aria-label','Выйти из встречи');
+        leave.textContent='Выйти';document.body.append(leave);heading.textContent='Встреча завершена';return;
+      }
+      if(mode==='current_removed'||mode==='current_gone'){
+        heading.remove();const card=document.createElement('div');card.className='container_XvwZc';
+        const title=document.createElement('div');title.className='title_dsYpg';
+        title.textContent=mode==='current_removed'?'Вас удалили из этой встречи':'Эта встреча уже закончилась,\\nно вы можете создать новую';
+        card.append(title);document.body.append(card);return;
+      }
       if(mode==='transient'){document.querySelector('h1').remove();return;}
       if(mode==='history'){chat.firstChild.setAttribute('data-timestamp',Date.now());return;}
       const node=document.createElement('div');node.setAttribute('data-message-id','new');
@@ -28,7 +42,8 @@ async def case(browser, mode):
       chat.append(node);
     }''',mode)
     result=await page.evaluate('window.__agentSampleLifecycle()')
-    expected={'removed':'removed','ended':'meeting_ended','command':'chat_stop'}.get(mode)
+    expected={'removed':'removed','ended':'meeting_ended','command':'chat_stop',
+              'current_ended':'meeting_ended','current_removed':'removed','current_gone':'meeting_ended'}.get(mode)
     assert result['reason']==expected,(mode,result)
     await page.close()
     return {'case':mode,'reason':result['reason']}
@@ -40,7 +55,7 @@ async def main():
             env={**os.environ, 'XDG_CONFIG_HOME':'/tmp/lifecycle-probe-config',
                  'XDG_CACHE_HOME':'/tmp/lifecycle-probe-cache'})
         try:
-            cases=[await case(browser,mode) for mode in ('history','old_time','unknown_time','quote','heading_in_chat','ordinary','transient','command','ended','removed')]
+            cases=[await case(browser,mode) for mode in ('history','old_time','unknown_time','quote','heading_in_chat','ordinary','transient','command','ended','removed','current_ended','current_removed','current_gone','call_title')]
         finally:
             await browser.close()
     print(json.dumps({'status':'passed','scope':'synthetic_dom_only','cases':cases}))

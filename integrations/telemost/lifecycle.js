@@ -14,12 +14,17 @@
   const endScreens = new Map([
     ['встреча завершена', 'meeting_ended'], ['звонок завершен', 'meeting_ended'],
     ['организатор завершил встречу', 'meeting_ended'], ['вас исключили из встречи', 'removed'],
+    ['организатор завершил встречу для всех', 'meeting_ended'],
+    ['эта встреча уже закончилась, но вы можете создать новую', 'meeting_ended'],
+    ['вас удалили из этой встречи', 'removed'],
     ['вы исключены из встречи', 'removed'], ['вас удалили из встречи', 'removed']]);
   function sample() {
     if (result.reason) return result;
     // Chat text or a temporary missing toolbar is never proof of removal.
-    for (const node of document.querySelectorAll('[role="alert"], [role="heading"], h1, h2, [data-testid="call-ended"]')) {
+    const inMeeting = Array.from(document.querySelectorAll('button[aria-label="Выйти из встречи"]')).some(n => n.getBoundingClientRect().width);
+    for (const node of document.querySelectorAll('[role="alert"], [role="heading"], h1, h2, [data-testid="call-ended"], .container_XvwZc .title_dsYpg, .Orb-Snackbar-Body')) {
       if (node.closest('[role="log"], [data-testid="chat-messages"], [class*="messagesList"], [class*="MessageList"]') || !node.getBoundingClientRect().width) continue;
+      if (inMeeting && node.matches('h1, h2, [role="heading"]') && !node.closest('.container_XvwZc')) continue;
       const reason = endScreens.get(normalize(node.textContent).replace(/[.!]$/, ''));
       if (reason) {result.reason = reason; return result;}
     }
