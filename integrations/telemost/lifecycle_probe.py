@@ -18,9 +18,10 @@ async def case(browser, mode):
     await page.evaluate('''mode => {
       if(mode==='removed'){heading.textContent='Вас исключили из встречи';return;}
       if(mode==='ended'){heading.textContent='Встреча завершена';return;}
-      if(mode==='current_ended'){
+      if(mode==='current_ended'||mode==='brief_ended'){
         const toast=document.createElement('div');toast.className='Orb-Snackbar-Body';
-        toast.textContent='Организатор завершил встречу для всех';document.body.append(toast);return;
+        toast.textContent='Организатор завершил встречу для всех';document.body.append(toast);
+        if(mode==='brief_ended')setTimeout(()=>toast.remove(),20);return;
       }
       if(mode==='call_title'){
         const leave=document.createElement('button');leave.setAttribute('aria-label','Выйти из встречи');
@@ -41,9 +42,10 @@ async def case(browser, mode):
         '<span data-testid="message-text">'+(mode==='ordinary'?'Обсудим /stop завтра':'Ассистент, останови запись')+'</span>';
       chat.append(node);
     }''',mode)
+    if mode=='brief_ended':await page.wait_for_timeout(100)
     result=await page.evaluate('window.__agentSampleLifecycle()')
     expected={'removed':'removed','ended':'meeting_ended','command':'chat_stop',
-              'current_ended':'meeting_ended','current_removed':'removed','current_gone':'meeting_ended'}.get(mode)
+              'current_ended':'meeting_ended','current_removed':'removed','current_gone':'meeting_ended','brief_ended':'meeting_ended'}.get(mode)
     assert result['reason']==expected,(mode,result)
     await page.close()
     return {'case':mode,'reason':result['reason']}
@@ -55,7 +57,7 @@ async def main():
             env={**os.environ, 'XDG_CONFIG_HOME':'/tmp/lifecycle-probe-config',
                  'XDG_CACHE_HOME':'/tmp/lifecycle-probe-cache'})
         try:
-            cases=[await case(browser,mode) for mode in ('history','old_time','unknown_time','quote','heading_in_chat','ordinary','transient','command','ended','removed','current_ended','current_removed','current_gone','call_title')]
+            cases=[await case(browser,mode) for mode in ('history','old_time','unknown_time','quote','heading_in_chat','ordinary','transient','command','ended','removed','current_ended','current_removed','current_gone','call_title','brief_ended')]
         finally:
             await browser.close()
     print(json.dumps({'status':'passed','scope':'synthetic_dom_only','cases':cases}))

@@ -322,6 +322,10 @@ async def run(sid):
             persist(sid, capture_health='healthy', **summary)
             return {'accepted': True}
         await context.expose_binding('agentCheckpoint', checkpoint_binding)
+        async def lifecycle_binding(source, reason):
+            if isinstance(reason, str) and reason in {'meeting_ended', 'removed', 'chat_stop'} and not sessions[sid].get('observed_end_reason'):
+                persist(sid, observed_end_reason=reason)
+        await context.expose_binding('agentLifecycle', lifecycle_binding)
         await context.add_init_script(path=str(Path(__file__).with_name('checkpoint.js')))
         await context.add_init_script(path=str(Path(__file__).with_name('meeting_observer.js')))
         await context.add_init_script(path=str(Path(__file__).with_name('lifecycle.js')))
@@ -454,7 +458,7 @@ async def run(sid):
                 pass
         recording_issue = None
         try:
-            if await start_native_recording(page, frame, should_stop=stop.is_set) is False:
+            if await start_native_recording(page, frame, should_stop=lambda: stop.is_set() or bool(state.get('observed_end_reason'))) is False:
                 persist(sid, status='cancelled', error_code='cancelled_before_recording')
                 return
         except Exception:
@@ -483,6 +487,9 @@ async def run(sid):
         end_reason = 'user_stop'
         rotation_failed = False
         while True:
+            if state.get('observed_end_reason') in {'meeting_ended', 'removed', 'chat_stop'}:
+                end_reason = state['observed_end_reason']
+                break
             try:
                 await asyncio.wait_for(stop.wait(), timeout=3)
                 break
@@ -541,7 +548,7 @@ async def run(sid):
                     persist(sid, capture_health='rotating')
                     try:
                         async def start_next_recording(page, frame):
-                            return await start_native_recording(page, frame, should_stop=stop.is_set)
+                            return await start_native_recording(page, frame, should_stop=lambda: stop.is_set() or bool(state.get('observed_end_reason')))
                         continued = await rotate(page, frame, leave, stop, float('inf'),
                                                  start_next_recording, stop_native_recording)
                     except Exception:
@@ -579,6 +586,12 @@ async def run(sid):
                 if await capture_scope.evaluate('() => ["final", "failed", "idle", "unsupported"].includes(window.__agentCheckpoint?.state)'):
                     break
                 await asyncio.sleep(.1)
+        except Exception:
+            pass
+        try:
+            captures = [await scope.evaluate('() => window.__agentContinuousCapture || {}') for scope in page.frames]
+            rotations = max(rotations, sum(c.get('rotations', 0) for c in captures))
+            persist(sid, native_rotations=rotations)
         except Exception:
             pass
         async def wait_downloads():

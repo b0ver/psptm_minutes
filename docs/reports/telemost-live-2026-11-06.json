@@ -30,5 +30,9 @@
   "model_acceptance_verified": false,
   "registry_release_bundle_promoted": false,
   "release_allowed": false,
-  "private_evidence_policy": "No meeting link, participant names, audio, video or conversation content in this receipt."
+  "private_evidence_policy": "No meeting link, participant names, audio, video or conversation content in this receipt.",
+  "second_profile_automatic_rollover": "failed_native_rotation_failed",
+  "offline_lifecycle_cases_passed": 15,
+  "offline_end_during_retry_passed": true,
+  "offline_main_loop_cases_passed": 9
 }

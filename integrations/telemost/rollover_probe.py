@@ -120,7 +120,7 @@ async def case(mode):
                         await request.fulfill(status=200, content_type='text/html; charset=utf-8', body=body, headers=headers)
                     await context.route('**/*', route)
                     await context.add_init_script('window.__agentCheckpointTimeslice = 250')
-                    if mode=='cancel_during_retry':
+                    if mode in {'cancel_during_retry','ended_during_retry'}:
                         await context.add_init_script('window.__probeCancelRetry = true')
                     return context
                 browser.new_context = new_context
@@ -148,6 +148,13 @@ async def case(mode):
                 frame=next(child for child in page.frames if '/private-join/' in child.url)
                 if mode == 'cancel_during_retry':
                     service.stops[sid].set()
+                    return
+                if mode == 'ended_during_retry':
+                    await frame.evaluate('''() => {
+                      const toast=document.createElement('div');toast.className='Orb-Snackbar-Body';
+                      toast.textContent='Организатор завершил встречу для всех';document.body.append(toast);
+                      setTimeout(()=>toast.remove(),20);
+                    }''')
                     return
                 if mode == 'native_stop':
                     await frame.evaluate('endRecording()')
@@ -200,21 +207,21 @@ async def case(mode):
             assert state['end_reason'] == 'user_stop'
             return {'mode': mode, 'saved_incomplete': True, 'imports': 1}
         assert state['status'] == 'uploaded', state.get('error_code')
-        assert state['native_rotations'] >= (0 if mode=='cancel_during_retry' else 1), state['native_rotations']
+        assert state['native_rotations'] >= (0 if mode in {'cancel_during_retry','ended_during_retry'} else 1), state['native_rotations']
         assert state['recording_complete'] == (mode != 'native_stop'), mode
         assert state['capture_discontinuities'] == 0
         assert state['recording_file'] == 'continuous.webm'
         assert imports == [1], 'Multiple meeting imports'
         assert len(list(folder.glob('native-*.webm'))) == state['native_rotations']
         assert (folder / 'recording.webm').is_file()
-        audio = check_audio(folder / 'continuous.webm', 3 if mode=='cancel_during_retry' else 4)
-        assert state['end_reason']==('chat_stop' if mode=='chat' else 'user_stop')
+        audio = check_audio(folder / 'continuous.webm', 3 if mode in {'cancel_during_retry','ended_during_retry'} else 4)
+        assert state['end_reason']==('chat_stop' if mode=='chat' else 'meeting_ended' if mode=='ended_during_retry' else 'user_stop')
         return {'mode': mode, 'rotations': state['native_rotations'], 'imports': len(imports), 'end_reason':state['end_reason'], **audio}
 
 
 async def main():
     results=[]
-    for mode in ('normal', 'failure', 'native_stop', 'transient_ui', 'advisory_expired', 'chat','strict_csp','cancel_during_retry'):
+    for mode in ('normal', 'failure', 'native_stop', 'transient_ui', 'advisory_expired', 'chat','strict_csp','cancel_during_retry','ended_during_retry'):
         print(json.dumps({'event':'offline_case_started','mode':mode}),flush=True)
         results.append(await case(mode))
     print(json.dumps({'status': 'passed', 'scope': 'offline_synthetic_only', 'cases': results}))
