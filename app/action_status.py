@@ -184,25 +184,31 @@ def classify_actions(actions, items, llm, validate, maximum_chars):
            for candidate in candidates):
         return classify_actions_full_source(actions, items, llm, validate, maximum_chars)
     from app.status_windows import plan_windows, SourceWindowError
-    from app.status_scan import scan_all_windows, SCAN_SYSTEM, SCAN_SCHEMA
+    from app.status_scan import scan_all_windows, SCAN_SYSTEM, SCAN_SCHEMA, INVENTORY_RULES
+    from app.source_wire import pack, SYSTEM_SUFFIX
+    from app.source_act_inventory import SYSTEM as INVENTORY_SYSTEM, SCHEMA as INVENTORY_SCHEMA
     from app.status_finalize import finalize
     consumed = getattr(llm, 'native_calls', None)
     if type(consumed) is not int or not 0 <= consumed < 64:
         raise ProcessingError('analysis_action_status_call_accounting_unavailable')
-    maximum_windows = (64 - consumed - 2 * len(candidates)) // 2
+    maximum_windows = (64 - consumed - 2 * len(candidates)) // 3
     if maximum_windows < 1:
         raise ProcessingError('analysis_native_call_budget_exceeded')
 
     def window_fits(window):
-        user = json.dumps({'source_spans': window, 'candidates': candidates}, ensure_ascii=False)
+        packet = pack(window)
+        user = json.dumps({**packet, 'candidates': candidates, 'source_acts': []}, ensure_ascii=False)
         # An obligation, cancellation and resumption can occupy distant windows with neighbors.
         # Smaller scan packets reserve space for their union; the final actual packet is still checked.
         # No source is discarded, and the same global call budget can still refuse an oversized plan.
-        return len(user) <= maximum_chars // 6 and fits(SCAN_SYSTEM, user, SCAN_SCHEMA)
+        return (len(user) <= maximum_chars // 6
+                and fits(SCAN_SYSTEM + '\n' + SYSTEM_SUFFIX + '\n' + INVENTORY_RULES, user, SCAN_SCHEMA)
+                and fits(INVENTORY_SYSTEM + '\n' + SYSTEM_SUFFIX,
+                         json.dumps(packet, ensure_ascii=False, separators=(',', ':')), INVENTORY_SCHEMA))
 
     try:
         windows = plan_windows(items, window_fits, maximum_windows)
-        ledger = scan_all_windows(items, windows, candidates, llm, validate, fits, 64 - consumed)
+        ledger = scan_all_windows(items, windows, candidates, llm, validate, fits, 64 - consumed, inventory=True)
         # Retries in earlier stages and in the scan count toward the same global transport budget.
         actual_prior = llm.native_calls - ledger['model_calls']
         contract = {'STATE_RULES': STATE_RULES, 'CLASSIFY_SCHEMA': CLASSIFY_SCHEMA,

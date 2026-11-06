@@ -4,6 +4,8 @@ import json
 import unittest
 from app.action_status import classify_actions, CLASSIFY_SCHEMA, CHECK_SCHEMA
 from app.status_scan import SCAN_SCHEMA, REVIEW_SCHEMA
+from app.source_act_inventory import SCHEMA as INVENTORY_SCHEMA
+from app.source_wire import unpack
 from app.ai import ProcessingError
 
 ITEMS = [{'id': 'L00001', 'start': 0, 'end': 1, 'text': 'Принимаю задачу.'},
@@ -29,8 +31,14 @@ class LedgerModel:
         packet = json.loads(user)
         self.calls.append(packet)
         self.native_calls += 1
-        if spec in [SCAN_SCHEMA, REVIEW_SCHEMA]:
-            spans = packet['source_spans']
+        if spec == INVENTORY_SCHEMA:
+            spans = unpack(packet)
+            value = {'source_reading': 'complete', 'acts': [
+                {'span_ref': span['span_ref'], 'quote': span['text'],
+                 'roles': ['cancellation'] if span['source_id'] == 'L00002' else ['assignment']}
+                for span in spans]}
+        elif spec in [SCAN_SCHEMA, REVIEW_SCHEMA]:
+            spans = unpack({key: packet[key] for key in ['source_columns', 'source_spans']})
             support = [{'span_ref': row['span_ref'], 'start_char': row['start_char'],
                         'end_char': row['end_char'], 'quote': row['text']} for row in spans]
             roles = ['assignment', 'cancellation'] if len(spans) == 2 else ['assignment']
@@ -60,7 +68,7 @@ class BoundedApplicationStatus(unittest.TestCase):
         self.assertEqual(active, [])
         self.assertEqual(context[0]['activity_state'], 'cancelled')
         self.assertEqual(context[0]['source_evidence'][0]['quote'], ITEMS[-1]['text'])
-        self.assertEqual(len(model.calls), 4)
+        self.assertEqual(len(model.calls), 5)
         self.assertTrue(audit[0]['status_component_only'])
         self.assertEqual(audit[0]['bounded_scan_ledger']['windows'][0]['window'][-1]['text'], ITEMS[-1]['text'])
 
@@ -70,10 +78,11 @@ class BoundedApplicationStatus(unittest.TestCase):
         model = LedgerModel()
         classify_actions(ACTIONS, items, model, validate, 45000)
         for call in model.calls:
-            self.assertEqual(call['source_spans'][-1]['speaker_hint'], 'Synthetic observer')
-            self.assertEqual(call['source_spans'][-1]['start'], 2)
-            self.assertEqual(call['source_spans'][-1]['end'], 3)
-            self.assertEqual(call['source_spans'][-1]['text'], ITEMS[-1]['text'])
+            spans = unpack({key: call[key] for key in ['source_columns', 'source_spans']})
+            self.assertEqual(spans[-1]['speaker_hint'], 'Synthetic observer')
+            self.assertEqual(spans[-1]['start'], 2)
+            self.assertEqual(spans[-1]['end'], 3)
+            self.assertEqual(spans[-1]['text'], ITEMS[-1]['text'])
 
     def test_coverage_uncertainty_and_unsupported_final_state_fail_closed(self):
         for stage in ['assessment_coverage', 'final']:
@@ -103,7 +112,7 @@ class BoundedApplicationStatus(unittest.TestCase):
                 value['coverage'] = value.pop('assessment_coverage')
         model = LedgerModel(mutate)
         with self.assertRaises(ProcessingError): classify_actions(ACTIONS, ITEMS, model, validate, 45000)
-        self.assertEqual(len(model.calls), 2)
+        self.assertEqual(len(model.calls), 3)
 
     def test_confirmed_requires_explicit_supported_window_assessment_reason(self):
         for reason in [None, 'insufficient_context']:
@@ -114,7 +123,37 @@ class BoundedApplicationStatus(unittest.TestCase):
             model = LedgerModel(mutate)
             with self.subTest(reason=reason), self.assertRaises(ProcessingError):
                 classify_actions(ACTIONS, ITEMS, model, validate, 45000)
-            self.assertEqual(len(model.calls), 2)
+            self.assertEqual(len(model.calls), 3)
+
+    def test_discovery_precedes_matching_and_receipts_bind_actual_packets(self):
+        import hashlib
+        model = LedgerModel(consumed=8)
+        _, _, audit = classify_actions(ACTIONS, ITEMS, model, validate, 45000)
+        self.assertEqual(set(model.calls[0]), {'source_columns', 'source_spans'})
+        ledger = audit[0]['bounded_scan_ledger']
+        self.assertEqual(ledger['pipeline_revision'], 'source_only_packed_v1')
+        self.assertEqual((ledger['native_calls_before'], ledger['native_calls_after']), (8, 11))
+        self.assertEqual(ledger['model_calls'], 3)
+        record = ledger['windows'][0]
+        self.assertEqual(record['native_attempts'], [1, 1, 1])
+        self.assertEqual(model.calls[1]['source_acts'], record['source_inventory']['source_acts'])
+        self.assertEqual(record['scan_packet_sha256'], hashlib.sha256(
+            json.dumps(model.calls[1], ensure_ascii=False).encode()).hexdigest())
+
+    def test_uncertain_source_only_reading_prevents_matching(self):
+        def mutate(value, packet, spec):
+            if spec == INVENTORY_SCHEMA:
+                value['source_reading'] = 'uncertain'
+        model = LedgerModel(mutate)
+        with self.assertRaises(ProcessingError):
+            classify_actions(ACTIONS, ITEMS, model, validate, 45000)
+        self.assertEqual(len(model.calls), 1)
+
+    def test_insufficient_three_stage_budget_refuses_before_any_call(self):
+        model = LedgerModel(consumed=60)
+        with self.assertRaisesRegex(ProcessingError, 'call_budget'):
+            classify_actions(ACTIONS, ITEMS, model, validate, 45000)
+        self.assertEqual(model.calls, [])
 
 
 if __name__ == '__main__':

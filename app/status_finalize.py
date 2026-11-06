@@ -32,12 +32,16 @@ source_id/исходная строка, span_ref/часть и action_ref/ра�
 
 
 def supported_inside_context(support, source, packet, contract):
+    spans = packet['source_spans']
+    if 'source_columns' in packet:
+        from app.source_wire import unpack
+        spans = unpack({name: packet[name] for name in ['source_columns', 'source_spans']})
     lookup = {row['id']: {'source_id': row['id'], 'text': row['text']} for row in source}
     contract['verify_support'](support, lookup)  # Original c31 uniqueness/literal gate.
     for row in support:
         start = lookup[row['source_id']]['text'].index(row['quote'])
         end = start + len(row['quote'])
-        intervals = sorted((span['start_char'], span['end_char']) for span in packet['source_spans']
+        intervals = sorted((span['start_char'], span['end_char']) for span in spans
                            if span['source_id'] == row['source_id'])
         cursor = start
         for first, last in intervals:
@@ -59,18 +63,39 @@ def finalize(source, windows, candidates, ledger, kinds, llm, validate, fits, co
         raise SourceWindowError('source_status_final_global_call_budget_invalid')
     system = CLASSIFY_PREFIX + contract['STATE_RULES']
     check_system = CHECK_PREFIX + contract['STATE_RULES']
+    inventory = ledger.get('pipeline_revision') == 'source_only_packed_v1'
+    if inventory:
+        from app.source_wire import SYSTEM_SUFFIX
+        system += '\n' + SYSTEM_SUFFIX
+        check_system += '\n' + SYSTEM_SUFFIX
+        if (consumed_before_scan != ledger.get('native_calls_before')
+                or type(getattr(llm, 'native_calls', None)) is not int
+                or llm.native_calls != ledger.get('native_calls_after')):
+            raise SourceWindowError('source_status_final_global_counter_provenance_changed')
+        final_start = llm.native_calls
+
+    def chat(system, user, schema):
+        if not inventory:
+            return llm.chat(system, user, schema)
+        before = llm.native_calls
+        if type(before) is not int or not final_start <= before < maximum_calls:
+            raise SourceWindowError('source_status_final_global_call_budget_exceeded')
+        value = llm.chat(system, user, schema)
+        if type(llm.native_calls) is not int or not before < llm.native_calls <= maximum_calls:
+            raise SourceWindowError('source_status_final_global_call_budget_exceeded')
+        return value
     available = maximum_calls - consumed_before_scan
     prepared = prepare(source, windows, candidates, ledger, validate, fits, system,
                        contract['CLASSIFY_SCHEMA'], available)
     results = []
     for packet in prepared['packets']:
-        value = llm.chat(system, json.dumps(packet, ensure_ascii=False), contract['CLASSIFY_SCHEMA'])
+        value = chat(system, json.dumps(packet, ensure_ascii=False), contract['CLASSIFY_SCHEMA'])
         validate(value, contract['CLASSIFY_SCHEMA'])
         if value['state'] == 'uncertain':
             raise SourceWindowError('source_status_final_uncertain')
         supported_inside_context(value['support'], source, packet, contract)
         opposed = opposed_packet(packet, value, fits, check_system, contract['CHECK_SCHEMA'])
-        check = llm.chat(check_system, json.dumps(opposed, ensure_ascii=False), contract['CHECK_SCHEMA'])
+        check = chat(check_system, json.dumps(opposed, ensure_ascii=False), contract['CHECK_SCHEMA'])
         validate(check, contract['CHECK_SCHEMA'])
         if check['verdict'] in ['confirmed', 'rejected']:
             supported_inside_context(check['support'], source, packet, contract)
@@ -81,6 +106,7 @@ def finalize(source, windows, candidates, ledger, kinds, llm, validate, fits, co
             raise SourceWindowError('analysis_action_status_kind_conflict')
         results.append({'action_ref': ref, 'classification': deepcopy(value), 'opposed_review': deepcopy(check),
                         'source_hash': prepared['source_hash'], 'scan_ledger_hash': prepared['scan_ledger_hash']})
-    return {'classifications': results, 'model_calls_including_scan': prepared['total_required_calls'],
+    actual_calls = ledger['model_calls'] + llm.native_calls - final_start if inventory else prepared['total_required_calls']
+    return {'classifications': results, 'model_calls_including_scan': actual_calls,
             'status_component_confirmed': True, 'action_quality_accepted': False,
             'application_field_owner_literal_and_report_gates_required': True}

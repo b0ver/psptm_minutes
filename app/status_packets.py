@@ -6,23 +6,61 @@ from app.status_scan import scan_all_windows, digest, SCAN_SCHEMA, REVIEW_SCHEMA
 
 
 def prepare(source, windows, candidates, ledger, validate, fits, system, schema, maximum_calls):
+    revision = ledger.get('pipeline_revision')
+    if revision not in (None, 'source_only_packed_v1'):
+        raise SourceWindowError('source_status_final_pipeline_revision_changed')
+    inventory = revision == 'source_only_packed_v1'
     if (ledger.get('source_hash') != digest(source) or ledger.get('candidates_hash') != digest(candidates)
             or ledger.get('action_quality_accepted') is not False
             or ledger.get('final_reconciliation_required') is not True
             or len(ledger.get('windows', [])) != len(windows)):
         raise SourceWindowError('source_status_final_ledger_provenance_changed')
-    needed = 2 * len(windows) + 2 * len(candidates)
+    if inventory:
+        from app.source_wire import pack
+        from app.source_act_inventory import SCHEMA as INVENTORY_SCHEMA
+        if (type(ledger.get('model_calls')) is not int
+                or ledger['model_calls'] < 3 * len(windows)
+                or type(ledger.get('native_calls_before')) is not int
+                or type(ledger.get('native_calls_after')) is not int
+                or ledger['native_calls_after'] - ledger['native_calls_before'] != ledger['model_calls']):
+            raise SourceWindowError('source_status_final_native_accounting_changed')
+    needed = (ledger['model_calls'] if inventory else 2 * len(windows)) + 2 * len(candidates)
     if type(maximum_calls) is not int or not needed <= maximum_calls <= 64:
         raise SourceWindowError('source_status_final_total_call_budget_exceeded')
 
     class Replay:
         def __init__(self):
             self.index = 0
+            if inventory:
+                self.native_calls = ledger['native_calls_before']
 
         def chat(self, _system, user, spec):
-            index, opposed = divmod(self.index, 2)
+            index, phase = divmod(self.index, 3 if inventory else 2)
+            opposed = phase == (2 if inventory else 1)
             record = ledger['windows'][index]
             packet = json.loads(user)
+            if inventory:
+                expected = pack(windows[index])
+                if phase != 0:
+                    expected.update(candidates=candidates, source_acts=record['source_inventory']['source_acts'])
+                if opposed:
+                    expected['scan'] = record['scan']
+                expected_schema = INVENTORY_SCHEMA if phase == 0 else REVIEW_SCHEMA if opposed else SCAN_SCHEMA
+                expected_sha = (record['source_inventory']['source_packet_sha256'] if phase == 0 else
+                                record['opposed_packet_sha256' if opposed else 'scan_packet_sha256'])
+                import hashlib
+                attempts = record.get('native_attempts')
+                if (record['window_index'] != index or record['window'] != windows[index]
+                        or record['window_hash'] != digest(windows[index])
+                        or packet != expected or spec != expected_schema
+                        or hashlib.sha256(user.encode()).hexdigest() != expected_sha
+                        or not isinstance(attempts, list) or len(attempts) != 3
+                        or any(type(n) is not int or n < 1 for n in attempts)):
+                    raise SourceWindowError('source_status_final_window_receipt_changed')
+                self.native_calls += attempts[phase]
+                self.index += 1
+                return deepcopy(record['source_inventory']['source_model_response'] if phase == 0
+                                else record['opposed_review' if opposed else 'scan'])
             if (record['window_index'] != index or record['window'] != windows[index]
                     or record['window_hash'] != digest(windows[index])
                     or packet['source_spans'] != windows[index]
@@ -33,7 +71,8 @@ def prepare(source, windows, candidates, ledger, validate, fits, system, schema,
             return deepcopy(record['opposed_review' if opposed else 'scan'])
 
     # Reapply every structural/quote/coverage gate to the complete journal.
-    checked = scan_all_windows(source, windows, candidates, Replay(), validate, fits, maximum_calls)
+    checked = scan_all_windows(source, windows, candidates, Replay(), validate, fits, maximum_calls,
+                               inventory=inventory)
     if checked != ledger:
         raise SourceWindowError('source_status_final_scan_receipt_changed')
     packets = []
@@ -49,6 +88,8 @@ def prepare(source, windows, candidates, ledger, validate, fits, system, schema,
                   'included_window_indices': included, 'excluded_window_indices': excluded,
                   'excluded_windows_checked_absent': True,
                   'context_policy': 'all_relevant_complete_windows_and_neighbors_in_original_order'}
+        if inventory:
+            packet.update(pack(relevant))
         if fits(system, json.dumps(packet, ensure_ascii=False), schema) is not True:
             raise SourceWindowError('source_status_final_relevant_context_does_not_fit')
         packets.append(packet)

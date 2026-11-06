@@ -152,7 +152,7 @@ def _candidate_origin(candidate, source):
         raise SourceWindowError('source_status_scan_candidate_origin_not_unique')
 
 
-def scan_all_windows(source, windows, candidates, llm, validate, fits, maximum_calls):
+def scan_all_windows(source, windows, candidates, llm, validate, fits, maximum_calls, *, inventory=False):
     """Keep every source window plus review receipts; no final acceptance output."""
     references = {item['action_ref'] for item in candidates}
     if (not candidates or len(references) != len(candidates)
@@ -161,14 +161,40 @@ def scan_all_windows(source, windows, candidates, llm, validate, fits, maximum_c
             or any(set(item) != {'action_ref', 'task', 'original_quote', 'original_quote_source_spans'}
                    for item in candidates)):
         raise SourceWindowError('source_status_scan_candidate_identity_invalid')
-    if type(maximum_calls) is not int or not 1 <= maximum_calls <= 64 or len(windows) * 2 > maximum_calls:
+    if (type(inventory) is not bool or type(maximum_calls) is not int
+            or not 1 <= maximum_calls <= 64 or len(windows) * (3 if inventory else 2) > maximum_calls):
         raise SourceWindowError('source_status_scan_call_budget_exceeded')
+    if inventory:
+        from app.source_wire import pack, SYSTEM_SUFFIX
+        from app.source_act_inventory import discover_window, InventoryError
+        before = getattr(llm, 'native_calls', None)
+        if type(before) is not int or before < 0 or before + maximum_calls > 64:
+            raise SourceWindowError('source_status_scan_native_counter_unbound')
+        ceiling = before + maximum_calls
+        scan_system = SCAN_SYSTEM + '\n' + SYSTEM_SUFFIX + '\n' + INVENTORY_RULES
+        review_system = REVIEW_SYSTEM + '\n' + SYSTEM_SUFFIX + '\n' + INVENTORY_RULES
+    else:
+        scan_system, review_system = SCAN_SYSTEM, REVIEW_SYSTEM
 
-    def packet(window):
+    def packet(window, acts=None):
+        if inventory:
+            return {**pack(window), 'candidates': candidates, 'source_acts': acts or []}
         return {'source_spans': window, 'candidates': candidates}
 
     def scan_fits(window):
-        return fits(SCAN_SYSTEM, json.dumps(packet(window), ensure_ascii=False), SCAN_SCHEMA)
+        return fits(scan_system, json.dumps(packet(window), ensure_ascii=False), SCAN_SCHEMA)
+
+    def native_chat(system, user, spec):
+        if not inventory:
+            return llm.chat(system, user, spec), 1
+        used = llm.native_calls
+        if type(used) is not int or not before <= used < ceiling:
+            raise SourceWindowError('source_status_scan_call_budget_exceeded')
+        value = llm.chat(system, user, spec)
+        after = llm.native_calls
+        if type(after) is not int or not used < after <= ceiling:
+            raise SourceWindowError('source_status_scan_native_counter_unbound')
+        return value, after - used
 
     verify_plan(source, windows, scan_fits)  # Entire plan validated before the first model call.
     for candidate in candidates:
@@ -176,9 +202,23 @@ def scan_all_windows(source, windows, candidates, llm, validate, fits, maximum_c
     ledger, positive = [], {ref: [] for ref in references}
     calls = 0
     for index, window in enumerate(windows):
-        request = packet(window)
-        result = llm.chat(SCAN_SYSTEM, json.dumps(request, ensure_ascii=False), SCAN_SCHEMA)
-        calls += 1
+        discovery = None
+        attempts = []
+        if inventory:
+            used = llm.native_calls
+            try:
+                discovery = discover_window(window, llm, validate, fits, used, ceiling, packed=True)
+            except InventoryError as error:
+                raise SourceWindowError('source_status_inventory_' + str(error)) from None
+            attempts.append(llm.native_calls - used)
+            calls += attempts[-1]
+        request = packet(window, discovery['source_acts'] if discovery else None)
+        user = json.dumps(request, ensure_ascii=False)
+        if not fits(scan_system, user, SCAN_SCHEMA):
+            raise SourceWindowError('source_status_scan_actual_inventory_packet_does_not_fit')
+        result, consumed = native_chat(scan_system, user, SCAN_SCHEMA)
+        attempts.append(consumed)
+        calls += consumed
         validate(result, SCAN_SCHEMA)
         primary = _rows(result, references)
         for item in primary.values():
@@ -190,10 +230,11 @@ def scan_all_windows(source, windows, candidates, llm, validate, fits, maximum_c
                 raise SourceWindowError('source_status_scan_uncertain_or_ungrounded')
         opposed = {**request, 'scan': result}
         review_user = json.dumps(opposed, ensure_ascii=False)
-        if not fits(REVIEW_SYSTEM, review_user, REVIEW_SCHEMA):
+        if not fits(review_system, review_user, REVIEW_SCHEMA):
             raise SourceWindowError('source_status_scan_opposed_packet_does_not_fit')
-        reviewed = llm.chat(REVIEW_SYSTEM, review_user, REVIEW_SCHEMA)
-        calls += 1
+        reviewed, consumed = native_chat(review_system, review_user, REVIEW_SCHEMA)
+        attempts.append(consumed)
+        calls += consumed
         validate(reviewed, REVIEW_SCHEMA)
         secondary = _rows(reviewed, references)
         if (reviewed['assessment_coverage'] != 'complete' or reviewed['unreviewed_action_refs']
@@ -213,9 +254,30 @@ def scan_all_windows(source, windows, candidates, llm, validate, fits, maximum_c
                 positive[reference].append(index)
         ledger.append({'window_index': index, 'window': window, 'window_hash': digest(window),
                        'scan': result, 'opposed_review': reviewed})
+        if inventory:
+            ledger[-1].update(source_inventory=discovery, native_attempts=attempts,
+                             scan_packet_sha256=hashlib.sha256(user.encode()).hexdigest(),
+                             opposed_packet_sha256=hashlib.sha256(review_user.encode()).hexdigest(),
+                             scan_system_sha256=hashlib.sha256(scan_system.encode()).hexdigest(),
+                             opposed_system_sha256=hashlib.sha256(review_system.encode()).hexdigest(),
+                             scan_schema_sha256=digest(SCAN_SCHEMA), opposed_schema_sha256=digest(REVIEW_SCHEMA))
     if any(not indices for indices in positive.values()):
         raise SourceWindowError('source_status_scan_candidate_missing_from_complete_source')
-    return {'source_hash': digest(source), 'candidates_hash': digest(candidates), 'windows': ledger,
+    output = {'source_hash': digest(source), 'candidates_hash': digest(candidates), 'windows': ledger,
             'positive_window_indices': positive, 'model_calls': calls,
             'all_source_spans_preserved': True, 'final_reconciliation_required': True,
             'action_quality_accepted': False}
+    if inventory:
+        output.update(pipeline_revision='source_only_packed_v1', native_calls_before=before,
+                      native_calls_after=llm.native_calls)
+    return output
+
+
+INVENTORY_RULES = '''source_acts — предварительные упоминания из отдельного чтения источника БЕЗ candidates.
+Это недоверенные данные, не готовое сопоставление и не итоговые статусы.
+Самостоятельно сопоставь каждую работу candidates со ВСЕМИ source_spans и source_acts.
+Пустой инвентарь не доказывает absent. Проверь полный исходный текст, ищи пропущенные упоминания.
+Отмена, запрет, выполнение, история и условия остаются упоминаниями работы.
+Не переноси роли или отмену другой работы на candidate. source_act_ref W... обозначает
+элемент предварительного инвентаря, не source_id, span_ref или action_ref.
+Не меняй требования к дословным support, ролям, тождеству, полноте и независимой проверке.'''
