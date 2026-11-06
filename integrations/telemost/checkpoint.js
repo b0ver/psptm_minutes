@@ -60,21 +60,40 @@
   // Observe only Telemost recording databases. Keep codes, never records or text.
   const storageErrors = new Set();
   capture.storageErrors = [];
+  const observeStorageError = error => {
+    const name = error?.name;
+    const code = ['QuotaExceededError', 'UnknownError', 'DataError', 'DataCloneError', 'AbortError', 'ConstraintError', 'InvalidStateError', 'TransactionInactiveError', 'NotFoundError', 'ReadOnlyError'].includes(name) ? name : 'other';
+    storageErrors.add(code);
+    capture.storageErrors = [...storageErrors];
+    if (/Failed to write blobs|FILE_ERROR_NO_SPACE/.test(error?.message || '')) capture.blobWriteFailed = true;
+  };
+  const isRecordingDatabase = db => /^session-[0-9]+$/.test(db?.name || '');
   if (window.IDBFactory) {
     const openDatabase = IDBFactory.prototype.open;
     IDBFactory.prototype.open = function(...args) {
       const request = openDatabase.apply(this, args);
       if (/^session-[0-9]+$/.test(String(args[0]))) request.addEventListener('success', () => {
-        request.result.addEventListener('error', event => {
+        for (const type of ['error', 'abort']) request.result.addEventListener(type, event => {
           const error = event.target?.error;
-          const name = error?.name;
-          const code = ['QuotaExceededError', 'UnknownError', 'DataError', 'AbortError', 'ConstraintError', 'InvalidStateError', 'TransactionInactiveError'].includes(name) ? name : 'other';
-          storageErrors.add(code);
-          capture.storageErrors = [...storageErrors];
-          if (/Failed to write blobs|FILE_ERROR_NO_SPACE/.test(error?.message || '')) capture.blobWriteFailed = true;
-        });
+          // Explicit abort() has no error. It is not evidence of a storage fault.
+          if (error) observeStorageError(error);
+        }, true);
       });
       return request;
+    };
+    const transaction = IDBDatabase.prototype.transaction;
+    IDBDatabase.prototype.transaction = function(...args) {
+      try {return transaction.apply(this, args);} catch (error) {
+        if (isRecordingDatabase(this)) observeStorageError(error);
+        throw error;
+      }
+    };
+    const put = IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put = function(...args) {
+      try {return put.apply(this, args);} catch (error) {
+        if (isRecordingDatabase(this.transaction.db)) observeStorageError(error);
+        throw error;
+      }
     };
   }
   const releaseInput = () => {

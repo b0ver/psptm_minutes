@@ -155,39 +155,34 @@ async def case(mode):
 
         actual_playwright = async_playwright()
         async with actual_playwright as playwright:
-            original_launch = playwright.chromium.launch
+            original_launch = playwright.chromium.launch_persistent_context
 
-            async def launch(**kwargs):
-                browser = await original_launch(**kwargs)
-                original_context = browser.new_context
-
-                async def new_context(**options):
-                    context = await original_context(**options)
-                    context.on('page', lambda page: live_pages.append(page))
-                    async def route(request):
-                        body = '<iframe src="/private-join/test"></iframe>' if '/private-join/' not in request.request.url else HTML
-                        headers={}
-                        if mode=='strict_csp':
-                            body=body.replace('<script>','<script nonce="test-fixture">')
-                            headers['Content-Security-Policy']="script-src 'nonce-test-fixture' blob:; object-src 'none'"
-                        await request.fulfill(status=200, content_type='text/html; charset=utf-8', body=body, headers=headers)
-                    await context.route('**/*', route)
-                    await context.add_init_script('window.__agentCheckpointTimeslice = 250')
-                    if mode in {'native_mix_disconnect','muted_mix_input','other_output_disconnect','cancel_mix_during_retry','ended_mix_during_retry','failure_after_native_stop','unrequested_stop_before_rotation','audio_diagnostic'}:
-                        await context.add_init_script('window.__probeDisconnectNativeMix = true')
-                    if mode == 'audio_diagnostic':
-                        await context.add_init_script('window.__probeAudioDiagnostic = true')
-                    if mode == 'muted_mix_input':
-                        await context.add_init_script('window.__probeMutedMixInput = true')
-                    if mode == 'other_output_disconnect':
-                        await context.add_init_script('window.__probeOtherOutput = true')
-                    if mode == 'unrelated_close':
-                        await context.add_init_script('window.__probeCloseTrap = true')
-                    if mode in {'cancel_during_retry','ended_during_retry','cancel_mix_during_retry','ended_mix_during_retry'}:
-                        await context.add_init_script('window.__probeCancelRetry = true')
-                    return context
-                browser.new_context = new_context
-                return browser
+            async def launch(user_data_dir, **kwargs):
+                context = await original_launch(user_data_dir, **kwargs)
+                live_pages.extend(context.pages)
+                context.on('page', lambda page: live_pages.append(page))
+                async def route(request):
+                    body = '<iframe src="/private-join/test"></iframe>' if '/private-join/' not in request.request.url else HTML
+                    headers={}
+                    if mode=='strict_csp':
+                        body=body.replace('<script>','<script nonce="test-fixture">')
+                        headers['Content-Security-Policy']="script-src 'nonce-test-fixture' blob:; object-src 'none'"
+                    await request.fulfill(status=200, content_type='text/html; charset=utf-8', body=body, headers=headers)
+                await context.route('**/*', route)
+                await context.add_init_script('window.__agentCheckpointTimeslice = 250')
+                if mode in {'native_mix_disconnect','muted_mix_input','other_output_disconnect','cancel_mix_during_retry','ended_mix_during_retry','failure_after_native_stop','unrequested_stop_before_rotation','audio_diagnostic'}:
+                    await context.add_init_script('window.__probeDisconnectNativeMix = true')
+                if mode == 'audio_diagnostic':
+                    await context.add_init_script('window.__probeAudioDiagnostic = true')
+                if mode == 'muted_mix_input':
+                    await context.add_init_script('window.__probeMutedMixInput = true')
+                if mode == 'other_output_disconnect':
+                    await context.add_init_script('window.__probeOtherOutput = true')
+                if mode == 'unrelated_close':
+                    await context.add_init_script('window.__probeCloseTrap = true')
+                if mode in {'cancel_during_retry','ended_during_retry','cancel_mix_during_retry','ended_mix_during_retry'}:
+                    await context.add_init_script('window.__probeCancelRetry = true')
+                return context
 
             class Manager:
                 async def start(self):
@@ -261,7 +256,7 @@ async def case(mode):
             stopper = asyncio.create_task(stop_later())
             with patch('playwright.async_api.async_playwright', return_value=Manager()), \
                  patch.object(playwright, 'stop', keep_driver), \
-                 patch.object(playwright.chromium, 'launch', launch), \
+                 patch.object(playwright.chromium, 'launch_persistent_context', launch), \
                  patch.object(service, 'DATA', Path(temp)), \
                  patch.object(service, 'time', SimpleNamespace(time=lambda: time.time()+clock_offset[0], monotonic=time.monotonic)), \
                  patch.object(service, 'ROTATE_AFTER_SECONDS', 1), \

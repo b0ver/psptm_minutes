@@ -34,9 +34,17 @@ async def main():
     const db=await new Promise((ok,no)=>{const r=indexedDB.open('session-1',1);r.onupgradeneeded=()=>r.result.createObjectStore('chunks');r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
     await new Promise((ok,no)=>{const tx=db.transaction('chunks','readwrite');tx.objectStore('chunks').add(new Blob(['first']),1);tx.oncomplete=ok;tx.onerror=no});
     await new Promise(ok=>{const tx=db.transaction('chunks','readwrite');tx.objectStore('chunks').add(new Blob(['duplicate']),1);tx.onabort=ok});
+    // Synchronous failures must propagate unchanged and be observable.
+    try {db.transaction('missing-store')} catch(e) {if(e.name!=='NotFoundError')throw e}
+    const tx=db.transaction('chunks','readwrite');
+    try {tx.objectStore('chunks').put(()=>{},2)} catch(e) {if(e.name!=='DataCloneError')throw e}
+    await new Promise(ok=>{tx.oncomplete=ok;tx.onabort=ok});
+    // Explicit cancellation must not add a storage-fault code.
+    const cancelled=db.transaction('chunks','readwrite');cancelled.abort();
+    await new Promise(ok=>{cancelled.onabort=ok});
     db.close();return window.__agentContinuousCapture.storageErrors;
    }''')
-   assert storage_errors==['ConstraintError'],storage_errors
+   assert set(storage_errors)=={'ConstraintError','NotFoundError','DataCloneError'},storage_errors
    await page.add_script_tag(content='window.stopPrimaryFromFixture=()=>primary.stop();\n//# sourceURL=https://fixture.invalid/static/recorder-fixture.js')
    await page.evaluate('stopPrimaryFromFixture()')
    await page.wait_for_function('()=>window.__agentCheckpoint.state==="final"')

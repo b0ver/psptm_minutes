@@ -18,12 +18,14 @@ from pydantic import BaseModel, Field, field_validator
 
 try:
     from .recording_controls import start_native_recording, stop_native_recording
+    from .browser_session import launch_session, remove_browser_data
     from .devices import mute_devices
     from .checkpoints import Checkpoints, CheckpointError, atomic
     from .states import Status, TERMINAL, CONTROLS
     from .rollover import ROTATE_AFTER_SECONDS, ROTATION_TIMEOUT_SECONDS, rotate, prepare_stop
 except ImportError:
     from recording_controls import start_native_recording, stop_native_recording
+    from browser_session import launch_session, remove_browser_data
     from devices import mute_devices
     from checkpoints import Checkpoints, CheckpointError, atomic
     from states import Status, TERMINAL, CONTROLS
@@ -224,11 +226,18 @@ def recover_partial(sid, reason):
 async def cleanup_and_import(sid, file, complete, browser):
     # Closing our isolated browser disconnects only this guest. Do not click
     # departure controls: Telemost may replace them as the meeting ends.
+    closed = False
     try:
         await browser.close()
+        closed = True
     except Exception:
         persist(sid, cleanup_error_code='browser_close_after_save_failed')
     await import_recording(sid, file, complete=complete)
+    if closed and complete and sessions[sid].get('status') == 'uploaded':
+        try:
+            remove_browser_data(DATA / sid)
+        except OSError:
+            persist(sid, cleanup_error_code='browser_profile_cleanup_failed')
 
 
 async def import_recording(sid, file, complete=True):
@@ -303,8 +312,8 @@ async def run(sid):
     try:
         driver = await async_playwright().start()
         p = driver
-        browser = await p.chromium.launch(headless=True, env={**os.environ, 'XDG_CONFIG_HOME': '/tmp/telemost-config', 'XDG_CACHE_HOME': '/tmp/telemost-cache'}, executable_path=os.environ.get('CHROMIUM_EXECUTABLE_PATH'), args=['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--use-file-for-fake-audio-capture=/agent/silence.wav', '--autoplay-policy=no-user-gesture-required', '--disable-dev-shm-usage'])
-        context = await browser.new_context(locale='ru-RU', accept_downloads=True, viewport={'width': 1280, 'height': 900})
+        context = await launch_session(p.chromium, DATA / sid)
+        browser = context.browser
         await context.add_init_script("""(() => {
           window.__agentStreams = [];
           if (!navigator.mediaDevices) return;
@@ -331,7 +340,7 @@ async def run(sid):
         await context.add_init_script(path=str(Path(__file__).with_name('lifecycle.js')))
         # Only synthetic devices exist in the container; host devices are not mounted.
         await context.grant_permissions(['microphone', 'camera'])
-        page = await context.new_page()
+        page = context.pages[0] if context.pages else await context.new_page()
         network_errors, browser_errors = [], []
         def failed_request(request):
             host = urlsplit(request.url).hostname

@@ -126,5 +126,24 @@
     "participant_stop_does_not_restart": true,
     "audio_diagnostic_ignored_before_and_during_video_recording": true,
     "real_long_acceptance": "pending"
+  },
+  "native_mixer_profile_live": {
+    "commit": "6cfb383eb66aa236a29d611896390e5c290d5b7b",
+    "qualification": "failed_before_first_rotation",
+    "native_rotations": 0,
+    "recovered_audio_seconds": 1231.92,
+    "imports": 1,
+    "import_bytes_match": true,
+    "complete": false,
+    "no_ai_runs": true,
+    "stand_stopped": true,
+    "cause": "not_established",
+    "stop_callsite": "public_client_saga_call_effect"
+  },
+  "disk_profile_candidate": {
+    "qualification": "pending",
+    "storage_persistence_probe": "passed",
+    "session_isolation_probe": "passed",
+    "storage_abort_and_sync_diagnostics": "implemented"
   }
 }
