@@ -24,7 +24,7 @@
   ],
   "fixed_full_long_automatic_rollover": "not_accepted",
   "local_integration_passed": 362,
-  "local_controls_cases_passed": 5,
+  "local_controls_cases_passed": 8,
   "offline_strict_csp_passed": true,
   "offline_cancel_between_parts_passed": true,
   "model_acceptance_verified": false,
@@ -229,6 +229,100 @@
           "last_tone_second": 3873.5,
           "max_internal_tone_gap_seconds": 0.1,
           "silent_bins": 330
+        }
+      ]
+    }
+  },
+  "finalization_profile_live": {
+    "commit": "d38d5ef162f7a2b5fcba55a373db144f55ff7f29",
+    "qualification": "failed_first_rotation",
+    "rotation_error_code": "not_collected_by_this_profile",
+    "native_rotations": 0,
+    "native_files": 1,
+    "recording_issue": "native_rotation_failed",
+    "end_reason": "user_stop",
+    "imports": 1,
+    "import_bytes_match": true,
+    "complete": false,
+    "no_ai_runs": true,
+    "stand_stopped": true,
+    "audio": {
+      "decoded_audio_seconds": 1752.959,
+      "timeline_end_seconds": 1760.429,
+      "max_frame_timestamp_gap_seconds": 0.15,
+      "bin_seconds": 0.1,
+      "marker_windows": [
+        {
+          "window_seconds": [
+            10,
+            50
+          ],
+          "covered_bins": 399,
+          "tone_bins": 0,
+          "first_tone_second": null,
+          "last_tone_second": null,
+          "max_internal_tone_gap_seconds": 0,
+          "silent_bins": 399
+        },
+        {
+          "window_seconds": [
+            50,
+            130
+          ],
+          "covered_bins": 800,
+          "tone_bins": 565,
+          "first_tone_second": 64.2,
+          "last_tone_second": 122.3,
+          "max_internal_tone_gap_seconds": 0.1,
+          "silent_bins": 225
+        },
+        {
+          "window_seconds": [
+            130,
+            170
+          ],
+          "covered_bins": 400,
+          "tone_bins": 0,
+          "first_tone_second": null,
+          "last_tone_second": null,
+          "max_internal_tone_gap_seconds": 0,
+          "silent_bins": 400
+        },
+        {
+          "window_seconds": [
+            1710,
+            1830
+          ],
+          "covered_bins": 503,
+          "tone_bins": 328,
+          "first_tone_second": 1724.9,
+          "last_tone_second": 1760.4,
+          "max_internal_tone_gap_seconds": 0.1,
+          "silent_bins": 163
+        },
+        {
+          "window_seconds": [
+            3450,
+            3570
+          ],
+          "covered_bins": 0,
+          "tone_bins": 0,
+          "first_tone_second": null,
+          "last_tone_second": null,
+          "max_internal_tone_gap_seconds": 0,
+          "silent_bins": 0
+        },
+        {
+          "window_seconds": [
+            3810,
+            3890
+          ],
+          "covered_bins": 0,
+          "tone_bins": 0,
+          "first_tone_second": null,
+          "last_tone_second": null,
+          "max_internal_tone_gap_seconds": 0,
+          "silent_bins": 0
         }
       ]
     }

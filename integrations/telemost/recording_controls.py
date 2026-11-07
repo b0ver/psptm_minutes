@@ -15,7 +15,7 @@ def stop_recording_control(frame):
     ).filter(visible=True).first
 
 
-async def start_native_recording(page, frame, should_stop=None):
+async def start_native_recording(page, frame, should_stop=None, restart=False):
     from playwright.async_api import TimeoutError as PWTimeout
     cancelled = should_stop or (lambda: False)
     if cancelled():
@@ -34,7 +34,7 @@ async def start_native_recording(page, frame, should_stop=None):
     for scope in page.frames:
         await scope.evaluate('() => {window.__agentCheckpointArmed = true; window.__agentExpectedRecordingVideo = true}')
     stop = stop_recording_control(frame)
-    deadline = time.monotonic() + 20
+    deadline = time.monotonic() + (60 if restart else 20)
     attempts, next_attempt, revealed_legacy = 0, 0, False
     while time.monotonic() < deadline:
         active = await frame.evaluate('() => window.__agentNativeRecordingActive')
@@ -43,11 +43,13 @@ async def start_native_recording(page, frame, should_stop=None):
             return True
         if cancelled():
             return False
+        if restart and active is not True and await record.is_visible() and not await record.is_enabled():
+            raise PWTimeout('native_recording_disabled')
         now = time.monotonic()
         # Telemost takes only the leading start action while the previous
         # recording finishes saving. Retry the visible UI command, never a
         # recorder API or a disabled/revoked control.
-        if active is not True and attempts < 5 and now >= next_attempt and await record.is_visible() and await record.is_enabled():
+        if active is not True and attempts < (30 if restart else 5) and now >= next_attempt and await record.is_visible() and await record.is_enabled():
             await record.evaluate('(element) => element.click()')
             attempts += 1
             next_attempt = now + 2

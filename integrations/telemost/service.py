@@ -90,7 +90,7 @@ def persist(sid, **updates):
 
 def public(sid):
     s = sessions[sid]
-    return {k: s.get(k) for k in ['id', 'title','title_source','camera_off', 'status', 'error_code', 'created_at', 'updated_at', 'recording_started_at', 'duration_minutes', 'meeting_id', 'bytes', 'has_preview', 'end_reason', 'recording_complete', 'chunks', 'checkpoint_bytes', 'last_checkpoint_at', 'capture_health', 'recovered_audio_seconds', 'retryable', 'native_rotations', 'capture_discontinuities', 'recording_issue', 'chat_control_available', 'native_export_warning', 'native_files_expected', 'native_files_saved']}
+    return {k: s.get(k) for k in ['id', 'title','title_source','camera_off', 'status', 'error_code', 'created_at', 'updated_at', 'recording_started_at', 'duration_minutes', 'meeting_id', 'bytes', 'has_preview', 'end_reason', 'recording_complete', 'chunks', 'checkpoint_bytes', 'last_checkpoint_at', 'capture_health', 'recovered_audio_seconds', 'retryable', 'native_rotations', 'capture_discontinuities', 'recording_issue', 'chat_control_available', 'native_export_warning', 'native_files_expected', 'native_files_saved', 'rotation_error_code', 'rotation_elapsed_seconds']}
 
 
 @asynccontextmanager
@@ -562,7 +562,7 @@ async def run(sid):
                     if isinstance(site, dict) and re.fullmatch(r'[A-Za-z0-9._-]{1,120}\.js', str(site.get('script', ''))) and all(type(site.get(k)) is int and 0 < site[k] < 100_000_000 for k in ('line', 'column')):
                         safe_diagnostic['callsite'] = {k: site[k] for k in ('script', 'line', 'column')}
                     storage = [await scope.evaluate('() => ({errors: window.__agentContinuousCapture?.storageErrors || [], blob: window.__agentContinuousCapture?.blobWriteFailed === true})') for scope in page.frames]
-                    safe_diagnostic['storage_errors'] = sorted({code for item in storage for code in item.get('errors', []) if code in {'QuotaExceededError', 'UnknownError', 'DataError', 'AbortError', 'ConstraintError', 'InvalidStateError', 'TransactionInactiveError', 'other'}})
+                    safe_diagnostic['storage_errors'] = sorted({code for item in storage for code in item.get('errors', []) if code in {'QuotaExceededError', 'UnknownError', 'DataError', 'DataCloneError', 'AbortError', 'ConstraintError', 'InvalidStateError', 'TransactionInactiveError', 'NotFoundError', 'ReadOnlyError', 'other'}})
                     safe_diagnostic['blob_write_failed'] = any(item.get('blob') is True for item in storage)
                     persist(sid, capture_health='native_stopped', recording_issue=recording_issue,
                             recording_complete=False, native_stop_diagnostic=safe_diagnostic)
@@ -581,12 +581,17 @@ async def run(sid):
                 if not rotation_failed and time.time() - native_started >= ROTATE_AFTER_SECONDS:
                     rotation_attempted = True
                     persist(sid, capture_health='rotating')
+                    rotation_started = time.monotonic()
                     try:
                         async def start_next_recording(page, frame):
-                            return await start_native_recording(page, frame, should_stop=lambda: stop.is_set() or bool(state.get('observed_end_reason')))
+                            return await start_native_recording(page, frame, should_stop=lambda: stop.is_set() or bool(state.get('observed_end_reason')), restart=True)
                         continued = await rotate(page, frame, leave, stop, float('inf'),
                                                  start_next_recording, stop_native_recording)
-                    except Exception:
+                    except Exception as error:
+                        known = {'native_start_command_unavailable', 'native_recording_start_not_confirmed', 'native_recording_disabled', 'continuous_capture_unavailable'}
+                        detail = str(error)
+                        code = detail if detail in known else ('rotation_deadline_exceeded' if isinstance(error, asyncio.TimeoutError) else 'native_control_timeout' if isinstance(error, PWTimeout) else 'native_rotation_error')
+                        persist(sid, rotation_error_code=code, rotation_elapsed_seconds=round(time.monotonic()-rotation_started, 3))
                         for scope in page.frames:
                             try:
                                 await scope.evaluate('() => window.__agentAbortRollover?.()')

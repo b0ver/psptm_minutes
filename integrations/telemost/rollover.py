@@ -7,7 +7,7 @@ import asyncio
 import time
 
 ROTATE_AFTER_SECONDS = 29 * 60
-ROTATION_TIMEOUT_SECONDS = 45
+ROTATION_TIMEOUT_SECONDS = 90
 
 
 async def prepare_stop(page):
