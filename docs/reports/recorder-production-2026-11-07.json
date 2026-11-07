@@ -1,0 +1,74 @@
+{
+  "deployed": true,
+  "scope": "telemost-agent_only_owner_approved_exception",
+  "source_commit": "cdbd17a19c8a487a297c457b6f40d7ff775c0ff4",
+  "image": "ghcr.io/b0ver/psptm_minutes-telemost@sha256:84fa3acfb32235cdc055f2964ec89fe9f00a48a76a37bbc3ef3e1ada769834af",
+  "all_services_running_unpaused": true,
+  "other_container_ids_and_images_unchanged": true,
+  "legacy_states_preserved": 73,
+  "legacy_partial_records_preserved": 12,
+  "schema_or_models_changed": false,
+  "rollback_image_archived_and_verified_offhost": true,
+  "full_recordings_archive_encrypted_and_verified_offhost": true,
+  "quiescent_database_secrets_env_encrypted_offhost": true,
+  "actual_restore_verified": {
+    "restored_meetings": 51,
+    "recording_import_hashes_verified": 34,
+    "calendar_credentials_decrypted": 1,
+    "restored_files_readable_by_uid_10001": true
+  },
+  "staging_validation": {
+    "candidate_commit": "cdbd17a19c8a487a297c457b6f40d7ff775c0ff4",
+    "candidate_digest": "ghcr.io/b0ver/psptm_minutes-telemost@sha256:84fa3acfb32235cdc055f2964ec89fe9f00a48a76a37bbc3ef3e1ada769834af",
+    "platform": "linux/amd64",
+    "current_production_api_import_passed": true,
+    "repeat_import_same_meeting": true,
+    "imported_bytes_match": true,
+    "ai_not_run": true,
+    "native_controls_cases": 9,
+    "old_image_rollback_and_forward_passed": true,
+    "legacy_terminal_states_loaded": 73,
+    "legacy_state_hashes_unchanged": true,
+    "legacy_partial_files_preserved": 12,
+    "production_changed": false,
+    "full_bundle_blockers": [
+      "unaccepted_analysis_and_prompt_changes",
+      "worker_and_calendar_original_images_unavailable"
+    ],
+    "requested_deployment_scope": "telemost-agent_only_explicitly_approved_by_owner"
+  },
+  "live_recorder_test_accepted_by_owner_seconds": 3751.359,
+  "new_live_meeting_after_production_switch_tested": false,
+  "api_health": true,
+  "production_api_recorder_proxy": true,
+  "telegram_api_get_me": true,
+  "verified_at_moscow": "2026-11-07T11:36:09.705598+03:00",
+  "temporary_staging_removed": true,
+  "test_restore_copies_removed": true,
+  "production_backup_archives_retained": true,
+  "whole_application_baseline_managed": false,
+  "remaining_baseline_gaps": [
+    "worker_original_image_unavailable",
+    "calendar_original_image_unavailable"
+  ],
+  "final_health": {
+    "api": {
+      "health": "healthy",
+      "restart_count": 0
+    },
+    "db": {
+      "health": "healthy",
+      "restart_count": 0
+    },
+    "telemost-agent": {
+      "health": "healthy",
+      "restart_count": 0
+    }
+  },
+  "production_changed": true,
+  "controller_commit": "e87ce95",
+  "owner_approved_component_exception": true,
+  "owner_accepted_live_62_minutes_two_rotations": true,
+  "production_release_tag": "recorder-hotfix-2026.11.07",
+  "manual_test_message_sent": false
+}
