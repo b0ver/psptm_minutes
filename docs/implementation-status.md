@@ -1,5 +1,8 @@
 # Состояние проекта: обновлено 21 октября 2026
 
+7 ноября 2026, RC опубликован: [тестовый prerelease записи](https://github.com/b0ver/psptm_minutes/releases/tag/recorder-2026.11.06-rc.1), исходный commit cdbd17a. Три образа linux/amd64 имеют immutable registry digest одного commit; [manifest и результаты](reports/recorder-rc-bundle-2026-11-07.json). CI и Release alpha прошли. Staging и production jobs пропущены в режиме candidate_only. Production и модели не менялись. Полная живая приемка, качество аудио, staging/rollback и действующая модельная/прикладная приемка остаются незавершенными. Для следующей встречи подготовлен отдельный CPU-стенд arm64 из того же исходного commit; это не E2E проверка registry-образов amd64. Обычный Telegram-бот сохраняет прежнюю версию.
+
+
 7 ноября 2026, подготовка registry RC: добавлен явный режим candidate_only в Release alpha. Он сохраняет три digest одного commit в draft и исключает staging/production jobs. Сборка и публикация еще не выполнены на момент этой записи. Исправление записи 5c9f96e прошло полный CI. Живая приемка нового кандидата и production-выпуск остаются незавершенными.
 
 

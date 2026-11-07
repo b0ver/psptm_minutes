@@ -1,5 +1,8 @@
 # Recorder 2026.11.06 RC1
 
+Статус 7 ноября: опубликован [тестовый prerelease](https://github.com/b0ver/psptm_minutes/releases/tag/recorder-2026.11.06-rc.1) из cdbd17a с тремя registry digest linux/amd64. [Manifest](../reports/recorder-rc-bundle-2026-11-07.json) содержит deploy_allowed=false. CI и релизная сборка прошли; staging и production не выполнялись. Это кандидат для живой приемки, а не допуск к production. Исторические записи о черновике ниже описывают предыдущие этапы.
+
+
 Статус: **draft; production-выпуск заблокирован**. Рабочий бот не обновлен.
 
 ## Результат разработки
