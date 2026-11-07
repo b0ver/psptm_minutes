@@ -33,6 +33,7 @@ document.querySelector('#end').onclick=()=>endRecording();
 let audio, dest, wave, otherWave, recorder, chunks;
 window.starts=0;
 async function beginRecording(){
+  menu.hidden=true;
   if(Date.now()<(window.__probeIgnoreRestartUntil||0))return;
   if(!audio){
     audio=new AudioContext(); dest=audio.createMediaStreamDestination();
@@ -77,6 +78,7 @@ async function beginRecording(){
 function endRecording(){
   recorder.stop();end.hidden=true;begin.hidden=false;
   if(window.__probeCancelRetry)window.__probeIgnoreRestartUntil=Date.now()+10000;
+  else if(window.__probeSlowNativeSave)window.__probeIgnoreRestartUntil=Date.now()+4500;
   else if(window.__probeDisconnectNativeMix)window.__probeIgnoreRestartUntil=Date.now()+1500;
 }
 if(window.__probeCloseTrap){
@@ -178,8 +180,10 @@ async def case(mode):
                     await request.fulfill(status=200, content_type='text/html; charset=utf-8', body=body, headers=headers)
                 await context.route('**/*', route)
                 await context.add_init_script('window.__agentCheckpointTimeslice = 250')
-                if mode in {'native_mix_disconnect','muted_mix_input','other_output_disconnect','cancel_mix_during_retry','ended_mix_during_retry','failure_after_native_stop','unrequested_stop_before_rotation','audio_diagnostic'}:
+                if mode in {'native_mix_disconnect','muted_mix_input','other_output_disconnect','cancel_mix_during_retry','ended_mix_during_retry','failure_after_native_stop','unrequested_stop_before_rotation','audio_diagnostic','slow_saving_menu'}:
                     await context.add_init_script('window.__probeDisconnectNativeMix = true')
+                if mode == 'slow_saving_menu':
+                    await context.add_init_script('window.__probeSlowNativeSave = true')
                 if mode in {'missing_native_download','missing_native_download_with_stop'}:
                     await context.add_init_script('window.__probeSkipLaterDownloads = true')
                 if mode == 'audio_diagnostic':
@@ -336,7 +340,7 @@ async def case(mode):
 
 async def main():
     results=[]
-    for mode in ('normal', 'failure', 'native_stop', 'transient_ui', 'advisory_expired', 'chat','strict_csp','cancel_during_retry','ended_during_retry','unrelated_close','native_mix_disconnect','muted_mix_input','other_output_disconnect','cancel_mix_during_retry','ended_mix_during_retry','failure_after_native_stop','unrequested_stop_before_rotation','audio_diagnostic','missing_native_download','missing_native_download_with_stop','failed_native_download'):
+    for mode in ('normal', 'failure', 'native_stop', 'transient_ui', 'advisory_expired', 'chat','strict_csp','cancel_during_retry','ended_during_retry','unrelated_close','native_mix_disconnect','muted_mix_input','other_output_disconnect','cancel_mix_during_retry','ended_mix_during_retry','failure_after_native_stop','unrequested_stop_before_rotation','audio_diagnostic','missing_native_download','missing_native_download_with_stop','failed_native_download','slow_saving_menu'):
         print(json.dumps({'event':'offline_case_started','mode':mode}),flush=True)
         results.append(await case(mode))
     print(json.dumps({'status': 'passed', 'scope': 'offline_synthetic_only', 'cases': results}))

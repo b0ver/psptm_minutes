@@ -35,7 +35,7 @@ async def start_native_recording(page, frame, should_stop=None, restart=False):
         await scope.evaluate('() => {window.__agentCheckpointArmed = true; window.__agentExpectedRecordingVideo = true}')
     stop = stop_recording_control(frame)
     deadline = time.monotonic() + (60 if restart else 20)
-    attempts, next_attempt, revealed_legacy = 0, 0, False
+    attempts, next_attempt, revealed_after_attempt = 0, 0, 0
     while time.monotonic() < deadline:
         active = await frame.evaluate('() => window.__agentNativeRecordingActive')
         if await stop.is_visible() and active is not False:
@@ -53,9 +53,13 @@ async def start_native_recording(page, frame, should_stop=None, restart=False):
             await record.evaluate('(element) => element.click()')
             attempts += 1
             next_attempt = now + 2
-        elif attempts and not revealed_legacy and not await record.is_visible() and not await stop.is_visible() and now >= next_attempt - 1:
+        elif attempts and revealed_after_attempt != attempts and not await record.is_visible() and not await stop.is_visible() and now >= next_attempt - 1:
+            if cancelled():
+                return False
+            # Every attempted menu command can close the menu, even when
+            # Telemost's leading worker is still busy with the previous file.
             await more.evaluate('(button) => button.click()')
-            revealed_legacy = True
+            revealed_after_attempt = attempts
         await asyncio.sleep(.1)
     raise PWTimeout('native_recording_start_not_confirmed')
 

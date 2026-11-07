@@ -18,12 +18,12 @@ function finish(){
   window.stopClicks++; window.downloads++; window.__agentNativeRecordingActive=false;
   document.querySelectorAll('button[aria-label="Остановить запись на компьютер"]').forEach(b=>b.hidden=true);
   legacy.hidden=true;start.hidden=false;menu.hidden=true;
-  window.readyAt=Date.now()+(window.layout==='slow-restart'?1500:['very-slow-restart','cancelled-restart'].includes(window.layout)?12000:0);
+  window.readyAt=Date.now()+(window.layout==='closing-menu-restart'?3500:window.layout==='slow-restart'?1500:['very-slow-restart','closing-menu-restart','cancelled-restart'].includes(window.layout)?12000:0);
   if(window.layout==='disabled-restart')start.disabled=true;
 }
 legacy.onclick=finish;
 function begin(){
-  window.startClicks++; if(Date.now()<(window.readyAt||0))return;window.__agentNativeRecordingActive=true; window.armedAtStart=window.__agentCheckpointArmed===true && window.__agentExpectedRecordingVideo===true;
+  window.startClicks++; menu.hidden=true; if(Date.now()<(window.readyAt||0))return;window.__agentNativeRecordingActive=true; window.armedAtStart=window.__agentCheckpointArmed===true && window.__agentExpectedRecordingVideo===true;
   start.hidden=true; menu.hidden=true;
   if(window.layout==='menu'){legacy.hidden=false; return;}
   if(window.layout==='missing')return;
@@ -66,11 +66,13 @@ async def case(browser, layout):
     await stop_native_recording(frame, leave, 'max_duration')
     assert await frame.evaluate('window.stopClicks===1 && window.downloads===1')
     assert await frame.evaluate('window.moreClicks') == before + (1 if layout == 'menu' else 0)
-    if layout in {'slow-restart','very-slow-restart'}:
-        await start_native_recording(page, frame, restart=True)
+    if layout in {'slow-restart','very-slow-restart','closing-menu-restart'}:
+        await asyncio.wait_for(start_native_recording(page, frame, restart=True), 25)
         assert await frame.evaluate('window.startClicks >= 3 && window.__agentNativeRecordingActive === true')
         await stop_native_recording(frame, leave, 'user_stop')
         assert await frame.evaluate('window.downloads === 2')
+        if layout == 'closing-menu-restart':
+            assert await frame.evaluate('window.startClicks >= 4'), 'Menu was not reopened after the second rejected command'
         if layout == 'very-slow-restart':
             assert await frame.evaluate('window.startClicks >= 8'), 'No retries after the old eight-second limit'
     if layout == 'cancelled-restart':
@@ -104,7 +106,7 @@ async def main():
             env={**os.environ, 'XDG_CONFIG_HOME': '/tmp/recording-control-probe'},
             args=['--no-sandbox'])
         try:
-            results = [await case(browser, layout) for layout in ('toolbar', 'delayed', 'menu', 'missing', 'slow-restart','very-slow-restart','cancelled-restart','disabled-restart')]
+            results = [await case(browser, layout) for layout in ('toolbar', 'delayed', 'menu', 'missing', 'slow-restart','very-slow-restart','closing-menu-restart','cancelled-restart','disabled-restart')]
         finally:
             await browser.close()
     print(json.dumps({'status': 'passed', 'cases': results}))
