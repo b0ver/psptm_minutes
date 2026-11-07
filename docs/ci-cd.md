@@ -109,3 +109,9 @@ Audit указал исправление 4.2.1; runtime lock и входной 
 Подготовленный GPU-образ ecd3d10 и CPU staging runtime остаются историческими кандидатами с прежними зависимостями. Их нельзя объявлять прошедшими security gate нового RC или подменять image ID в прежних manifests. Существующий диагностический capacity-job не изменять автоматически. После восстановления SSH отдельно сверить его зависимости и определить новый immutable candidate/release manifest с чистым CI; при смене runtime image новая приёмка должна явно указывать фактические hashes. Старые capacity-результаты не доказывают мощность нового образа.
 
 Локальный повтор с filelock 4.2.1: 292 passed (12.43 s), pip check success; pip-audit 2.9.0 для runtime и agent lockfile — `No known vulnerabilities found`, оба exit 0. PostgreSQL tests cleanup выполнен. GPU/CUDA/OS этим аудитом не покрываются.
+
+## Сборка непринятого RC без доставки, 7 ноября 2026
+
+Release alpha принимает явный параметр candidate_only=true. Этот режим собирает и проверяет три образа linux/amd64 из одного commit выбранной ветки. Он сохраняет три registry digest в recorder-rc-bundle.json существующего draft recorder-2026.11.06-rc.1. Manifest содержит deploy_allowed=false и acceptance_complete=false. Режим не запускает staging или production jobs. Он не отменяет приемку, rollback или ограничения модели. Без этого параметра сохраняется прежний путь выпуска только из default branch. GPU-образ собирается на hosted runner без запуска моделей и без доступа к production GPU.
+
+Команда для подготовленного commit ветки: `gh workflow run release.yml --ref codex/telemost-continuous-recording-20261106 -f candidate_only=true`. Перед живой встречей проверить исходный commit всех образов. Исправленный рекордер на изолированном CPU-стенде подключается оператором по ссылке; production Telegram продолжает использовать прежнюю версию до полной приемки.
