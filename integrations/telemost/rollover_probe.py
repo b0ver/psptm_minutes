@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 import av
 import httpx
-from playwright.async_api import async_playwright
+from playwright.async_api import async_playwright, Download
 
 import service
 
@@ -69,7 +69,7 @@ async function beginRecording(){
     if(otherAnalyser)setTimeout(()=>{const a=new Float32Array(otherAnalyser.fftSize);otherAnalyser.getFloatTimeDomainData(a);(window.__probeOtherLevels||=[]).push(Math.sqrt(a.reduce((s,x)=>s+x*x,0)/a.length))},500);
     nativeStream.getTracks().forEach(t=>t.stop());
     const a=document.createElement('a'); a.download='native.webm';
-    a.href=URL.createObjectURL(new Blob(chunks,{type:'audio/webm'}));a.click();
+    a.href=URL.createObjectURL(new Blob(chunks,{type:'audio/webm'}));if(!window.__probeSkipLaterDownloads || window.starts===1)a.click();
   };
   recorder.start(); window.starts++;
   begin.hidden=true;end.hidden=false;menu.hidden=true;
@@ -156,6 +156,14 @@ async def case(mode):
         actual_playwright = async_playwright()
         async with actual_playwright as playwright:
             original_launch = playwright.chromium.launch_persistent_context
+            original_save = Download.save_as
+            saved_attempts = [0]
+            async def save_download(download, path, **kwargs):
+                saved_attempts[0] += 1
+                if mode == 'failed_native_download' and saved_attempts[0] > 1:
+                    raise OSError('synthetic_download_write_failure')
+                return await original_save(download, path, **kwargs)
+
 
             async def launch(user_data_dir, **kwargs):
                 context = await original_launch(user_data_dir, **kwargs)
@@ -172,6 +180,8 @@ async def case(mode):
                 await context.add_init_script('window.__agentCheckpointTimeslice = 250')
                 if mode in {'native_mix_disconnect','muted_mix_input','other_output_disconnect','cancel_mix_during_retry','ended_mix_during_retry','failure_after_native_stop','unrequested_stop_before_rotation','audio_diagnostic'}:
                     await context.add_init_script('window.__probeDisconnectNativeMix = true')
+                if mode in {'missing_native_download','missing_native_download_with_stop'}:
+                    await context.add_init_script('window.__probeSkipLaterDownloads = true')
                 if mode == 'audio_diagnostic':
                     await context.add_init_script('window.__probeAudioDiagnostic = true')
                 if mode == 'muted_mix_input':
@@ -228,7 +238,7 @@ async def case(mode):
                       setTimeout(()=>toast.remove(),20);
                     }''')
                     return
-                if mode == 'native_stop':
+                if mode in {'native_stop','missing_native_download_with_stop'}:
                     await frame.evaluate('endRecording()')
                 elif mode == 'transient_ui':
                     await frame.evaluate('document.querySelector("#leave").hidden=true')
@@ -256,11 +266,13 @@ async def case(mode):
             stopper = asyncio.create_task(stop_later())
             with patch('playwright.async_api.async_playwright', return_value=Manager()), \
                  patch.object(playwright, 'stop', keep_driver), \
+                 patch.object(Download, 'save_as', save_download), \
                  patch.object(playwright.chromium, 'launch_persistent_context', launch), \
                  patch.object(service, 'DATA', Path(temp)), \
                  patch.object(service, 'time', SimpleNamespace(time=lambda: time.time()+clock_offset[0], monotonic=time.monotonic)), \
                  patch.object(service, 'ROTATE_AFTER_SECONDS', 1), \
                  patch.object(service, 'ROTATION_TIMEOUT_SECONDS', 1), \
+                 patch.object(service, 'NATIVE_DOWNLOAD_TIMEOUT_SECONDS', 1 if mode.startswith('missing_native_download') else 90), \
                  patch.object(service, 'mute_devices', mute), \
                  patch.object(service, 'rotate', rotation), \
                  patch.object(service.httpx, 'AsyncClient', lambda **kw: original(transport=httpx.MockTransport(respond), **kw)):
@@ -291,7 +303,7 @@ async def case(mode):
         if mode == 'other_output_disconnect':
             assert other_levels and max(other_levels)<0.01, ('Unrelated output remained connected',other_levels)
         assert state['native_rotations'] >= (0 if mode in {'cancel_during_retry','ended_during_retry','cancel_mix_during_retry','ended_mix_during_retry','unrequested_stop_before_rotation'} else 1), state['native_rotations']
-        assert state['recording_complete'] == (mode not in {'native_stop','unrequested_stop_before_rotation'}), mode
+        assert state['recording_complete'] == (mode not in {'native_stop','unrequested_stop_before_rotation','missing_native_download_with_stop'}), mode
         assert state['capture_discontinuities'] == 0
         if mode == 'unrequested_stop_before_rotation':
             assert seen_starts==[1],('Restarted a participant stop',seen_starts)
@@ -299,18 +311,32 @@ async def case(mode):
             assert state['native_stop_diagnostic']['callsite']['script'] == 'recorder-fixture.js'
         assert state['recording_file'] == 'continuous.webm'
         assert imports == [1], 'Multiple meeting imports'
-        assert len(list(folder.glob('native-*.webm'))) == state['native_rotations']
+        if mode.startswith('missing_native_download') or mode == 'failed_native_download':
+            assert state['native_export_warning']==('native_download_failed' if mode == 'failed_native_download' else 'native_download_timeout')
+            assert state['native_files_expected']==state['native_rotations']+1
+            assert state['native_files_saved']==1
+            assert (folder/'browser-profile').exists(), 'Lost recovery data after export warning'
+        else:
+            assert len(list(folder.glob('native-*.webm'))) == state['native_rotations']
         assert (folder / 'recording.webm').is_file()
         if mode == 'muted_mix_input':
             assert_extra_tone_absent(folder / 'continuous.webm')
         audio = check_audio(folder / 'continuous.webm', 3 if mode in {'cancel_during_retry','ended_during_retry','cancel_mix_during_retry','ended_mix_during_retry'} else 2 if mode=='unrequested_stop_before_rotation' else 4)
         assert state['end_reason']==('chat_stop' if mode=='chat' else 'meeting_ended' if mode in {'ended_during_retry','ended_mix_during_retry'} else 'user_stop')
+        if mode == 'missing_native_download':
+            snapshot=state.copy()
+            with patch.object(service, 'DATA', Path(temp)):
+                service.recover_partial(sid,'recording_download_timeout')
+            assert state['end_reason']=='user_stop'
+            assert state['error_code']=='recording_download_timeout'
+            assert state['status']=='partial_saved'
+            state.clear();state.update(snapshot)
         return {'mode': mode, 'rotations': state['native_rotations'], 'imports': len(imports), 'end_reason':state['end_reason'], **audio}
 
 
 async def main():
     results=[]
-    for mode in ('normal', 'failure', 'native_stop', 'transient_ui', 'advisory_expired', 'chat','strict_csp','cancel_during_retry','ended_during_retry','unrelated_close','native_mix_disconnect','muted_mix_input','other_output_disconnect','cancel_mix_during_retry','ended_mix_during_retry','failure_after_native_stop','unrequested_stop_before_rotation','audio_diagnostic'):
+    for mode in ('normal', 'failure', 'native_stop', 'transient_ui', 'advisory_expired', 'chat','strict_csp','cancel_during_retry','ended_during_retry','unrelated_close','native_mix_disconnect','muted_mix_input','other_output_disconnect','cancel_mix_during_retry','ended_mix_during_retry','failure_after_native_stop','unrequested_stop_before_rotation','audio_diagnostic','missing_native_download','missing_native_download_with_stop','failed_native_download'):
         print(json.dumps({'event':'offline_case_started','mode':mode}),flush=True)
         results.append(await case(mode))
     print(json.dumps({'status': 'passed', 'scope': 'offline_synthetic_only', 'cases': results}))

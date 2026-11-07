@@ -33,6 +33,7 @@ except ImportError:
 
 DATA = Path(os.environ.get('AGENT_DATA_DIR', '/data/telemost'))
 API = os.environ.get('MINUTES_API_URL', 'http://api:8080')
+NATIVE_DOWNLOAD_TIMEOUT_SECONDS = 90
 sessions, stops, tasks = {}, {}, {}
 
 
@@ -89,7 +90,7 @@ def persist(sid, **updates):
 
 def public(sid):
     s = sessions[sid]
-    return {k: s.get(k) for k in ['id', 'title','title_source','camera_off', 'status', 'error_code', 'created_at', 'updated_at', 'recording_started_at', 'duration_minutes', 'meeting_id', 'bytes', 'has_preview', 'end_reason', 'recording_complete', 'chunks', 'checkpoint_bytes', 'last_checkpoint_at', 'capture_health', 'recovered_audio_seconds', 'retryable', 'native_rotations', 'capture_discontinuities', 'recording_issue', 'chat_control_available']}
+    return {k: s.get(k) for k in ['id', 'title','title_source','camera_off', 'status', 'error_code', 'created_at', 'updated_at', 'recording_started_at', 'duration_minutes', 'meeting_id', 'bytes', 'has_preview', 'end_reason', 'recording_complete', 'chunks', 'checkpoint_bytes', 'last_checkpoint_at', 'capture_health', 'recovered_audio_seconds', 'retryable', 'native_rotations', 'capture_discontinuities', 'recording_issue', 'chat_control_available', 'native_export_warning', 'native_files_expected', 'native_files_saved']}
 
 
 @asynccontextmanager
@@ -216,7 +217,7 @@ def recover_partial(sid, reason):
         return
     try:
         result = Checkpoints(folder).assemble(folder / 'recovered.webm')
-        persist(sid, status='partial_saved', error_code=reason, end_reason=reason,
+        persist(sid, status='partial_saved', error_code=reason, end_reason=sessions[sid].get('end_reason') or reason,
                 recording_complete=False, recording_file='recovered.webm', bytes=(folder / 'recovered.webm').stat().st_size,
                 capture_health='recovered', retryable=False, **result)
     except Exception:
@@ -233,7 +234,7 @@ async def cleanup_and_import(sid, file, complete, browser):
     except Exception:
         persist(sid, cleanup_error_code='browser_close_after_save_failed')
     await import_recording(sid, file, complete=complete)
-    if closed and complete and sessions[sid].get('status') == 'uploaded':
+    if closed and complete and sessions[sid].get('status') == 'uploaded' and not sessions[sid].get('native_export_warning'):
         try:
             remove_browser_data(DATA / sid)
         except OSError:
@@ -388,10 +389,13 @@ async def run(sid):
         # Keep native download alive and save it immediately; path never comes from remote filename.
         new_download = asyncio.Event()
         download_errors = []
+        native_saved = 0
         async def save(download, index):
+            nonlocal native_saved
             try:
                 name = 'recording.webm' if index == 0 else f'native-{index:03d}.webm'
                 await download.save_as(str(DATA / sid / name))
+                native_saved += 1
             except Exception:
                 download_errors.append('recording_download_failed')
         download_tasks = []
@@ -630,14 +634,6 @@ async def run(sid):
             persist(sid, native_rotations=rotations)
         except Exception:
             pass
-        async def wait_downloads():
-            while len(download_tasks) < rotations + 1:
-                await new_download.wait()
-                new_download.clear()
-            await asyncio.gather(*download_tasks)
-        await asyncio.wait_for(wait_downloads(), timeout=90)
-        if download_errors:
-            raise AgentError(download_errors[0])
         file = DATA / sid / 'recording.webm'
         if rotations or (rotation_attempted and checkpoints.summary()['chunks']):
             file = DATA / sid / 'continuous.webm'
@@ -651,6 +647,25 @@ async def run(sid):
                         for scope in page.frames]
             discontinuities = max(discontinuities, sum(c.get('discontinuities', 0) for c in captures))
             persist(sid, capture_discontinuities=discontinuities)
+        async def wait_downloads():
+            while len(download_tasks) < rotations + 1:
+                await new_download.wait()
+                new_download.clear()
+            await asyncio.gather(*download_tasks)
+        # A validated, final continuous audio file is canonical. Native
+        # exports are additional files; retain their recovery profile on failure.
+        mirror_ready = file.name == 'continuous.webm'
+        try:
+            await asyncio.wait_for(wait_downloads(), timeout=NATIVE_DOWNLOAD_TIMEOUT_SECONDS)
+        except asyncio.TimeoutError:
+            if not mirror_ready:
+                raise
+            persist(sid, native_export_warning='native_download_timeout')
+        if download_errors:
+            if not mirror_ready:
+                raise AgentError(download_errors[0])
+            persist(sid, native_export_warning='native_download_failed')
+        persist(sid, native_files_expected=rotations + 1, native_files_saved=native_saved)
         if not file.is_file() or not file.stat().st_size:
             raise AgentError('empty_recording_file')
         complete = not discontinuities and not recording_issue and end_reason != 'removed'

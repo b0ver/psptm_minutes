@@ -232,6 +232,7 @@
       super.pause();
       if (this !== activeNative) return;
       window.__agentRecordingHadPause=true;
+      capture.discontinuities++;
       if (mirror?.state === 'recording') mirror.pause();
     }
     resume() {

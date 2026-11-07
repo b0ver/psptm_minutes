@@ -30,6 +30,16 @@ async def main():
    state=await page.evaluate('()=>({capture:window.__agentCheckpoint.state,nativeActive:window.__agentNativeRecordingActive,primary:primary.state})')
    assert state=={'capture':'recording','nativeActive':True,'primary':'recording'},state
    assert not any(packet.get('final') for packet in packets),'Secondary recorder finalized capture'
+   await page.evaluate('primary.pause()')
+   assert await page.evaluate('window.__agentCheckpoint.state') == 'recording'
+   assert await page.evaluate('window.__agentContinuousCapture.discontinuities') == 1
+   assert await page.evaluate('window.__agentRecordingHadPause') is True
+   paused_packets=len(packets)
+   await asyncio.sleep(.3)
+   assert len(packets)<=paused_packets+1
+   await page.evaluate('primary.resume()')
+   await asyncio.sleep(.3)
+   assert len(packets)>paused_packets
    storage_errors=await page.evaluate('''async()=>{
     const db=await new Promise((ok,no)=>{const r=indexedDB.open('session-1',1);r.onupgradeneeded=()=>r.result.createObjectStore('chunks');r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error)});
     await new Promise((ok,no)=>{const tx=db.transaction('chunks','readwrite');tx.objectStore('chunks').add(new Blob(['first']),1);tx.oncomplete=ok;tx.onerror=no});

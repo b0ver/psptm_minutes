@@ -141,9 +141,96 @@
     "stop_callsite": "public_client_saga_call_effect"
   },
   "disk_profile_candidate": {
-    "qualification": "pending",
-    "storage_persistence_probe": "passed",
-    "session_isolation_probe": "passed",
-    "storage_abort_and_sync_diagnostics": "implemented"
+    "commit": "e18b11b6b3553630dd19dfbb10518a833a4e9b86",
+    "presence_and_audio_65_minutes": "passed",
+    "full_finalization": "failed_native_download_timeout",
+    "native_rotations": 2,
+    "native_files": 1,
+    "expected_native_files": 3,
+    "imports": 1,
+    "import_bytes_match": true,
+    "complete": false,
+    "no_ai_runs": true,
+    "stand_stopped": true,
+    "audio": {
+      "decoded_audio_seconds": 3886.919,
+      "timeline_end_seconds": 3904.359,
+      "max_frame_timestamp_gap_seconds": 0.145,
+      "bin_seconds": 0.1,
+      "marker_windows": [
+        {
+          "window_seconds": [
+            10,
+            50
+          ],
+          "covered_bins": 400,
+          "tone_bins": 0,
+          "first_tone_second": null,
+          "last_tone_second": null,
+          "max_internal_tone_gap_seconds": 0,
+          "silent_bins": 400
+        },
+        {
+          "window_seconds": [
+            50,
+            130
+          ],
+          "covered_bins": 798,
+          "tone_bins": 605,
+          "first_tone_second": 61.1,
+          "last_tone_second": 125.3,
+          "max_internal_tone_gap_seconds": 0.1,
+          "silent_bins": 169
+        },
+        {
+          "window_seconds": [
+            130,
+            170
+          ],
+          "covered_bins": 400,
+          "tone_bins": 0,
+          "first_tone_second": null,
+          "last_tone_second": null,
+          "max_internal_tone_gap_seconds": 0,
+          "silent_bins": 400
+        },
+        {
+          "window_seconds": [
+            1710,
+            1830
+          ],
+          "covered_bins": 1193,
+          "tone_bins": 886,
+          "first_tone_second": 1721.9,
+          "last_tone_second": 1813.2,
+          "max_internal_tone_gap_seconds": 0.1,
+          "silent_bins": 292
+        },
+        {
+          "window_seconds": [
+            3450,
+            3570
+          ],
+          "covered_bins": 1198,
+          "tone_bins": 858,
+          "first_tone_second": 3462.8,
+          "last_tone_second": 3553.9,
+          "max_internal_tone_gap_seconds": 0.1,
+          "silent_bins": 309
+        },
+        {
+          "window_seconds": [
+            3810,
+            3890
+          ],
+          "covered_bins": 798,
+          "tone_bins": 448,
+          "first_tone_second": 3825.4,
+          "last_tone_second": 3873.5,
+          "max_internal_tone_gap_seconds": 0.1,
+          "silent_bins": 330
+        }
+      ]
+    }
   }
 }
