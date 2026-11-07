@@ -326,5 +326,108 @@
         }
       ]
     }
+  },
+  "expanded_restart_profile_live": {
+    "commit": "6358c2e2850502506ebc30ca08f3e30889cb6a80",
+    "qualification": "failed_first_rotation",
+    "rotation_error_code": "native_recording_start_not_confirmed",
+    "rotation_elapsed_seconds": 60.139,
+    "recording_issue": "native_rotation_failed",
+    "native_rotations": 0,
+    "native_files": 1,
+    "end_reason": "user_stop",
+    "imports": 1,
+    "import_bytes_match": true,
+    "complete": false,
+    "no_ai_runs": true,
+    "stand_stopped": true,
+    "second_cdp_client_during_recording": false,
+    "audio": {
+      "decoded_audio_seconds": 1793.399,
+      "timeline_end_seconds": 1800.345,
+      "max_frame_timestamp_gap_seconds": 0.146,
+      "bin_seconds": 0.1,
+      "marker_windows": [
+        {
+          "window_seconds": [
+            10,
+            50
+          ],
+          "covered_bins": 400,
+          "tone_bins": 0,
+          "first_tone_second": null,
+          "last_tone_second": null,
+          "max_internal_tone_gap_seconds": 0,
+          "silent_bins": 400
+        },
+        {
+          "window_seconds": [
+            50,
+            130
+          ],
+          "covered_bins": 800,
+          "tone_bins": 608,
+          "first_tone_second": 61.6,
+          "last_tone_second": 125.7,
+          "max_internal_tone_gap_seconds": 0.1,
+          "silent_bins": 163
+        },
+        {
+          "window_seconds": [
+            130,
+            170
+          ],
+          "covered_bins": 400,
+          "tone_bins": 0,
+          "first_tone_second": null,
+          "last_tone_second": null,
+          "max_internal_tone_gap_seconds": 0,
+          "silent_bins": 400
+        },
+        {
+          "window_seconds": [
+            1710,
+            1830
+          ],
+          "covered_bins": 903,
+          "tone_bins": 710,
+          "first_tone_second": 1726.3,
+          "last_tone_second": 1800.4,
+          "max_internal_tone_gap_seconds": 0.1,
+          "silent_bins": 174
+        },
+        {
+          "window_seconds": [
+            3450,
+            3570
+          ],
+          "covered_bins": 0,
+          "tone_bins": 0,
+          "first_tone_second": null,
+          "last_tone_second": null,
+          "max_internal_tone_gap_seconds": 0,
+          "silent_bins": 0
+        },
+        {
+          "window_seconds": [
+            3810,
+            3890
+          ],
+          "covered_bins": 0,
+          "tone_bins": 0,
+          "first_tone_second": null,
+          "last_tone_second": null,
+          "max_internal_tone_gap_seconds": 0,
+          "silent_bins": 0
+        }
+      ]
+    }
+  },
+  "observer_download_contract": {
+    "scope": "isolated_synthetic_chromium",
+    "default_observer_owner_save": false,
+    "no_defaults_observer_owner_save": true,
+    "historical_missing_native_exports_cause": "not_established_observer_may_have_changed_download_directory",
+    "playwright_version": "1.63.0"
   }
 }
