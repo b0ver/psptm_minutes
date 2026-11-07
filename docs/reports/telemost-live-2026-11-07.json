@@ -1,0 +1,69 @@
+{
+  "date": "2026-11-07",
+  "source_commit": "cdbd17a19c8a487a297c457b6f40d7ff775c0ff4",
+  "scope": "isolated_local_arm64_real_telemost",
+  "production_changed": false,
+  "models_run": false,
+  "secondary_cdp_used": false,
+  "meeting_links_and_content_excluded": true,
+  "live_cases": [
+    {
+      "case": "first_live_meeting",
+      "platform_reported_end": "meeting_ended",
+      "explicit_operator_stop_sent": false,
+      "validation": {
+        "status": "uploaded",
+        "end_reason": "meeting_ended",
+        "issue": null,
+        "complete": true,
+        "rotations": 1,
+        "discontinuities": 0,
+        "checkpoint_final": true,
+        "chunks": 338,
+        "rotation_error_code": null,
+        "rotation_elapsed_seconds": null,
+        "native_export_warning": null,
+        "native_files_expected": 2,
+        "native_files_saved": 2,
+        "native_files": 2,
+        "canonical_name": "continuous.webm",
+        "imports": 1,
+        "source_matches_import": true,
+        "import_complete": true,
+        "no_ai_runs": true
+      },
+      "audio_validation": {
+        "scope": "audio_decode_and_container_timestamps_only",
+        "speech_quality_verified": false,
+        "decoded_frames": 56086,
+        "decoded_audio_seconds": 3365.16,
+        "timeline_end_seconds": 3381.231,
+        "max_frame_timestamp_gap_seconds": 0.346,
+        "gaps_over_250ms": 1,
+        "backwards_over_20ms": 19,
+        "max_overlap_seconds": 0.053,
+        "total_overlap_seconds": 80.248,
+        "rotation_windows": [
+          {
+            "from": 1710,
+            "to": 1800,
+            "max_gap_seconds": 0.074,
+            "frames": 1491
+          },
+          {
+            "from": 3450,
+            "to": 3540,
+            "max_gap_seconds": 0.0,
+            "frames": 0
+          }
+        ]
+      },
+      "local_audio_copy_matches_source": true,
+      "full_65_minute_with_two_rotations": false,
+      "audio_speech_quality_accepted": false
+    }
+  ],
+  "next_live_case": "started_fresh_session_same_immutable_source",
+  "registry_amd64_real_e2e_verified": false,
+  "production_acceptance_complete": false
+}
