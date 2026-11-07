@@ -34,7 +34,8 @@
         <p class="muted">Видимый участник «Ассистент протокола · запись», с выключенными камерой и микрофоном. Запись сохранится на сервере, затем начнутся транскрибация и разборы.</p>
         <label>Ссылка на встречу<input name="url" type="url" placeholder="https://telemost.yandex.ru/j/…" required></label>
         <label>Название встречи<input name="title" maxlength="200" value="Встреча в Телемосте" required></label>
-        <label>Максимальная длительность записи, минут<input name="duration_minutes" type="number" min="1" max="120" value="15" required></label>
+        <label>Ожидаемая длительность встречи, минут<input name="duration_minutes" type="number" min="1" max="120" value="15" required></label>
+        <p class="muted">Ассистент остается до завершения встречи, исключения или команды остановки. Ожидаемая длительность не запускает автоматический выход.</p>
         <label class="type-choice"><input name="recording_authorized" type="checkbox" required>Организатор и участники разрешили запись</label>
         <p class="muted">Готовятся пять универсальных разборов. Другие типы можно добавить в карточке встречи.</p>
         <button id="telemost-start" type="submit">Подключить и записывать</button>

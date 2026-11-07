@@ -1,0 +1,171 @@
+{
+  "date": "2026-11-07",
+  "source_commit": "cdbd17a19c8a487a297c457b6f40d7ff775c0ff4",
+  "scope": "isolated_local_arm64_real_telemost",
+  "production_changed": false,
+  "models_run": false,
+  "secondary_cdp_used": false,
+  "meeting_links_and_content_excluded": true,
+  "live_cases": [
+    {
+      "case": "first_live_meeting",
+      "platform_reported_end": "meeting_ended",
+      "explicit_operator_stop_sent": false,
+      "validation": {
+        "status": "uploaded",
+        "end_reason": "meeting_ended",
+        "issue": null,
+        "complete": true,
+        "rotations": 1,
+        "discontinuities": 0,
+        "checkpoint_final": true,
+        "chunks": 338,
+        "rotation_error_code": null,
+        "rotation_elapsed_seconds": null,
+        "native_export_warning": null,
+        "native_files_expected": 2,
+        "native_files_saved": 2,
+        "native_files": 2,
+        "canonical_name": "continuous.webm",
+        "imports": 1,
+        "source_matches_import": true,
+        "import_complete": true,
+        "no_ai_runs": true
+      },
+      "audio_validation": {
+        "scope": "audio_decode_and_container_timestamps_only",
+        "speech_quality_verified": false,
+        "decoded_frames": 56086,
+        "decoded_audio_seconds": 3365.16,
+        "timeline_end_seconds": 3381.231,
+        "max_frame_timestamp_gap_seconds": 0.346,
+        "gaps_over_250ms": 1,
+        "backwards_over_20ms": 19,
+        "max_overlap_seconds": 0.053,
+        "total_overlap_seconds": 80.248,
+        "rotation_windows": [
+          {
+            "from": 1710,
+            "to": 1800,
+            "max_gap_seconds": 0.074,
+            "frames": 1491
+          },
+          {
+            "from": 3450,
+            "to": 3540,
+            "max_gap_seconds": 0.0,
+            "frames": 0
+          }
+        ]
+      },
+      "local_audio_copy_matches_source": true,
+      "full_65_minute_with_two_rotations": false,
+      "audio_speech_quality_accepted": false
+    },
+    {
+      "case": "second_live_meeting",
+      "platform_reported_end": "meeting_ended",
+      "explicit_operator_stop_sent": false,
+      "operator_timer_cancelled_to_preserve_work_meeting": true,
+      "validation": {
+        "status": "uploaded",
+        "end_reason": "meeting_ended",
+        "issue": null,
+        "complete": true,
+        "rotations": 2,
+        "discontinuities": 0,
+        "checkpoint_final": true,
+        "chunks": 375,
+        "rotation_error_code": null,
+        "rotation_elapsed_seconds": null,
+        "native_export_warning": null,
+        "native_files_expected": 3,
+        "native_files_saved": 3,
+        "native_files": 3,
+        "canonical_name": "continuous.webm",
+        "imports": 1,
+        "source_matches_import": true,
+        "import_complete": true,
+        "no_ai_runs": true
+      },
+      "audio_validation": {
+        "scope": "audio_decode_and_container_timestamps_only",
+        "speech_quality_verified": false,
+        "decoded_frames": 62134,
+        "decoded_audio_seconds": 3728.04,
+        "timeline_end_seconds": 3751.359,
+        "max_frame_timestamp_gap_seconds": 0.238,
+        "gaps_over_250ms": 0,
+        "backwards_over_20ms": 35,
+        "max_overlap_seconds": 0.059,
+        "total_overlap_seconds": 88.43,
+        "rotation_windows": [
+          {
+            "from": 1710,
+            "to": 1800,
+            "max_gap_seconds": 0.221,
+            "frames": 1477
+          },
+          {
+            "from": 3450,
+            "to": 3540,
+            "max_gap_seconds": 0.097,
+            "frames": 1487
+          }
+        ]
+      },
+      "native_validation": {
+        "scope": "native_container_and_first_frames_only",
+        "parts": [
+          {
+            "part_index": 0,
+            "bytes": 91969015,
+            "container_duration_seconds": 1740.661,
+            "audio_streams": 1,
+            "video_streams": 1,
+            "first_audio_frame_decoded": true,
+            "first_video_frame_decoded": true
+          },
+          {
+            "part_index": 1,
+            "bytes": 234082476,
+            "container_duration_seconds": 1741.389,
+            "audio_streams": 1,
+            "video_streams": 1,
+            "first_audio_frame_decoded": true,
+            "first_video_frame_decoded": true
+          },
+          {
+            "part_index": 2,
+            "bytes": 20698134,
+            "container_duration_seconds": 262.606,
+            "audio_streams": 1,
+            "video_streams": 1,
+            "first_audio_frame_decoded": true,
+            "first_video_frame_decoded": true
+          }
+        ]
+      },
+      "local_audio_copy_matches_source": true,
+      "two_automatic_rotations_and_final_import_passed": true,
+      "full_65_minute_with_two_rotations": false,
+      "audio_speech_quality_accepted": false
+    }
+  ],
+  "next_live_case": "none_requested",
+  "registry_amd64_real_e2e_verified": false,
+  "production_acceptance_complete": false,
+  "all_requested_live_sessions_terminal": true,
+  "test_stack_stopped": true,
+  "private_volumes_retained": true,
+  "private_persistent_audio_copies_verified": true,
+  "formal_65_minute_target_reached": false,
+  "owner_acceptance": {
+    "date": "2026-11-07",
+    "scope": "recorder_live_duration_and_two_automatic_rotations",
+    "accepted": true,
+    "accepted_timeline_seconds": 3751.359,
+    "original_65_minute_duration_requirement_superseded": true,
+    "speech_quality_review_not_claimed": true
+  }
+}

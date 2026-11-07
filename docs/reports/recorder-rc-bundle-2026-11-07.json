@@ -1,0 +1,29 @@
+{
+  "candidate_only": true,
+  "deploy_allowed": false,
+  "acceptance_complete": false,
+  "source_commit": "cdbd17a19c8a487a297c457b6f40d7ff775c0ff4",
+  "platform": "linux/amd64",
+  "build_run": "https://github.com/b0ver/psptm_minutes/actions/runs/42341136144",
+  "registry_images": {
+    "runtime": "ghcr.io/b0ver/psptm_minutes-runtime@sha256:af5fe1f478e26155a1f9003e33eaec74b36aac208bdeef9263749b790da95ec1",
+    "gpu": "ghcr.io/b0ver/psptm_minutes-gpu@sha256:4162e585af8bc487a5dbe3a9be9709a8a56c3ce645712c76e935e85150febfd2",
+    "telemost": "ghcr.io/b0ver/psptm_minutes-telemost@sha256:84fa3acfb32235cdc055f2964ec89fe9f00a48a76a37bbc3ef3e1ada769834af"
+  },
+  "release_url": "https://github.com/b0ver/psptm_minutes/releases/tag/recorder-2026.11.06-rc.1",
+  "published_prerelease": true,
+  "ci_url": "https://github.com/b0ver/psptm_minutes/actions/runs/42341139145",
+  "ci_status": "success",
+  "build_status": "success",
+  "staging_job": "skipped_candidate_only",
+  "production_job": "skipped_candidate_only",
+  "production_changed": false,
+  "live_full_65_minute_accepted": false,
+  "local_live_stack": {
+    "platform": "linux/arm64",
+    "source_commit": "cdbd17a19c8a487a297c457b6f40d7ff775c0ff4",
+    "state": "prepared_idle_awaiting_new_meeting",
+    "production_credentials_used": false,
+    "models_enabled": false
+  }
+}

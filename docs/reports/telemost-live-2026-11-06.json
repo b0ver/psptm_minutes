@@ -1,0 +1,466 @@
+{
+  "date": "2026-11-06",
+  "scope": "isolated_local_cpu_real_telemost",
+  "production_changed": false,
+  "original_long_profile_commit": "100150bc8a141f04b8a98e2b85d6510201de343d",
+  "original_long_automatic_rollover": "failed_native_rotation_failed",
+  "stayed_in_call_beyond_30_minutes": true,
+  "stayed_after_recording_failure": true,
+  "original_long_test_had_manual_interventions": true,
+  "synthetic_tone_detected_in_saved_audio": true,
+  "guest_chat": "requires_account_login",
+  "current_end_profile_commit": "9148255380da1160d10be8fb7125cf5f3d3ffe72",
+  "host_end_validation": "passed_for_9148255",
+  "fixed_controls_sha256": "65583453176e3d4ce02d93fcd4bf71fe30ad155709c2121fe93de7f8ad09e3c9",
+  "fixed_controls_real_short_cycles": [
+    {
+      "confirmed": true,
+      "seconds": 2.809
+    },
+    {
+      "confirmed": true,
+      "seconds": 2.573
+    }
+  ],
+  "fixed_full_long_automatic_rollover": "not_accepted",
+  "local_integration_passed": 362,
+  "local_controls_cases_passed": 9,
+  "offline_strict_csp_passed": true,
+  "offline_cancel_between_parts_passed": true,
+  "model_acceptance_verified": false,
+  "registry_release_bundle_promoted": false,
+  "release_allowed": false,
+  "private_evidence_policy": "No meeting link, participant names, audio, video or conversation content in this receipt.",
+  "second_profile_automatic_rollover": "failed_native_rotation_failed",
+  "offline_lifecycle_cases_passed": 15,
+  "offline_end_during_retry_passed": true,
+  "offline_main_loop_cases_passed": 22,
+  "host_end_reason": "meeting_ended",
+  "host_end_import_once": true,
+  "host_end_import_bytes_match": true,
+  "operator_stop_import_once": true,
+  "operator_stop_import_bytes_match": true,
+  "live_imports_marked_incomplete": true,
+  "private_volumes_retained": true,
+  "fixed_profile_code_ci_sha": "bb28c491c81f337c774be6c9aede463aaa267167",
+  "fixed_profile_code_ci_url": "https://github.com/b0ver/psptm_minutes/actions/runs/42266348379",
+  "fixed_profile_code_ci_status": "success",
+  "fixed_full_long_attempt_9460202": {
+    "status": "failed_before_first_rotation",
+    "native_stop_detected_seconds": 977,
+    "rotations": 0,
+    "recording_complete": false,
+    "recovered_audio_seconds": 960.9,
+    "explicit_test_controller_stop": true,
+    "import_once": true,
+    "import_bytes_match": true,
+    "live_root_cause": "not_established",
+    "production_changed": false
+  },
+  "secondary_recorder_regression": {
+    "old_code": "reproduced_capture_final_while_primary_recording",
+    "fixed_code": "passed",
+    "live_causality": "not_proven"
+  },
+  "scope_profile_2e2c253": {
+    "recording_result": "failed_before_first_rotation",
+    "native_stopped_observed_seconds": 1718,
+    "native_rotations": 0,
+    "stayed_after_native_stop": true,
+    "native_downloads": 0,
+    "native_storage_metadata": "recoverable",
+    "native_storage_backends": 2,
+    "oom_kill_count": 0,
+    "storage_free_sufficient": true,
+    "live_root_cause": "not_established",
+    "65_minute_presence_test": "passed",
+    "explicit_operator_stop_seconds": 3902,
+    "browser_connection_verified_seconds": 3943,
+    "stayed_after_native_failure_seconds_at_stop": 2184,
+    "import_once": true,
+    "import_bytes_match": true,
+    "import_complete": false,
+    "stack_stopped": true
+  },
+  "synthetic_storage_probe": {
+    "incognito_written_mb": 640,
+    "persistent_written_mb": 640,
+    "both_succeeded": true,
+    "live_root_cause_proven": false
+  },
+  "original_test_stack_stopped": true,
+  "diagnostic_profile_3ac3ddf": {
+    "recording_result": "failed_before_first_rotation",
+    "native_stop_detected_seconds": 1376,
+    "native_stop_diagnostic": {
+      "trigger": "page_stop",
+      "error": "none_observed",
+      "pagehide": false,
+      "storage_errors": [],
+      "blob_write_failed": false
+    },
+    "cause_in_page_code": "not_established",
+    "native_rotations": 0,
+    "recovered_audio_seconds": 1364.64,
+    "import_once": true,
+    "import_bytes_match": true,
+    "import_complete": false,
+    "stack_stopped": true,
+    "ci_status": "success",
+    "ci_url": "https://github.com/b0ver/psptm_minutes/actions/runs/42295454347"
+  },
+  "generic_close_regression": {
+    "old_code": "reproduced_9_unrequested_clicks",
+    "fixed_code": "passed_zero_unrequested_clicks",
+    "live_causality": "not_proven"
+  },
+  "native_mixer_bridge_offline": {
+    "before_fix": "reproduced_audio_gap_after_source_disconnect",
+    "fixed_mix_rollovers": 2,
+    "fixed_audio_seconds": 13.2,
+    "fixed_max_silence_seconds": 0.0,
+    "muted_source_not_restored": true,
+    "unrelated_output_disconnected": true,
+    "cancel_and_end_release_bridge": true,
+    "failed_restart_stops_inactive_capture": true,
+    "participant_stop_does_not_restart": true,
+    "audio_diagnostic_ignored_before_and_during_video_recording": true,
+    "real_long_acceptance": "pending"
+  },
+  "native_mixer_profile_live": {
+    "commit": "6cfb383eb66aa236a29d611896390e5c290d5b7b",
+    "qualification": "failed_before_first_rotation",
+    "native_rotations": 0,
+    "recovered_audio_seconds": 1231.92,
+    "imports": 1,
+    "import_bytes_match": true,
+    "complete": false,
+    "no_ai_runs": true,
+    "stand_stopped": true,
+    "cause": "not_established",
+    "stop_callsite": "public_client_saga_call_effect"
+  },
+  "disk_profile_candidate": {
+    "commit": "e18b11b6b3553630dd19dfbb10518a833a4e9b86",
+    "presence_and_audio_65_minutes": "passed",
+    "full_finalization": "failed_native_download_timeout",
+    "native_rotations": 2,
+    "native_files": 1,
+    "expected_native_files": 3,
+    "imports": 1,
+    "import_bytes_match": true,
+    "complete": false,
+    "no_ai_runs": true,
+    "stand_stopped": true,
+    "audio": {
+      "decoded_audio_seconds": 3886.919,
+      "timeline_end_seconds": 3904.359,
+      "max_frame_timestamp_gap_seconds": 0.145,
+      "bin_seconds": 0.1,
+      "marker_windows": [
+        {
+          "window_seconds": [
+            10,
+            50
+          ],
+          "covered_bins": 400,
+          "tone_bins": 0,
+          "first_tone_second": null,
+          "last_tone_second": null,
+          "max_internal_tone_gap_seconds": 0,
+          "silent_bins": 400
+        },
+        {
+          "window_seconds": [
+            50,
+            130
+          ],
+          "covered_bins": 798,
+          "tone_bins": 605,
+          "first_tone_second": 61.1,
+          "last_tone_second": 125.3,
+          "max_internal_tone_gap_seconds": 0.1,
+          "silent_bins": 169
+        },
+        {
+          "window_seconds": [
+            130,
+            170
+          ],
+          "covered_bins": 400,
+          "tone_bins": 0,
+          "first_tone_second": null,
+          "last_tone_second": null,
+          "max_internal_tone_gap_seconds": 0,
+          "silent_bins": 400
+        },
+        {
+          "window_seconds": [
+            1710,
+            1830
+          ],
+          "covered_bins": 1193,
+          "tone_bins": 886,
+          "first_tone_second": 1721.9,
+          "last_tone_second": 1813.2,
+          "max_internal_tone_gap_seconds": 0.1,
+          "silent_bins": 292
+        },
+        {
+          "window_seconds": [
+            3450,
+            3570
+          ],
+          "covered_bins": 1198,
+          "tone_bins": 858,
+          "first_tone_second": 3462.8,
+          "last_tone_second": 3553.9,
+          "max_internal_tone_gap_seconds": 0.1,
+          "silent_bins": 309
+        },
+        {
+          "window_seconds": [
+            3810,
+            3890
+          ],
+          "covered_bins": 798,
+          "tone_bins": 448,
+          "first_tone_second": 3825.4,
+          "last_tone_second": 3873.5,
+          "max_internal_tone_gap_seconds": 0.1,
+          "silent_bins": 330
+        }
+      ]
+    }
+  },
+  "finalization_profile_live": {
+    "commit": "d38d5ef162f7a2b5fcba55a373db144f55ff7f29",
+    "qualification": "failed_first_rotation",
+    "rotation_error_code": "not_collected_by_this_profile",
+    "native_rotations": 0,
+    "native_files": 1,
+    "recording_issue": "native_rotation_failed",
+    "end_reason": "user_stop",
+    "imports": 1,
+    "import_bytes_match": true,
+    "complete": false,
+    "no_ai_runs": true,
+    "stand_stopped": true,
+    "audio": {
+      "decoded_audio_seconds": 1752.959,
+      "timeline_end_seconds": 1760.429,
+      "max_frame_timestamp_gap_seconds": 0.15,
+      "bin_seconds": 0.1,
+      "marker_windows": [
+        {
+          "window_seconds": [
+            10,
+            50
+          ],
+          "covered_bins": 399,
+          "tone_bins": 0,
+          "first_tone_second": null,
+          "last_tone_second": null,
+          "max_internal_tone_gap_seconds": 0,
+          "silent_bins": 399
+        },
+        {
+          "window_seconds": [
+            50,
+            130
+          ],
+          "covered_bins": 800,
+          "tone_bins": 565,
+          "first_tone_second": 64.2,
+          "last_tone_second": 122.3,
+          "max_internal_tone_gap_seconds": 0.1,
+          "silent_bins": 225
+        },
+        {
+          "window_seconds": [
+            130,
+            170
+          ],
+          "covered_bins": 400,
+          "tone_bins": 0,
+          "first_tone_second": null,
+          "last_tone_second": null,
+          "max_internal_tone_gap_seconds": 0,
+          "silent_bins": 400
+        },
+        {
+          "window_seconds": [
+            1710,
+            1830
+          ],
+          "covered_bins": 503,
+          "tone_bins": 328,
+          "first_tone_second": 1724.9,
+          "last_tone_second": 1760.4,
+          "max_internal_tone_gap_seconds": 0.1,
+          "silent_bins": 163
+        },
+        {
+          "window_seconds": [
+            3450,
+            3570
+          ],
+          "covered_bins": 0,
+          "tone_bins": 0,
+          "first_tone_second": null,
+          "last_tone_second": null,
+          "max_internal_tone_gap_seconds": 0,
+          "silent_bins": 0
+        },
+        {
+          "window_seconds": [
+            3810,
+            3890
+          ],
+          "covered_bins": 0,
+          "tone_bins": 0,
+          "first_tone_second": null,
+          "last_tone_second": null,
+          "max_internal_tone_gap_seconds": 0,
+          "silent_bins": 0
+        }
+      ]
+    }
+  },
+  "expanded_restart_profile_live": {
+    "commit": "6358c2e2850502506ebc30ca08f3e30889cb6a80",
+    "qualification": "failed_first_rotation",
+    "rotation_error_code": "native_recording_start_not_confirmed",
+    "rotation_elapsed_seconds": 60.139,
+    "recording_issue": "native_rotation_failed",
+    "native_rotations": 0,
+    "native_files": 1,
+    "end_reason": "user_stop",
+    "imports": 1,
+    "import_bytes_match": true,
+    "complete": false,
+    "no_ai_runs": true,
+    "stand_stopped": true,
+    "second_cdp_client_during_recording": false,
+    "audio": {
+      "decoded_audio_seconds": 1793.399,
+      "timeline_end_seconds": 1800.345,
+      "max_frame_timestamp_gap_seconds": 0.146,
+      "bin_seconds": 0.1,
+      "marker_windows": [
+        {
+          "window_seconds": [
+            10,
+            50
+          ],
+          "covered_bins": 400,
+          "tone_bins": 0,
+          "first_tone_second": null,
+          "last_tone_second": null,
+          "max_internal_tone_gap_seconds": 0,
+          "silent_bins": 400
+        },
+        {
+          "window_seconds": [
+            50,
+            130
+          ],
+          "covered_bins": 800,
+          "tone_bins": 608,
+          "first_tone_second": 61.6,
+          "last_tone_second": 125.7,
+          "max_internal_tone_gap_seconds": 0.1,
+          "silent_bins": 163
+        },
+        {
+          "window_seconds": [
+            130,
+            170
+          ],
+          "covered_bins": 400,
+          "tone_bins": 0,
+          "first_tone_second": null,
+          "last_tone_second": null,
+          "max_internal_tone_gap_seconds": 0,
+          "silent_bins": 400
+        },
+        {
+          "window_seconds": [
+            1710,
+            1830
+          ],
+          "covered_bins": 903,
+          "tone_bins": 710,
+          "first_tone_second": 1726.3,
+          "last_tone_second": 1800.4,
+          "max_internal_tone_gap_seconds": 0.1,
+          "silent_bins": 174
+        },
+        {
+          "window_seconds": [
+            3450,
+            3570
+          ],
+          "covered_bins": 0,
+          "tone_bins": 0,
+          "first_tone_second": null,
+          "last_tone_second": null,
+          "max_internal_tone_gap_seconds": 0,
+          "silent_bins": 0
+        },
+        {
+          "window_seconds": [
+            3810,
+            3890
+          ],
+          "covered_bins": 0,
+          "tone_bins": 0,
+          "first_tone_second": null,
+          "last_tone_second": null,
+          "max_internal_tone_gap_seconds": 0,
+          "silent_bins": 0
+        }
+      ]
+    }
+  },
+  "observer_download_contract": {
+    "scope": "isolated_synthetic_chromium",
+    "default_observer_owner_save": false,
+    "no_defaults_observer_owner_save": true,
+    "historical_missing_native_exports_cause": "not_established_observer_may_have_changed_download_directory",
+    "playwright_version": "1.63.0",
+    "no_defaults_owner_save_while_connected": true,
+    "no_defaults_owner_save_after_detach": true,
+    "default_owner_save_after_detach": false
+  },
+  "menu_retry_fix": {
+    "previous_controller_negative_control": "two_attempts_then_no_restart_after_client_ready",
+    "menu_reopened_after_each_rejected_attempt": true,
+    "new_controls_cases_passed": 9,
+    "new_main_loop_cases_passed": 22,
+    "new_candidate_full_long_accepted": false
+  },
+  "latest_cold_diagnostic": {
+    "source_commit": "6358c2e2850502506ebc30ca08f3e30889cb6a80",
+    "host_confirmed_meeting_end": true,
+    "end_reason": "meeting_ended",
+    "native_rotations": 1,
+    "audio_timeline_seconds": 2566.427,
+    "decoded_audio_seconds": 2550.539,
+    "max_frame_timestamp_gap_seconds": 0.901,
+    "first_rotation_max_tone_gap_seconds": 0.2,
+    "calibration_max_tone_gap_seconds": 0.1,
+    "audio_quality_accepted": false,
+    "imports": 1,
+    "imported_bytes_match": true,
+    "metadata_complete": true,
+    "recording_issue": null,
+    "native_export_warning": "native_download_timeout",
+    "native_files_saved": 1,
+    "native_files_expected": 2,
+    "full_65_minute_accepted": false,
+    "no_ai_runs": true,
+    "stack_stopped": true,
+    "private_volumes_retained": true
+  }
+}
