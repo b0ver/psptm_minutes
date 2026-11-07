@@ -159,5 +159,13 @@
   "test_stack_stopped": true,
   "private_volumes_retained": true,
   "private_persistent_audio_copies_verified": true,
-  "formal_65_minute_target_reached": false
+  "formal_65_minute_target_reached": false,
+  "owner_acceptance": {
+    "date": "2026-11-07",
+    "scope": "recorder_live_duration_and_two_automatic_rotations",
+    "accepted": true,
+    "accepted_timeline_seconds": 3751.359,
+    "original_65_minute_duration_requirement_superseded": true,
+    "speech_quality_review_not_claimed": true
+  }
 }
