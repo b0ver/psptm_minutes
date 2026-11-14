@@ -1,0 +1,38 @@
+{
+  "source_commit": "531d6787e601fcfb35b833c388ef09785de54a80",
+  "platform": "linux/amd64",
+  "ci_run": "https://github.com/b0ver/psptm_minutes/actions/runs/43561520880",
+  "images": {
+    "runtime": {
+      "local_ref": "psptm-minutes-rc-531d678-runtime:local",
+      "local_id": "sha256:0fab0b9b0fc60bec00534e50d2f8e93cd82107cccdecd791908f81fa5b4347d5",
+      "registry_ref": null,
+      "opentelemetry_api": "1.45.2"
+    },
+    "gpu": {
+      "local_ref": "psptm-minutes-rc-531d678-gpu:local",
+      "local_id": "sha256:c6636c7574093295e21ba97d7f35234636b4f2d2881cc6fdead142ce2290a21e",
+      "registry_ref": null,
+      "opentelemetry_api": "1.45.2"
+    },
+    "telemost": {
+      "local_ref": "psptm-minutes-rc-531d678-telemost:local",
+      "local_id": "sha256:cb66034ba3426189947e4baca5513687ca9bbfcc5667ca15e90a2f6002edaa7c",
+      "registry_ref": null,
+      "opentelemetry_api": "1.45.2"
+    }
+  },
+  "telemost_offline": {
+    "recording_controls": "passed",
+    "recovery_normal_seconds": 3.06,
+    "recovery_after_crash_seconds": 3.0,
+    "unarmed_chunks": 0
+  },
+  "acceptance": {
+    "registry_publication": "pending",
+    "staging_version_rollback": "pending",
+    "production_data_restore": "pending",
+    "external_e2e": "pending",
+    "capacity": "pending"
+  }
+}
