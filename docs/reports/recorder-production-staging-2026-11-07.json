@@ -1,0 +1,28 @@
+{
+  "candidate_commit": "cdbd17a19c8a487a297c457b6f40d7ff775c0ff4",
+  "candidate_digest": "ghcr.io/b0ver/psptm_minutes-telemost@sha256:84fa3acfb32235cdc055f2964ec89fe9f00a48a76a37bbc3ef3e1ada769834af",
+  "platform": "linux/amd64",
+  "current_production_api_import_passed": true,
+  "repeat_import_same_meeting": true,
+  "imported_bytes_match": true,
+  "ai_not_run": true,
+  "native_controls_cases": 9,
+  "old_image_rollback_and_forward_passed": true,
+  "legacy_terminal_states_loaded": 73,
+  "legacy_state_hashes_unchanged": true,
+  "legacy_partial_files_preserved": 12,
+  "production_changed": false,
+  "full_bundle_blockers": [
+    "unaccepted_analysis_and_prompt_changes",
+    "worker_and_calendar_original_images_unavailable"
+  ],
+  "requested_deployment_scope": "telemost-agent_only_requires_owner_policy_exception",
+  "owner_accepted_62_minutes_two_rotations": true,
+  "recorder_rollback_archive_saved": true,
+  "encrypted_offhost_rollback_archive_verified": true,
+  "single_service_policy_exception": "explicitly_approved_by_owner",
+  "full_recordings_restore_verified": true,
+  "restored_meetings": 51,
+  "recording_import_hashes_verified": 34,
+  "restored_calendar_credentials_verified": 1
+}

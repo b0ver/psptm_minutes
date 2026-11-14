@@ -136,10 +136,11 @@ def tasks_view(s,user,mode,page):
 def recording_form(d):
     names={r['id']:r['name'] for r in reports.catalog()}
     data=d.data
-    text=(f"Телемост\nНазвание: {data['title']}\nДлительность: до {data['duration_minutes']} минут\n"
+    text=(f"Телемост\nНазвание: {data['title']}\nОжидаемая длительность: {data['duration_minutes']} минут\n"
           'Разборы: '+', '.join(names[t] for t in data['types'])+'\n\n'
           'Ассистент будет видимым участником с выключенными камерой и микрофоном. '
           'Запуск подтверждает, что организатор и участники разрешили запись. '
+          'Ассистент остается до завершения встречи, исключения или команды остановки. '
           'Аудио и AI-обработка остаются на сервере.')
     return text,keyboard([[button('Разрешение получено — начать',f'v1:launch:{d.revision}')],
         [button('Название',f'v1:title:{d.revision}'),button('Длительность',f'v1:duration:{d.revision}')],
@@ -185,6 +186,20 @@ def handle(s,update,allow_all,allowed_users):
         if command=='/meetings':reply(*meetings_view(s,user));return None
         if command=='/tasks':reply(*tasks_view(s,user,'open',0));return None
         if command=='/status':reply(*status_view(s,user));return None
+        if command == '/stop' or text.casefold() in {'останови запись', 'остановить запись', 'стоп запись'}:
+            resources=list(s.scalars(select(TelegramResource).where(
+                TelegramResource.user_id==user, TelegramResource.kind=='session')))
+            active=[]
+            for resource in resources:
+                card=s.get(TelegramCard,resource.resource_id)
+                if card and card.snapshot and card.snapshot.get('status') not in TERMINAL:
+                    active.append(resource.resource_id)
+            if len(active)==1:
+                sid=active[0]
+                if not s.scalar(select(TelegramCommand.id).where(TelegramCommand.update_id==update['update_id'])):
+                    s.add(TelegramCommand(update_id=update['update_id'],user_id=user,kind='stop',body={'session_id':sid}))
+                reply('Завершаем вашу запись и сохраняем файл.');return None
+            reply('Выберите запись для остановки.' if active else 'Активных записей у вас нет.',status_view(s,user)[1]);return None
         if command in {'/telemost','/new'}:
             set_dialog(s,user,'link',{});reply('Отправьте прямую ссылку https://telemost.yandex.ru/j/…',keyboard([[button('Отмена','v1:cancel')]]));return None
         if command=='/help':reply(help_text(),menu());return None
@@ -272,7 +287,7 @@ def handle(s,update,allow_all,allowed_users):
                 d.step='title';reply('Напишите название встречи.',keyboard([[button('Отмена','v1:cancel')]]))
             elif op=='duration':
                 if 'url' not in d.data:raise ValueError('step')
-                d.step='duration';reply('Максимальная длительность записи:',keyboard([[button(f'{n} минут',f'v1:minutes:{d.revision}:{n}')] for n in (15,30,60,90,120)]+[[button('Отмена','v1:cancel')]]))
+                d.step='duration';reply('Ожидаемая длительность встречи. Это не время автоматического выхода:',keyboard([[button(f'{n} минут',f'v1:minutes:{d.revision}:{n}')] for n in (15,30,60,90,120)]+[[button('Отмена','v1:cancel')]]))
             elif op=='minutes':
                 n=int(parts[3])
                 if d.step!='duration' or n not in {15,30,60,90,120}:raise ValueError('minutes')
@@ -311,6 +326,7 @@ def page_number(value):
 def help_text():
     return ('Отправьте ссылку Телемоста, выберите название, длительность и разборы, затем подтвердите разрешение записи. '
         'Ассистента нужно впустить во встречу. Один ассистент обслуживает одну встречу одновременно.\n\n'
+        'Чтобы остановить свою запись, отправьте /stop в личном чате бота или нажмите «Завершить и обработать». '
         'Вход открыт всем, но каждый видит только свои материалы. '
         'Бот показывает статусы и утверждённые поручения; по вашей команде отправляет Markdown своей встречи по разделам. Эти файлы передаются через Telegram. Исходные записи и AI-обработка остаются локальными. '
         'Кнопки управления не запускают отправку материалов другим пользователям.\n\n/menu — меню, /cancel — отменить незавершённый диалог.')
@@ -327,9 +343,17 @@ def status_view(s,user):
 def card_view(s,user,state):
     sid=state['id'];status=state['status'];rows=[]
     lines=[state.get('title') or 'Встреча из Telegram',SESSION_LABELS.get(status,'Обработка')]
+    if status=='recording' and state.get('recording_issue'):
+        lines[1]='Ассистент во встрече. Есть проблема с записью.'
     if status=='recording' and state.get('recording_started_at'):
         lines.append(f"Длительность: {max(0,int((now().timestamp()-state['recording_started_at'])/60))} мин.")
     if state.get('chunks'):lines.append(f"На диске: {state['chunks']} частей аудио")
+    if state.get('capture_health') == 'rotating':
+        lines.append('Сохраняем очередной файл. Запись звука продолжается.')
+    if state.get('capture_health') in {'native_stopped','rotation_failed','ui_unavailable'}:
+        lines.append('Ассистент остается во встрече. Запись требует проверки.')
+    if state.get('chat_control_available') is False:
+        lines.append('Чат Телемоста не подтвержден. Для остановки используйте /stop или кнопку ниже.')
     if state.get('recording_complete') is False:lines.append('Неполная запись: часть встречи отсутствует.')
     if state.get('capture_health') in {'failed','delayed','unavailable'}:
         lines.append('Аварийное сохранение недоступно или задерживается; состояние штатной записи показано выше.')
@@ -337,6 +361,8 @@ def card_view(s,user,state):
         errors={'agent_busy':'Ассистент занят другой встречей. Попробуйте позже.',
                 'waiting_room_timeout':'Не дождались допуска. Проверьте встречу и подключите ассистента заново.',
                 'import_key_conflict':'Параметры повторного импорта отличаются. Нужна проверка в приложении.',
+                'native_rotation_failed':'Не удалось продолжить запись. Проверьте сохраненную часть в приложении.',
+                'continuous_recording_invalid':'Не удалось проверить полную аудиозапись. Проверьте сохраненную часть в приложении.',
                 'start_result_unknown':'Результат запуска не подтверждён. Проверяем прежнюю сессию; не создавайте новый запуск до проверки.'}
         lines.append(errors.get(state.get('error_code'),'Подключение или запись прерваны. Проверьте встречу и попробуйте новый запуск.'))
     if status not in TERMINAL and status not in {'saved','uploading','finishing','stopping'}:
