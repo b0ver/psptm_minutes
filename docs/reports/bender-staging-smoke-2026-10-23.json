@@ -1,0 +1,21 @@
+{
+  "date": "2026-10-23",
+  "host": "Bender",
+  "project": "psptm-minutes-staging-smoke",
+  "commit": "366d0eabcb61fcc0a0908f26afab364ef6959c7a",
+  "runtime_image_id": "sha256:a5c6c8d5f8513b8d8cf55cd2ecc08bb012f7d6e5cae0a35caae111e8c384e958",
+  "probe_sha256": "ccb2a79c7ecf593992829273c71c1e360948f965a2ee32c277c388f082a971b9",
+  "host_loopback": true,
+  "synthetic_upload": true,
+  "restart_persistence": true,
+  "synthetic_audio_archive_restore": true,
+  "synthetic_database_restore": true,
+  "gpu_requested": false,
+  "real_e2e": false,
+  "release_promotion": false,
+  "version_rollback": false,
+  "capacity_gate": "gpu_busy",
+  "cancel_job_state": "created",
+  "corpus_job_state": "created",
+  "inference_started": false
+}

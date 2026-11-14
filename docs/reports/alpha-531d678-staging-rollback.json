@@ -1,0 +1,23 @@
+{
+  "previous": {
+    "commit": "cdbd17a19c8a487a297c457b6f40d7ff775c0ff4",
+    "refs": {
+      "runtime": "ghcr.io/b0ver/psptm_minutes-runtime@sha256:af5fe1f478e26155a1f9003e33eaec74b36aac208bdeef9263749b790da95ec1",
+      "gpu": "ghcr.io/b0ver/psptm_minutes-gpu@sha256:4162e585af8bc487a5dbe3a9be9709a8a56c3ce645712c76e935e85150febfd2",
+      "telemost": "ghcr.io/b0ver/psptm_minutes-telemost@sha256:84fa3acfb32235cdc055f2964ec89fe9f00a48a76a37bbc3ef3e1ada769834af"
+    }
+  },
+  "candidate": {
+    "commit": "531d6787e601fcfb35b833c388ef09785de54a80",
+    "refs": {
+      "runtime": "ghcr.io/b0ver/psptm_minutes-rc-runtime@sha256:3e43f12a289daea9b6ce929b6e62a5c0429d20c7517a26a101101e4e1fa8818b",
+      "gpu": "ghcr.io/b0ver/psptm_minutes-rc-gpu@sha256:922bd53c461138cb35b24b8a302d879a6c74475ac72413dc6a9e55d307bccfd4",
+      "telemost": "ghcr.io/b0ver/psptm_minutes-rc-telemost@sha256:77b080256ecee168f56eb359b9b317504f7de22244a7919a672ffba37f3cfb99"
+    }
+  },
+  "result": "pass",
+  "database_and_audio_preserved": true,
+  "gpu_inference": false,
+  "external_e2e": false,
+  "stage_stopped": true
+}

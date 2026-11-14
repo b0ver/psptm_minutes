@@ -1,0 +1,45 @@
+{
+  "date": "2026-10-24",
+  "source_commit": "993472b0fd5682f08fc29726d05d41ab2b28e027",
+  "tool_sha256": "5786087ff8f42d7b2836e5b78d3efed03aa2e6084733fcad040f099731ccfa2c",
+  "guard_sha256": "e8b6001aea3ecd47a176487d4c0a4869838873a7dc28641a8a7d7cf853cf7a96",
+  "image_id": "sha256:21295ad6cb679361dbde6b7bb1ce4928e5c8f4a9313fa2fb07cfa22342f81a24",
+  "ci": {
+    "url": "https://github.com/b0ver/psptm_minutes/actions/runs/40110730282",
+    "conclusion": "success",
+    "tests_passed": 274,
+    "tests_seconds": 21.29,
+    "runtime_and_agent_audits": "no_known_vulnerabilities"
+  },
+  "local_tests": {
+    "passed": 301,
+    "seconds": 13.2,
+    "additional_untracked_tests": true
+  },
+  "bender_drills": [
+    {
+      "failure": "timeout",
+      "run_id": "5b43b08edc6f4eeb",
+      "expected_unit_result": true,
+      "journal_restored": true,
+      "worker_running_at_verification": true,
+      "control_running_at_verification": true,
+      "owned_containers_removed": true
+    },
+    {
+      "failure": "sigkill",
+      "run_id": "915fd6ae50734602",
+      "expected_unit_result": true,
+      "journal_restored": true,
+      "worker_running_at_verification": true,
+      "control_running_at_verification": true,
+      "owned_containers_removed": true
+    }
+  ],
+  "production_worker_running": true,
+  "production_worker_compute_pid_unchanged": true,
+  "production_touched": false,
+  "gpu_requested": false,
+  "production_maintenance_lease_verified": false,
+  "server_cancellation_verified": false
+}

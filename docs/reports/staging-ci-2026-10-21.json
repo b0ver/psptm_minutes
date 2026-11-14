@@ -1,0 +1,26 @@
+{
+  "workflow_run": "https://github.com/b0ver/psptm_minutes/actions/runs/39647601435",
+  "head_commit": "c5ab1b7761308b401e4417d49ce441ac0ffac07b",
+  "tested_merge_commit": "f85f309c86f57e2622c5569ca485e36345ec5f6d",
+  "head_to_merge_files_changed": 0,
+  "platform": "linux/amd64",
+  "integration_passed": 230,
+  "integration_warnings": 1,
+  "integration_seconds": 17.48,
+  "staging_smoke": {
+    "host_loopback": true,
+    "synthetic_upload": true,
+    "restart_persistence": true,
+    "synthetic_audio_archive_restore": true,
+    "synthetic_database_restore": true,
+    "runtime_image_id": "sha256:c2f3a293e3c5c7864d71c17a1d13a1023d5abece8e9f1f840d4383cf6b163657",
+    "gpu_requested": false,
+    "real_e2e": false,
+    "release_promotion": false,
+    "version_rollback": false
+  },
+  "python_audits": "no_known_vulnerabilities_both_lockfiles",
+  "recorder_controls_and_crash_recovery": "passed",
+  "bender_staging_probe": "pending_ssh_connection_closed",
+  "production_delivery": "disabled"
+}

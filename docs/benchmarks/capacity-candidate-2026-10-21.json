@@ -1,0 +1,25 @@
+{
+  "source_commit": "ecd3d10b7ef6f1011dba65afaecca1aa09eb390e",
+  "source_archive_sha256": "7c6cbe18cfa6021d4d4b0858f7c85e433055d4032fb440fe24ad55d02d0800c8",
+  "image_id": "sha256:21295ad6cb679361dbde6b7bb1ce4928e5c8f4a9313fa2fb07cfa22342f81a24",
+  "architecture": "amd64",
+  "model_digest": "6488c96fa5faab64bb65cbd30d4289e20e6130ef535a93ef9a49f42eda893ea7",
+  "checks": {
+    "pip_check": "passed",
+    "cpu_imports": "passed",
+    "uid": 10001,
+    "corpus_samples_readable": 3,
+    "weights_files_readable": 3,
+    "cpu_check_cuda_devices_exposed": false,
+    "outside_window_start": "refused"
+  },
+  "prepared_project": "psptm-minutes-capacity-d845c7676d734200",
+  "prepared_containers_state": "created",
+  "gpu_acceptance": "not_run",
+  "cancellation_acceptance": "pending",
+  "capacity": "not_run",
+  "rejected_image": {
+    "id": "sha256:a4bfe213517430d811aa34ea92d001d0dd919bcd329e4da2673d046a2b6093fe",
+    "reason": "source_permissions_not_readable_by_uid_10001"
+  }
+}

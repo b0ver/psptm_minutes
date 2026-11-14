@@ -1,0 +1,22 @@
+{
+  "source_commit": "531d6787e601fcfb35b833c388ef09785de54a80",
+  "platform": "linux/amd64",
+  "ci_run": "https://github.com/b0ver/psptm_minutes/actions/runs/43561520880",
+  "images": {
+    "runtime": {
+      "registry_ref": "ghcr.io/b0ver/psptm_minutes-rc-runtime@sha256:3e43f12a289daea9b6ce929b6e62a5c0429d20c7517a26a101101e4e1fa8818b",
+      "visibility": "private",
+      "platform_config_digest": "sha256:baadf6c49fb25d724a82913828fbd5fa66716ba1099d20d721e98478e731978e"
+    },
+    "gpu": {
+      "registry_ref": "ghcr.io/b0ver/psptm_minutes-rc-gpu@sha256:922bd53c461138cb35b24b8a302d879a6c74475ac72413dc6a9e55d307bccfd4",
+      "visibility": "private",
+      "platform_config_digest": "sha256:7bb1467b2de4b065bd8b56c1f254570eb37c1890f74857354861680bfa03cd7a"
+    },
+    "telemost": {
+      "registry_ref": "ghcr.io/b0ver/psptm_minutes-rc-telemost@sha256:77b080256ecee168f56eb359b9b317504f7de22244a7919a672ffba37f3cfb99",
+      "visibility": "private",
+      "platform_config_digest": "sha256:2bfbb0da4a501e37ce285519902d13dafbbb2bc14fe813156bb4eef41f790217"
+    }
+  }
+}

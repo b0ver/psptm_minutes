@@ -1,0 +1,216 @@
+{
+  "date": "2026-10-24",
+  "source_commit": "3fa09d44932720d1b8ab4d0100bf158305af6a5a",
+  "main_commit": "cd2e047943eba72652e79a565958113e9c6b5c54",
+  "pr": {
+    "url": "https://github.com/b0ver/psptm_minutes/pull/3",
+    "state": "OPEN",
+    "draft": true
+  },
+  "ci": {
+    "url": "https://github.com/b0ver/psptm_minutes/actions/runs/40097561349",
+    "conclusion": "success",
+    "integration_tests_passed": 265,
+    "integration_seconds": 19.61,
+    "warnings": 1,
+    "runtime_lock_audit": "no_known_vulnerabilities",
+    "agent_lock_audit": "no_known_vulnerabilities",
+    "synthetic_staging_upload_restart_restore": "passed",
+    "synthetic_backup_restore": "passed",
+    "recorder_controls_and_crash_recovery": "passed"
+  },
+  "local_worktree": {
+    "integration_tests_passed": 375,
+    "integration_seconds": 13.01,
+    "includes_additional_untracked_tests": true,
+    "laboratory_changes_preserved": true
+  },
+  "github_delivery": {
+    "environment_count": 0,
+    "self_hosted_runner_count": 0,
+    "production_opt_in_variable_http_status": 404,
+    "production_delivery_enabled": false
+  },
+  "external_acceptance": {
+    "ssh": "available_2026-10-24_21:17_MSK",
+    "server_cancellation": "all_four_transport_profiles_accepted_and_natural_release_verified",
+    "new_observer_installed_on_bender": true,
+    "bounded_reduce_corpus_85_60_30": "interrupted_before_first_complete_sample",
+    "human_e2e": "pending",
+    "production_data_restore": "pending",
+    "full_staging_promotion_and_version_rollback": "pending",
+    "validated_daily_capacity": false,
+    "current_capacity_gate": "recap_periodic_gpu_healthcheck_requires_coordination"
+  },
+  "image_scope": {
+    "prepared_gpu_source": "ecd3d10b7ef6f1011dba65afaecca1aa09eb390e",
+    "prepared_images_security_gate_for_current_rc": "old_ecd3d10_is_historical_only",
+    "current_three_registry_digest_release_manifest": "not_created",
+    "current_capacity_image": "sha256:97077db98378e4cc6eaa7d80e8ca2a428bef3890190447fc39e82f5924c36d98",
+    "current_capacity_source": "3fa09d44932720d1b8ab4d0100bf158305af6a5a",
+    "current_capacity_build": "cpu_verified"
+  },
+  "release_ready": false,
+  "observer": {
+    "directory": "benchmarks/private/capacity/qualification-tools-49350a7",
+    "source_commit": "49350a73f4438b2d91f549387a9a248085e3e26b",
+    "observer_sha256": "a793ee0dc195b7e38665a4ab1d8ce649c11ef08140127681305e4d0b9155eb72",
+    "guard_sha256": "71229898864ccb71495aa24cb2180ab729e03f3580ae7a92b8ca2447a6bedfee",
+    "cpu_help_and_parser_probe": "passed"
+  },
+  "latest_resource_check": {
+    "observed_epoch": 1792868453.3952994,
+    "gpu_utilization_percent": 93,
+    "gpu_free_mib": 19085,
+    "own_measure_compute_pid_count": 1,
+    "runtime_resource_gate": "passed",
+    "note": "Real STT processing of first recording; no complete sample yet.",
+    "point_in_time_before_interruption": true
+  },
+  "compute_ownership": {
+    "container": "psptm-minutes-worker-1",
+    "compose_project": "psptm-minutes",
+    "compose_service": "worker",
+    "container_image_id": "sha256:c28908dee490a2497178cbe33e2f9da4e7bcbc1a1ef5e84587cb8e4e913cf954",
+    "state": "running",
+    "gpu_memory_mib": 394,
+    "service_stopped": false
+  },
+  "current_candidate_source": {
+    "commit": "3fa09d44932720d1b8ab4d0100bf158305af6a5a",
+    "directory": "benchmarks/private/capacity/candidate-3fa09d4/source",
+    "archive_sha256": "7897548b6e9acb067d4d5b32f6ccce8c3b4e9c49660e29672950e0149b686efa",
+    "file_count": 72,
+    "file_hashes_verified": true,
+    "filelock_pin": "4.2.1",
+    "image_built": false
+  },
+  "historical_cancel_attempt_64af8b08b363474b": {
+    "job": "benchmarks/private/capacity/cancel-observer-3fa09d4-01/job.json",
+    "unit": "minutes-capacity-64af8b08b363474b",
+    "containers_state": "exited",
+    "started": true,
+    "image_id": "sha256:21295ad6cb679361dbde6b7bb1ce4928e5c8f4a9313fa2fb07cfa22342f81a24",
+    "historical_diagnostic_image": true,
+    "cpu_uid_storage_and_policy_import_probes": "passed",
+    "server_cancellation_verified": false,
+    "terminal_reason": "foreign_gpu_process"
+  },
+  "current_cancellation_evidence": "cancellation-profiles-2026-10-24.json",
+  "next_action": "Owner decision on reviewed Recap shared-lock healthcheck proposal. No additional corpus job until the periodic GPU conflict is resolved.",
+  "production_worker_pause_required": false,
+  "latest_tool_ci": {
+    "commit": "49350a73f4438b2d91f549387a9a248085e3e26b",
+    "url": "https://github.com/b0ver/psptm_minutes/actions/runs/40122951864",
+    "conclusion": "success",
+    "integration_tests_passed": 337,
+    "integration_seconds": 20.58,
+    "runtime_lock_audit": "no_known_vulnerabilities",
+    "agent_lock_audit": "no_known_vulnerabilities"
+  },
+  "current_main_job": {
+    "job": "benchmarks/private/capacity/prepared-current-3fa09d4-04/job.json",
+    "unit": "minutes-capacity-ecf31efb88164bba",
+    "orchestrator_unit": "minutes-capacity-orchestrator-ecf31efb88164bba",
+    "controller_sha256": "1af5be2ccf28a83a446ef659f7e09af710445f0645814446ea484c065150b4a4",
+    "state": "terminal_foreign_recap_healthcheck",
+    "measure_started_at": "2026-10-24T19:00:03.047211983Z",
+    "watchdog_stop_at_epoch": 1792875586.132746,
+    "runtime_resource_gate": "passed",
+    "database_health": "healthy",
+    "meeting_status_counts": {
+      "processing": 1
+    },
+    "source_files_verified": 72,
+    "uid10001_storage_mount_and_app_model_path_probe": "passed",
+    "input_durations_seconds": [
+      5079.8,
+      3531.68,
+      1762.0
+    ],
+    "stt_weight_files_hashed": 11,
+    "complete_samples": 0,
+    "validated_daily_capacity": false,
+    "measure_exit": 137,
+    "database_exit": 0,
+    "result": "not_accepted"
+  },
+  "historical_main_attempts": [
+    {
+      "attempt": "prepared-ecd3d10-01",
+      "state": "retired_created_objects",
+      "security_current_rc": false,
+      "volumes_removed": false
+    },
+    {
+      "attempt": "prepared-current-3fa09d4-01",
+      "state": "retired_after_admission_refusal",
+      "reason": "additional_compute_pid",
+      "ownership": "unconfirmed_pid_disappeared_before_diagnosis",
+      "model_calls": 0,
+      "volumes_removed": false
+    },
+    {
+      "attempt": "prepared-current-3fa09d4-02",
+      "state": "failed_and_retired",
+      "reason": "stt_weights_missing_from_cache_root_path",
+      "samples": 3,
+      "reports_ready": 0,
+      "image_changed": false,
+      "weights_changed": false,
+      "volumes_removed": false
+    },
+    {
+      "job": "benchmarks/private/capacity/prepared-current-3fa09d4-03/job.json",
+      "unit": "minutes-capacity-29938a168bd54e6b",
+      "orchestrator_unit": "minutes-capacity-orchestrator-29938a168bd54e6b",
+      "measure_started_at": "2026-10-24T18:47:05.428182649Z",
+      "state": "retired_after_foreign_recap_gpu_process",
+      "source_files_verified": 72,
+      "uid10001_storage_mount_and_app_model_path_probe": "passed",
+      "input_durations_seconds": [
+        5079.8,
+        3531.68,
+        1762.0
+      ],
+      "stt_weight_files_hashed": 11,
+      "runtime_resource_gate": "passed",
+      "database_health": "healthy",
+      "meeting_status_counts": {
+        "processing": 1
+      },
+      "validated_daily_capacity": false,
+      "complete_samples": 0,
+      "result": "not_accepted",
+      "attempt": "prepared-current-3fa09d4-03",
+      "volumes_removed": false
+    }
+  ],
+  "independent_gpu_consumer": {
+    "name": "recap-stt-1",
+    "project": "recap",
+    "service": "stt",
+    "ownership_proof": "driver PID cgroup matches exact Docker container",
+    "changed": false,
+    "queue_depth_at_diagnosis": 0,
+    "active_stt_leases_at_diagnosis": 0,
+    "periodic_gpu_healthcheck_seconds": 120,
+    "healthcheck_command_verified": true,
+    "passive_gpu_healthcheck_pid_verified": true,
+    "queue_gate_alone_sufficient": false,
+    "project_changed": false,
+    "proposal": "docs/proposals/recap-healthcheck-coordination-2026-10-24.md",
+    "owner_approval": "pending"
+  },
+  "proposed_healthcheck_ci": {
+    "commit": "8b846720d70c015d682d1ce4d2b15fe280448a8f",
+    "url": "https://github.com/b0ver/psptm_minutes/actions/runs/40124283349",
+    "conclusion": "success",
+    "clean_tests_passed": 348,
+    "clean_seconds": 20.52,
+    "runtime_lock_audit": "no_known_vulnerabilities",
+    "agent_lock_audit": "no_known_vulnerabilities",
+    "deployed_to_recap": false,
+    "owner_approval": "pending"
+  }
+}

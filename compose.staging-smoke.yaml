@@ -1,0 +1,66 @@
+# CPU-only infrastructure smoke; deliberately separate from full release staging.
+name: psptm-minutes-staging-smoke
+
+x-runtime: &runtime
+  image: ${STAGING_RUNTIME_IMAGE:?Set the verified runtime sha256 image ID}
+  pull_policy: never
+  environment:
+    DB_HOST: db
+    DB_PASSWORD_FILE: /run/secrets/db_password
+    CALENDAR_KEY_FILE: /run/secrets/calendar_key
+    TELEGRAM_ENABLED: '0'
+  secrets: [db_password, calendar_key]
+  networks: [isolated]
+  read_only: true
+  tmpfs: ["/tmp:size=128m,mode=1777"]
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  cpus: 1
+  mem_limit: 512m
+
+services:
+  db:
+    image: postgres:16.10-alpine@sha256:029660641a0cfc575b14f336ba448fb8a75fd595d42e1fa316b9fb4378742297
+    environment:
+      POSTGRES_DB: minutes
+      POSTGRES_USER: minutes
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets: [db_password]
+    volumes: [database:/var/lib/postgresql/data]
+    networks: [isolated]
+    cpus: 1
+    mem_limit: 512m
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U minutes -d minutes]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+  init:
+    <<: *runtime
+    command: [python, -m, app.db]
+    depends_on:
+      db: {condition: service_healthy}
+  api:
+    <<: *runtime
+    networks: [isolated, frontend]
+    volumes: [recordings:/data]
+    ports: ["127.0.0.1:18191:8080"]
+    depends_on:
+      init: {condition: service_completed_successfully}
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz', timeout=3)"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+
+networks:
+  isolated: {internal: true}
+  frontend: {}
+volumes:
+  database:
+  recordings:
+secrets:
+  db_password: {file: '${STAGING_SECRETS_DIR:?Set the private staging secrets directory}/db_password'}
+  calendar_key: {file: '${STAGING_SECRETS_DIR:?Set the private staging secrets directory}/calendar_key'}

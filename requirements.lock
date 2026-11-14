@@ -11,7 +11,7 @@ ctranslate2==4.8.2
 defusedxml==0.7.1
 fastapi==0.156.8
 faster-whisper==1.1.1
-filelock==4.0.12
+filelock==4.2.1
 flatbuffers==25.12.19
 fsspec==2026.9.0
 greenlet==3.5.6
@@ -24,7 +24,7 @@ icalendar==6.3.2
 idna==3.20
 numpy==2.5.3
 onnxruntime==1.30.0
-opentelemetry-api==1.45.1
+opentelemetry-api==1.45.2
 packaging==26.3
 protobuf==7.36.2
 psycopg==3.2.6
