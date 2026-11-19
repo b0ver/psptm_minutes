@@ -5,6 +5,7 @@ Unknown-session requests have no matching durable state.
 """
 import hashlib,ipaddress,json,os,re,subprocess,sys,time
 from pathlib import Path
+from datetime import datetime
 B=Path('/home/epopov/projects/psptm_minutes-ops/main-release-20261119')
 SOURCE='c5d0059162ba2eae72c3c56dd378affb53a34aa8'
 ROLES={'api':'runtime','telegram':'runtime','calendar-scheduler':'runtime','analysis-worker':'runtime','worker':'gpu','telemost-agent':'telemost'}
@@ -105,7 +106,17 @@ print(json.dumps({'authenticated_event_feed':True,'old_notices_queued':0,'allowe
     if value==b't':locks[role]=True;break
     time.sleep(1)
    assert role in locks,'real_worker_session_lock_missing'
-  tick=run(['docker','exec',current['db']['Id'],'psql','-qAt','-U','minutes','-d','minutes','-c',"SELECT extract(epoch from now()-last_tick) FROM calendar_scheduler_state WHERE id=1"]).strip();assert tick and 0<=float(tick)<90,'calendar_heartbeat_stale'
- result={'status':'DEPLOYED_CORE_VERIFIED' if mode=='core' else 'DEPLOYED_MAIN_VERIFIED','source_commit':SOURCE,'verified_application_services':len(roles),'database_container_and_mounts_preserved':True,'existing_mounts_networks_ports_preserved':True,'uid':10001,'immutable_registry_refs':True,'http':http,'all_terminal_sessions':states['sessions'],'state_sha256':states['state_sha256'],'real_service_session_locks':locks,'auto_leave_changed':False,'model_policy_changed':False,'real_meeting_started':False,'test_messages_sent':False,'models_invoked_by_probe':False,'time':time.time()}
+  started=datetime.fromisoformat(current['calendar-scheduler']['State']['StartedAt'].replace('Z','+00:00')).timestamp()
+  deadline=time.monotonic()+60;calendar_fresh=False
+  while time.monotonic()<deadline:
+   tick=run(['docker','exec','-e','PGOPTIONS=-c default_transaction_read_only=on -c statement_timeout=3000',current['db']['Id'],'psql','-qAt','-U','minutes','-d','minutes','-c',"SELECT extract(epoch from last_tick) FROM calendar_scheduler_state WHERE id=1"]).strip()
+   if tick and float(tick)>=started and -5<=time.time()-float(tick)<90:calendar_fresh=True;break
+   time.sleep(1)
+  assert calendar_fresh,'calendar_heartbeat_after_restart_missing'
+  getme="from app.telegram import Telegram,telegram_token;bot=Telegram(telegram_token());result=bot.call('getMe',{});assert result.get('is_bot') is True;bot.client.close();print('telegram_getme_verified')"
+  assert run(['docker','exec',tg,'python','-c',getme],timeout=45).strip()==b'telegram_getme_verified'
+  model="import httpx;from app.ai import validate_endpoint,verify_model;from app.settings import OLLAMA_URL,OLLAMA_MODEL,model_policy;validate_endpoint(OLLAMA_URL);client=httpx.Client(base_url=OLLAMA_URL,timeout=10,trust_env=False,follow_redirects=False);verify_model(client,OLLAMA_MODEL,model_policy());client.close();print('approved_model_digest_verified_without_inference')"
+  assert run(['docker','exec',current['analysis-worker']['Id'],'python','-c',model],timeout=20).strip()==b'approved_model_digest_verified_without_inference'
+ result={'status':'DEPLOYED_CORE_VERIFIED' if mode=='core' else 'DEPLOYED_MAIN_VERIFIED','source_commit':SOURCE,'verified_application_services':len(roles),'database_container_and_mounts_preserved':True,'existing_mounts_networks_ports_preserved':True,'uid':10001,'immutable_registry_refs':True,'http':http,'all_terminal_sessions':states['sessions'],'state_sha256':states['state_sha256'],'real_service_session_locks':locks,'calendar_tick_after_start':mode=='complete','telegram_readonly_getme':mode=='complete','approved_model_digest_verified_without_inference':mode=='complete','auto_leave_changed':False,'model_policy_changed':False,'real_meeting_started':False,'test_messages_sent':False,'models_invoked_by_probe':False,'time':time.time()}
  (d/'receipt.json').write_text(json.dumps(result,indent=2)+'\n');print(json.dumps(result));log.close()
 if __name__=='__main__':main(*sys.argv[1:])

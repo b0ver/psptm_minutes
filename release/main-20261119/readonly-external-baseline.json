@@ -1,0 +1,15 @@
+{
+  "source_services_unchanged": true,
+  "test_messages_sent": false,
+  "inference_requests": 0,
+  "checks": {
+    "telegram": {
+      "passed": true,
+      "safe_code": "telegram_getme_verified"
+    },
+    "analysis-worker": {
+      "passed": true,
+      "safe_code": "approved_model_digest_verified_without_inference"
+    }
+  }
+}
