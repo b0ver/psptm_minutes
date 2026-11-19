@@ -25,6 +25,18 @@ jobs:
         run: python3 -m unittest discover -s benchmarks/tests -v
       - name: Compile operational tools
         run: python3 -m py_compile scripts/ops/*.py benchmarks/capacity.py
+      - name: Current restore lineage and frozen admission without production access
+        run: |
+          docker run --rm --network none --read-only --tmpfs /tmp:size=64m,mode=1777 --cpus .5 --memory 256m \
+            --cap-drop ALL --security-opt no-new-privileges --entrypoint python \
+            -e PYTHONPATH=/ops:/next:/writer-code \
+            -v "$PWD/release/main-20261119/current-restore-tools-v3:/ops:ro" \
+            -v "$PWD/release/main-20261119/restore-tools-b4:/next:ro" \
+            -v "$PWD/release/main-20261119/restore-tools-b4:/writer-code:ro" -w /ops \
+            psptm-minutes-tests-tests -m unittest test_frozen_source_probe test_catchup_core
+          docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges --entrypoint python \
+            -v "$PWD/release/main-20261119/current-restore-tools-v3:/ops:ro" \
+            psptm-minutes-tests-tests -c 'import ast;from pathlib import Path;[ast.parse(p.read_text()) for p in Path("/ops").glob("*.py")]'
       - name: Check shell scripts
         run: |
           bash -n scripts/ops/deploy.sh

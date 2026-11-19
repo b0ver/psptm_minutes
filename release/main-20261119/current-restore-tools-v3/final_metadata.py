@@ -51,6 +51,6 @@ with tarfile.open(fileobj=sys.stdout.buffer,mode='w|') as archive:
  assert r.returncode==0,'metadata_capture_failed_see_protected_log'
  p=d/'metadata.tar'
  with p.open('rb') as stream:digest=hashlib.file_digest(stream,'sha256').hexdigest()
- receipt={'status':'AWAITING_ENCRYPTED_OFFHOST_ROUNDTRIP','sha256':digest,'bytes':p.stat().st_size,'original_settings_files_verified':11,'candidate_configuration_included':True,'database_included':database_label is not None,'database_label':database_label,'production_services_modified':False}
+ receipt={'status':'AWAITING_ENCRYPTED_OFFHOST_ROUNDTRIP','sha256':digest,'bytes':p.stat().st_size,'original_settings_files_verified':11,'candidate_configuration_included':True,'database_included':database_label is not None,'database_label':database_label,'production_services_modified':False,'candidate_compose_sha256':hashlib.sha256((B/'candidate-c5/compose.yaml').read_bytes()).hexdigest()}
  (d/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n');print(json.dumps(receipt))
 if __name__=='__main__':main(*sys.argv[1:])

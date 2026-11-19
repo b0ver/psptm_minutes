@@ -49,7 +49,10 @@ with engine.connect() as c:
  assert blocked_analysis==total_queued_analysis,'unknown_queued_analysis_requires_review'
  blocked_reports=c.scalar(text("SELECT count(*) FROM meeting_reports r JOIN meeting_analysis a ON a.meeting_id=r.meeting_id JOIN meetings m ON m.id=r.meeting_id WHERE r.status='queued' AND a.status='queued' AND a.step='waiting_transcript' AND m.status='failed' AND m.transcript IS NULL"))
  assert blocked_reports==c.scalar(text("SELECT count(*) FROM meeting_reports WHERE status='queued'")),'unknown_queued_report_requires_review'
- imminent=c.scalar(text("SELECT count(*) FROM calendar_occurrences o JOIN calendar_subscriptions s ON s.id=o.subscription_id WHERE s.enabled AND s.connected AND s.recording_authorized AND o.status IN ('scheduled','starting','recording') AND NOT o.skipped AND o.starts_at BETWEEN now()-interval '5 minutes' AND now()+interval '15 minutes'"))
+ assert c.scalar(text("SELECT count(*) FROM calendar_occurrences WHERE status IN ('dispatching','uncertain','started')"))==0,'calendar_intent_unsettled'
+ assert c.scalar(text("SELECT count(*) FROM telegram_commands WHERE status NOT IN ('done','failed')"))==0,'telegram_command_pending'
+ assert c.scalar(text("SELECT count(*) FROM telegram_events WHERE status NOT IN ('sent','failed')"))==0,'telegram_delivery_pending'
+ imminent=c.scalar(text("SELECT count(*) FROM calendar_occurrences o JOIN calendar_subscriptions s ON s.id=o.subscription_id WHERE s.enabled AND s.connected AND s.recording_authorized AND o.status IN ('scheduled','dispatching','uncertain','started') AND NOT o.skipped AND o.starts_at BETWEEN now()-interval '5 minutes' AND now()+interval '15 minutes'"))
  assert imminent==0,'scheduled_recording_near_cutover'
  counts={}
  for name in sorted(Base.metadata.tables):

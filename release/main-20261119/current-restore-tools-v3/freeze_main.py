@@ -3,7 +3,7 @@
 No service recreation. On failure/timeout, resumes only unchanged original IDs.
 Successful handoff requires verified frozen backup and encrypted off-host metadata.
 """
-import fcntl,importlib.util,json,os,re,select,signal,subprocess,sys,time
+import hashlib,fcntl,importlib.util,json,os,re,select,signal,subprocess,sys,time
 from pathlib import Path
 B=Path('/home/epopov/projects/psptm_minutes-ops/main-release-20261119')
 sys.path[:0]=[str(B),str(B/'code-b4')]
@@ -22,7 +22,8 @@ def main(attempt,online='c1',frozen='c2'):
  assert load(B/('restore-current-database-'+online)/'agent-state-startup.json')['state_files_changed']==0
  rollback=load(B/'rollback-roundtrip-current-clone/receipt.json');gpu=load(B/'registry-images/gpu-installed.json')
  assert rollback['status']=='PASSED' and rollback['source_dump_sha256']==online_snapshot['sha256'] and rollback['cycles'][1]['image_id']==gpu['host_image_id']
- assert load(B/'candidate-c5/prepared.json')['status']=='PREPARED_NOT_ACCEPTED_OR_DEPLOYED'
+ prepared=load(B/'candidate-c5/prepared.json');assert prepared['status']=='PREPARED_NOT_ACCEPTED_OR_DEPLOYED'
+ assert hashlib.sha256((B/'candidate-c5/compose.yaml').read_bytes()).hexdigest()==prepared['compose_sha256'],'prepared_candidate_changed'
  log=(d/'commands.private.log').open('xb');guard=None;closed=False;handoff=False
  def run(args,timeout=60,data=None):
   r=subprocess.run(args,input=data,stdout=subprocess.PIPE,stderr=log,timeout=timeout)
@@ -88,6 +89,7 @@ def main(attempt,online='c1',frozen='c2'):
     assert load(B/('restore-current-database-'+frozen)/'agent-state-startup.json')['state_files_changed']==0
     metadata=B/('final-metadata-'+frozen);small=load(metadata/'receipt.json');off=load(metadata/'offhost-confirmed.json')
     assert small['database_label']==frozen and small['database_included'] and off['decryption_hash_verified'] and off['sha256']==small['sha256'] and off['plaintext_bytes']==small['bytes']
+    assert hashlib.sha256((B/'candidate-c5/compose.yaml').read_bytes()).hexdigest()==small['candidate_compose_sha256'],'candidate_changed_after_final_backup'
     binding=load(B/('source-binding-'+frozen+'.json'));assert binding['status']=='CURRENT_SOURCE_METADATA_BOUND' and binding['metadata_stable'] and binding['attempt']==frozen and 0<=time.time()-binding['time']<=60
     assert binding['target_manifest_sha256']==load(B/('catchup-20261120-'+frozen)/'writer/current-file-proof.json')['target_manifest_sha256']
     final=inventory(attempt+'handoff');assert final['all_state_hashes_sha256']==after['all_state_hashes_sha256']

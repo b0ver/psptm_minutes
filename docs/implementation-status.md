@@ -54,3 +54,5 @@ B3 выявил ошибку инструмента восстановления
 
 
 20 ноября: три exact registry refs доставлены и разрешаются локально на Bender. Они идентичны проверенным native образам по Config и слоям. Подготовлен отдельный контроль текущего delta и финального frozen admission; 19 Docker tests прошли на arm64 и native amd64. Scoped OS review зафиксирован в каталоге релиза. B4 продолжает восстановление 85 архивов. Актуальная БД, worker rollback на ее копии и production cutover еще не приняты. Подготовка Compose не запускала сервисы. Автовыход не изменен.
+
+Дополнительная readonly сверка исключает незавершенные calendar intents, Telegram commands и недоставленные interface events. На текущем источнике таких работ нет. В CI добавлены 19 изолированных проверок цепочки current delta и frozen admission. Все 18 новых ops scripts прошли Docker syntax check; actionlint прошел. Новые post-deploy проверки сверяют реальные session locks, digest, mounts, порты, ключ управления и HTTP 404 без запуска встречи или отправки тестовых сообщений. Их production выполнение еще не проводилось.
