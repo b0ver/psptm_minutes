@@ -38,6 +38,10 @@ jobs:
             -v "$PWD/release/main-20261119/restore-tools:/next:ro" \
             -v "$PWD/release/main-20261119/restore-tools:/writer-code:ro" -w /next \
             psptm-minutes-tests-tests -m unittest test_next test_restore_controller test_smoke test_restore_safety_new
+          docker run --rm --network none --read-only --tmpfs /tmp:size=256m --cpus .5 --memory 512m --cap-drop ALL --security-opt no-new-privileges --entrypoint python \
+            -v "$PWD/release/main-20261119/restore-tools-b3:/next:ro" \
+            -v "$PWD/release/main-20261119/restore-tools-b3:/writer-code:ro" -w /next \
+            psptm-minutes-tests-tests -m unittest test_controller test_next test_plan test_production_probe test_restore_controller test_restore_safety_new test_smoke test_writer
           docker run --rm --network none --read-only --tmpfs /tmp:size=64m,mode=1777 --cpus .5 --memory 128m --cap-drop ALL --security-opt no-new-privileges --entrypoint python \
             -v "$PWD/release/main-20261119:/proof:ro" -w /proof \
             psptm-minutes-tests-tests -m unittest test_install_os
@@ -128,6 +132,10 @@ jobs:
             -v "$PWD/release/main-20261119/restore-tools:/next:ro" \
             -v "$PWD/release/main-20261119/restore-tools:/writer-code:ro" -w /next \
             psptm-minutes-tests-tests -m unittest test_next test_restore_controller test_smoke test_restore_safety_new
+          docker run --rm --network none --read-only --tmpfs /tmp:size=256m --cpus .5 --memory 512m --cap-drop ALL --security-opt no-new-privileges --entrypoint python \
+            -v "$PWD/release/main-20261119/restore-tools-b3:/next:ro" \
+            -v "$PWD/release/main-20261119/restore-tools-b3:/writer-code:ro" -w /next \
+            psptm-minutes-tests-tests -m unittest test_controller test_next test_plan test_production_probe test_restore_controller test_restore_safety_new test_smoke test_writer
           docker run --rm --network none --read-only --tmpfs /tmp:size=64m,mode=1777 --cpus .5 --memory 128m --cap-drop ALL --security-opt no-new-privileges --entrypoint python \
             -v "$PWD/release/main-20261119:/proof:ro" -w /proof \
             psptm-minutes-tests-tests -m unittest test_install_os

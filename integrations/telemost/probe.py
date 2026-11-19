@@ -8,12 +8,14 @@ from pathlib import Path
 
 from playwright.async_api import async_playwright
 from checkpoints import Checkpoints, CheckpointError
+from probe_process import browser_roots
 
 
 async def case(driver, mode):
     with tempfile.TemporaryDirectory(prefix='checkpoint-probe-') as folder:
         store = Checkpoints(folder)
-        browser = await driver.chromium.launch(executable_path='/usr/bin/chromium', headless=True,
+        executable = os.getenv('CHROMIUM_EXECUTABLE_PATH', '/usr/bin/chromium')
+        browser = await driver.chromium.launch(executable_path=executable, headless=True,
             env={**os.environ, 'XDG_CONFIG_HOME':'/tmp/probe-config', 'XDG_CACHE_HOME':'/tmp/probe-cache'},
             args=['--autoplay-policy=no-user-gesture-required'])
         context = await browser.new_context()
@@ -46,17 +48,12 @@ async def case(driver, mode):
         await page.wait_for_function('window.__agentCheckpoint.chunks >= 3', timeout=15000)
         assert await page.evaluate('window.nativeChunks') == 0, 'Mirror changed native recorder cadence'
         if mode == 'crash':
-            # This disposable container has exactly one root Chromium process.
-            roots = []
-            for entry in Path('/proc').iterdir():
-                if not entry.name.isdecimal():
-                    continue
-                try:
-                    command = (entry/'cmdline').read_bytes().split(b'\0')
-                except OSError:
-                    continue
-                if command and command[0] == b'/usr/lib/chromium/chromium' and not any(x.startswith(b'--type=') for x in command):
-                    roots.append(int(entry.name))
+            cdp = await browser.new_browser_cdp_session()
+            arguments = (await cdp.send('Browser.getBrowserCommandLine'))['arguments']
+            profiles = [arg for arg in arguments if arg.startswith('--user-data-dir=')]
+            assert len(profiles) == 1, 'Cannot bind isolated browser profile'
+            await cdp.detach()
+            roots = browser_roots(profiles[0], executable)
             assert len(roots) == 1, 'Cannot identify isolated browser process'
             closed = asyncio.create_task(page.wait_for_event('close', timeout=10000))
             await asyncio.sleep(0)

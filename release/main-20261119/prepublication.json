@@ -132,5 +132,20 @@
   "current_restore_pending": true,
   "complete_rollback_pending": true,
   "production_updated": false,
-  "deploy_allowed": false
+  "deploy_allowed": false,
+  "snapshot_scope": "Initial publication snapshot at d002cc7; file hashes are historical. Later operational probe changes are described separately.",
+  "operational_probe_changes": [
+    "Crash probe binds exact executable, UID and CDP user-data-dir; no production recorder logic changes."
+  ],
+  "latest_local_arm64_full_suite": {
+    "passed": 431,
+    "failed": 0,
+    "warnings": 2,
+    "seconds": 16.32
+  },
+  "restore_b3_native_unit_tests": {
+    "run": 117,
+    "failed": 0,
+    "skipped": 1
+  }
 }
