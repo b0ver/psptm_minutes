@@ -65,11 +65,24 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          base="ghcr.io/${REPOSITORY,,}-rc"
+          base="ghcr.io/${REPOSITORY,,}-main-20261119"
           owner="${REPOSITORY%%/*}"
-          package="${REPOSITORY##*/}"
+          package="${REPOSITORY##*/}-main-20261119"
           for kind in runtime gpu telemost; do
-            test "$(gh api "/users/$owner/packages/container/$package-rc-$kind" --jq .visibility)" = private
+            endpoint="/users/$owner/packages/container/$package-$kind"
+            if visibility=$(gh api "$endpoint" --jq .visibility 2> package-check.err); then
+              test "$visibility" = private
+            else
+              # First publication is private by GitHub's documented default.
+              # Seed contains only public labels, before any licensed binary is sent.
+              grep -Fq '(HTTP 404)' package-check.err
+              seed="$base-$kind:registry-admission-$GITHUB_RUN_ID"
+              printf 'FROM scratch\n' | docker build --platform linux/amd64 \
+                --label "org.opencontainers.image.source=https://github.com/$REPOSITORY" \
+                --label "org.opencontainers.image.revision=$GITHUB_SHA" -t "$seed" -
+              docker push "$seed"
+              test "$(gh api "$endpoint" --jq .visibility)" = private
+            fi
           done
           for kind in runtime gpu telemost; do
             ref="$base-$kind:$GITHUB_SHA"
@@ -92,7 +105,7 @@ jobs:
               -v "$PWD/release/main-20261119/surface_probe.py:/surface_probe.py:ro" \
               --entrypoint python "$ref" /surface_probe.py "$kind"
             docker push "$ref"
-            test "$(gh api "/users/$owner/packages/container/$package-rc-$kind" --jq .visibility)" = private
+            test "$(gh api "/users/$owner/packages/container/$package-$kind" --jq .visibility)" = private
             digest=$(docker image inspect --format '{{index .RepoDigests 0}}' "$ref")
             echo "$kind=$digest" >> "$GITHUB_OUTPUT"
           done
