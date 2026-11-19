@@ -55,3 +55,18 @@ Release alpha запускается в candidate_only=true на ветке code
 Классическое Docker хранилище сообщает config digest как image ID. Containerd image store на Bender сообщает OCI manifest digest. Проверка доставки связывает оба значения через исходный OCI manifest, сравнивает полную Config и упорядоченные rootfs diff IDs. Совпадение source commit и платформы проверяется отдельно. Эти различия представления не требуют пересборки на production.
 
 B4 исправляет только отдельный инструмент приемки. Исходный commit трех образов остается c5d0059; revision инструментов и итоговые доказательства фиксируются отдельно. Production и release draft пока не опубликованы как принятый релиз.
+
+
+## Точная доставка и актуальная копия, 20 ноября
+
+Три опубликованных registry manifest доставлены без перекодирования слоев. Их полные digest refs разрешаются локально на Bender. Config и rootfs совпали с native exports, на которых прошли probes. Подтверждения: runtime-registry-delivery.json, gpu-registry-delivery.json и telemost-registry-delivery.json. PAT остался на Mac; credentials на Bender не передавались. Production-сервисы не менялись.
+
+[Оценка применимости OS advisories](os-applicability-20261120.md) ограничена текущим закрытым пилотом. Она не объявляет все установленные пакеты исправленными.
+
+Отдельный набор current-restore-tools-v3 проверяет текущий delta поверх восстановленных 85 архивов. Он сохраняет цепочку хешей извлечения, проверяет inode/ctime/metadata предыдущей копии и целостность новых архивов до записи. Следующий delta использует proof предыдущего. Исходные recordings всегда подключены readonly. Служебные runtime symlinks исключаются только по отдельно проверенному точному descriptor. Удаление persistent файлов отражается в плане.
+
+Финальный frozen admission требует остановки всех шести исходных приложений и работающей исходной PostgreSQL. Он проверяет точные container/image IDs, все durable состояния и processing очереди. Для чтения состояний после остановки API используется отдельный readonly контейнер. Замена контейнера, перезапуск приложения или новая запись закрывает допуск. Шесть проверок frozen admission и 13 проверок delta прошли в Docker на arm64 и native amd64. Проверки не выполняли production cutover.
+
+Текущая БД будет снята через readonly REPEATABLE READ и exported snapshot, общий с pg_dump. На отдельной БД проверяются все таблицы, ссылки recordings, import hashes и расшифровка календарных credentials ключом из проверенной копии настроек. Затем требуется previous/candidate/previous worker rollback на этой БД. Эти настоящие проверки пока ожидают завершения B4. Подготовленный private Compose сохраняет существующие volumes, networks и PostgreSQL. Он еще не запущен. Перед запуском требуется фактический cutoff уведомлений и финальная согласованная копия. Автовыход и модельная политика не изменены.
+
+Readonly сверка источника подтвердила 88 terminal sessions, неизменность 14 старых partial_saved и отсутствие pending recovery events. Два оператора имеют активные private chat bindings. Processing и eligible analysis jobs отсутствуют. Пять старых failed-встреч без транскрипта сохраняют waiting_transcript и 25 ожидающих отчетов; новый релиз не ставит их на повторную обработку. Перед переключением проверка выполняется заново.

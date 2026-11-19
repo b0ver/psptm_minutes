@@ -1,0 +1,16 @@
+{
+  "kind": "telemost",
+  "registry_ref": "ghcr.io/b0ver/psptm_minutes-rc-telemost@sha256:481d79580c53522621dbac8f9fc9f954f00cba18f64b2bbaae5f5e8066d83d85",
+  "registry_manifest_digest": "sha256:481d79580c53522621dbac8f9fc9f954f00cba18f64b2bbaae5f5e8066d83d85",
+  "ci_config_digest": "sha256:d04fcbd43c0cf02d3104c52db560da4c10f7ce6be14561455d5e76f85c888be0",
+  "source_commit": "c5d0059162ba2eae72c3c56dd378affb53a34aa8",
+  "transport_sha256": "9d2bfc1ffa520c4b0fa2cdaeae51d82ffcdd8ea60510f272d77edaaa20e02a98",
+  "transport_bytes": 456663040,
+  "registry_credentials_forwarded": false,
+  "exact_registry_blobs_verified": true,
+  "host_image_id": "sha256:481d79580c53522621dbac8f9fc9f954f00cba18f64b2bbaae5f5e8066d83d85",
+  "exact_registry_ref_resolves_locally": true,
+  "tested_native_manifest": "sha256:924f3e3406765f88f7137c3f32fb2c6e55d0dbc2343fd8edeb500aa0ff75dec4",
+  "tested_config_and_layers_identical": true,
+  "production_services_modified": false
+}
