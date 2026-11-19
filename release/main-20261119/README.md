@@ -74,3 +74,9 @@ Readonly сверка источника подтвердила 88 terminal sess
 Подготовленный freeze controller не пересоздает сервисы. Он удерживает настоящие queue locks во время остановки consumers. Финальное ожидание ограничено 20 минутами. До принятой передачи управления он возвращает только исходные контейнеры с теми же ID. Перед передачей проверяются актуальный delta, frozen DB restore, стабильная metadata источника и подтвержденная encrypted off-host копия. Контроллер еще не запускался.
 
 Настоящий малый архив настроек с подготовленной конфигурацией прошел AES256 off-host roundtrip без сохранения plaintext на Mac. Одиннадцать исходных файлов совпали с проверенной прежней копией. Финальный архив после остановки приема дополнительно включит свежий database.dump и фактический cutoff уведомлений. Подготовительная копия не заменяет этот финальный шаг.
+
+Новый native CI 44630594434 для a8da1ac завершился успешно. Все три web-файла кандидата совпали с текущим production; исправление раскрывающихся блоков сохраняется. System/model policy SHA также совпал.
+
+Изолированный readonly PostgreSQL template выявил гонку pg_isready с временным сервером initdb. Версия restore_current_database_v2.py ждет конечный postgres как PID1 и успешный SELECT в нужной БД. Настоящий повтор этого template прошел под UID70, read-only root и tmpfs, без production mounts. Source и работающий B4 не менялись.
+
+Отдельный rollback_roundtrip_v3.py прошел native synthetic previous/candidate/previous с exact registry GPU digest. Все probe-процессы используют runc; NVIDIA devices отсутствуют. Реальные worker session locks, synthetic jobs и сохранение предыдущих jobs подтверждены. Этот повтор еще не заменяет откат на восстановленной актуальной БД.

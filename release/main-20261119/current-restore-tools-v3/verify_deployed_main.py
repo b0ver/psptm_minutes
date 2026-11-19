@@ -33,6 +33,12 @@ def main(label,mode='complete'):
   assert c['HostConfig']['ReadonlyRootfs'] and c['HostConfig']['CapDrop']==['ALL'] and any(x.startswith('no-new-privileges') for x in c['HostConfig']['SecurityOpt'])
   assert run(['docker','exec',c['Id'],'id','-u']).strip()==b'10001'
   assert c['Config']['Cmd']==baseline[role]['Config']['Cmd']
+  for field in ['Memory','MemorySwap','NanoCpus','CpuPeriod','CpuQuota','CpusetCpus','PidsLimit','ShmSize']:
+   assert c['HostConfig'].get(field)==baseline[role]['HostConfig'].get(field),'resource_limit_changed'
+  if role=='worker':
+   def gpu_request(rows):
+    return [{k:(x.get(k) or ({} if k=='Options' else [])) if k in {'Options','DeviceIDs','Capabilities'} else x.get(k) for k in ['Driver','Count','DeviceIDs','Capabilities','Options']} for x in (rows or [])]
+   assert gpu_request(c['HostConfig'].get('DeviceRequests'))==gpu_request(baseline[role]['HostConfig'].get('DeviceRequests')),'gpu_allocation_changed'
   for m in baseline[role]['Mounts']:
    actual=next(x for x in c['Mounts'] if x['Destination']==m['Destination'])
    assert (actual['Type'],actual['Source'],actual['RW'])==(m['Type'],m['Source'],m['RW']),'existing_mount_changed'
