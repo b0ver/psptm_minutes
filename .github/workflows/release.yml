@@ -38,7 +38,7 @@ jobs:
             -v "$PWD/release/main-20261119/restore-tools:/next:ro" \
             -v "$PWD/release/main-20261119/restore-tools:/writer-code:ro" -w /next \
             psptm-minutes-tests-tests -m unittest test_next test_restore_controller test_smoke test_restore_safety_new
-          docker run --rm --network none --read-only --entrypoint python \
+          docker run --rm --network none --read-only --tmpfs /tmp:size=64m,mode=1777 --cpus .5 --memory 128m --cap-drop ALL --security-opt no-new-privileges --entrypoint python \
             -v "$PWD/release/main-20261119:/proof:ro" -w /proof \
             psptm-minutes-tests-tests -m unittest test_install_os
           python3 scripts/ops/capacity_inspect_probe.py psptm-minutes-tests-tests
