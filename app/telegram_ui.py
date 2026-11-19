@@ -4,6 +4,7 @@ Content exports require an explicit owner request in a private chat; ordinary vi
 from datetime import timedelta
 import hashlib
 import json
+import math
 import os
 import re
 from uuid import uuid4, UUID
@@ -26,6 +27,51 @@ SESSION_LABELS = {'starting':'Запуск', 'opening':'Открываем Те�
     'failed':'Ошибка подключения или записи', 'cancelled':'Отменено'}
 MEETING_LABELS={'queued':'В очереди на транскрибацию', 'processing':'Транскрибация', 'ready':'Транскрипт готов', 'failed':'Ошибка транскрибации'}
 REPORT_LABELS={'queued':'в очереди','processing':'готовится','ready':'готов','failed':'ошибка'}
+STOP_CONFIRMED = TERMINAL | {'stopping', 'finishing', 'saved', 'uploading'}
+
+
+def session_summary(state):
+    """Metadata only. Never present a cached status as a live observation."""
+    status = SESSION_LABELS.get(state.get('status'), 'Состояние неизвестно')
+    issue = state.get('_agent_issue')
+    uncertain = state.get('_stop_uncertain')
+    lines = [state.get('title') or 'Название встречи неизвестно']
+    if uncertain:
+        lines.append('Результат остановки не подтвержден.')
+    if issue == 'unavailable':
+        lines.append('Связь с агентом потеряна. Текущее состояние записи неизвестно.')
+    elif issue:
+        lines.append('Состояние сессии не подтверждено. Сохранение записи неизвестно.')
+    lines.append('Последнее известное состояние: ' + status if issue or uncertain else status)
+    confirmed = state.get('_agent_confirmed_at')
+    valid_time = lambda value: type(value) in (int, float) and math.isfinite(value)
+    if issue or uncertain:
+        lines.append(f'Последнее подтверждение: {max(0, int((now().timestamp()-confirmed)/60))} мин. назад.'
+                     if valid_time(confirmed) else 'Время последнего подтверждения неизвестно.')
+    origin = state.get('recording_started_at') if state.get('status') == 'recording' else state.get('created_at')
+    measured = confirmed if issue or uncertain else now().timestamp()
+    if valid_time(origin) and valid_time(measured):
+        label = 'Последняя известная длительность' if issue or uncertain else ('Длительность' if state.get('status') == 'recording' else 'Возраст сессии')
+        lines.append(f'{label}: {max(0, int((measured-origin)/60))} мин.')
+    return lines
+
+
+def confirmed_snapshot(state, prior=None):
+    if not isinstance(state, dict) or state.get('status') not in SESSION_LABELS:
+        raise ValueError('unexpected_session_state')
+    result = {k: v for k, v in state.items() if not k.startswith('_')}
+    result['_agent_confirmed_at'] = now().timestamp()
+    if (prior or {}).get('_stop_uncertain') and state['status'] not in STOP_CONFIRMED:
+        result['_stop_uncertain'] = True
+    return result
+
+
+def uncertain_stop(s, sid, issue):
+    card = s.get(TelegramCard, sid)
+    if card:
+        card.snapshot = {'id': sid, 'status': 'starting', **(card.snapshot or {}),
+                         '_stop_uncertain': True, '_agent_issue': issue}
+        card.settled = False
 
 
 def button(text, data):
@@ -37,10 +83,14 @@ def keyboard(rows):
     return {'inline_keyboard':rows}
 
 
-def menu():
-    return keyboard([[button('Мои встречи','v1:meetings:0'),button('Текущая обработка','v1:status')],
+def menu(user=None):
+    rows=[[button('Мои встречи','v1:meetings:0'),button('Текущая обработка','v1:status')],
         [button('Мои поручения','v1:tasks:open:0')], [button('Подключить к Телемосту','v1:new')],
-        [button('Помощь','v1:help')]])
+        [button('Помощь','v1:help')]]
+    from app.recovery_control import enabled
+    if user is not None and enabled(user):
+        rows.append([button('Перезагрузить','v1:repair')])
+    return keyboard(rows)
 
 
 def owned(s, user, kind, rid):
@@ -136,10 +186,11 @@ def tasks_view(s,user,mode,page):
 def recording_form(d):
     names={r['id']:r['name'] for r in reports.catalog()}
     data=d.data
-    text=(f"Телемост\nНазвание: {data['title']}\nДлительность: до {data['duration_minutes']} минут\n"
+    text=(f"Телемост\nНазвание: {data['title']}\nОжидаемая длительность: {data['duration_minutes']} минут\n"
           'Разборы: '+', '.join(names[t] for t in data['types'])+'\n\n'
           'Ассистент будет видимым участником с выключенными камерой и микрофоном. '
           'Запуск подтверждает, что организатор и участники разрешили запись. '
+          'Ассистент остается до завершения встречи, исключения или команды остановки. '
           'Аудио и AI-обработка остаются на сервере.')
     return text,keyboard([[button('Разрешение получено — начать',f'v1:launch:{d.revision}')],
         [button('Название',f'v1:title:{d.revision}'),button('Длительность',f'v1:duration:{d.revision}')],
@@ -181,22 +232,22 @@ def handle(s,update,allow_all,allowed_users):
         text=(message.get('text') or '').strip()
         command=text.split()[0].split('@')[0] if text else ''
         if command in {'/start','/menu','/cancel'}:
-            reset();reply('Протоколы и поручения\nВы видите только свои встречи. Отправьте ссылку Телемоста или выберите действие.',menu());return None
+            reset();reply('Протоколы и поручения\nВы видите только свои встречи. Отправьте ссылку Телемоста или выберите действие.',menu(user));return None
         if command=='/meetings':reply(*meetings_view(s,user));return None
         if command=='/tasks':reply(*tasks_view(s,user,'open',0));return None
         if command=='/status':reply(*status_view(s,user));return None
         if command in {'/telemost','/new'}:
             set_dialog(s,user,'link',{});reply('Отправьте прямую ссылку https://telemost.yandex.ru/j/…',keyboard([[button('Отмена','v1:cancel')]]));return None
-        if command=='/help':reply(help_text(),menu());return None
+        if command=='/help':reply(help_text(),menu(user));return None
         if message.get('document') or message.get('audio') or message.get('voice') or message.get('video'):
-            reply('Записи загружаются через локальное приложение. Бот принимает ссылки Телемоста и команды управления.',menu());return None
+            reply('Записи загружаются через локальное приложение. Бот принимает ссылки Телемоста и команды управления.',menu(user));return None
         if d and d.step=='title':
             if not text or len(text)>200:reply('Введите название длиной от 1 до 200 символов.');return None
             d=set_dialog(s,user,'record',{**d.data,'title':text,'title_from_telemost':False});reply(*recording_form(d));return None
         if re.fullmatch(r'https://telemost\.yandex\.(ru|com)/j/[A-Za-z0-9_-]{8,128}',text):
             d=set_dialog(s,user,'record',{'url':text,'title':'Название из Телемоста','title_from_telemost':True,'duration_minutes':60,'types':list(reports.DEFAULT_TYPES)})
             reply(*recording_form(d));return None
-        reply('Отправьте прямую ссылку Телемоста или выберите действие. '+('Диалог завершён.' if d is None else ''),menu());return None
+        reply('Отправьте прямую ссылку Телемоста или выберите действие. '+('Диалог завершён.' if d is None else ''),menu(user));return None
     data=callback.get('data','');parts=data.split(':')
     try:
         if parts[0] in {'p','d'} and len(parts)==3:
@@ -206,8 +257,12 @@ def handle(s,update,allow_all,allowed_users):
             reply(*tasks_view(s,user,'open',0));return callback['id'],'Статус сохранён'
         if len(parts)<2 or parts[0]!='v1':raise ValueError('command')
         op=parts[1]
-        if op in {'menu','cancel'}:reset();reply('Главное меню',menu())
-        elif op=='help':reply(help_text(),menu())
+        if op in {'repair','repair_yes','repair_no'}:
+            from app.recovery_control import callback as repair_callback
+            repair_callback(s,user,op,parts,d,update['update_id'],reply)
+            return callback['id'],'Запрос проверен'
+        if op in {'menu','cancel'}:reset();reply('Главное меню',menu(user))
+        elif op=='help':reply(help_text(),menu(user))
         elif op=='new':set_dialog(s,user,'link',{});reply('Отправьте прямую ссылку Телемоста.',keyboard([[button('Отмена','v1:cancel')]]))
         elif op=='meetings':reply(*meetings_view(s,user,page_number(parts[2])))
         elif op=='tasks':reply(*tasks_view(s,user,parts[2],page_number(parts[3])))
@@ -251,14 +306,20 @@ def handle(s,update,allow_all,allowed_users):
             sid=str(UUID(parts[2]))
             if not owned(s,user,'session',sid):raise ValueError('access')
             if op in {'stop','retry'}:
-                title='Остановить запись и обработать сохранённое?' if op=='stop' else 'Передать сохранённый файл? Если запись неполная, выводы будут относиться только к сохранённой части.'
+                if op=='stop':
+                    card=s.get(TelegramCard,sid)
+                    state=card.snapshot if card and card.snapshot else {'id':sid,'status':'starting'}
+                    title=('Остановить запись выбранной встречи?\n\n'+'\n'.join(session_summary(state))+
+                           '\n\nПодтвердите: встреча закончилась. Можно остановить запись и обработать сохраненное.')
+                else:
+                    title='Передать сохранённый файл? Если запись неполная, выводы будут относиться только к сохранённой части.'
                 reply(title,keyboard([[button('Подтвердить',f'v1:{op}_yes:{sid}')],[button('Назад','v1:status')]]))
             else:
                 if op=='stop_yes':
                     start_cmd=s.scalar(select(TelegramCommand).where(TelegramCommand.id==sid,TelegramCommand.user_id==user).with_for_update())
                     if start_cmd and start_cmd.status=='pending':start_cmd.status='cancelled'
                 s.add(TelegramCommand(update_id=update['update_id'],user_id=user,kind='stop' if op=='stop_yes' else 'import',body={'session_id':sid}))
-                reply('Команда принята. Статус обновится в карточке.',menu())
+                reply('Команда принята. Статус обновится в карточке.',menu(user))
         elif op in {'launch','title','duration','minutes','choose','pick','chosen'}:
             if not d or d.revision!=parts[2] or d.step not in {'record','title','duration','reports'}:raise ValueError('expired')
             if op=='launch':
@@ -266,13 +327,13 @@ def handle(s,update,allow_all,allowed_users):
                 types=reports.selected_types(d.data['types']);cid=str(uuid4())
                 s.add(TelegramCommand(id=cid,update_id=update['update_id'],user_id=user,kind='start',body={'url':d.data['url'],'title':d.data['title'],'title_from_telemost':d.data.get('title_from_telemost',True),'duration_minutes':d.data['duration_minutes'],'analysis_types':types,'recording_authorized':True,'command_key':cid}))
                 s.add(TelegramResource(kind='session',resource_id=cid,user_id=user));s.add(TelegramCard(session_id=cid,user_id=user))
-                reset();reply('Запуск поставлен в очередь. Карточка появится после ответа агента.',menu())
+                reset();reply('Запуск поставлен в очередь. Карточка появится после ответа агента.',menu(user))
             elif op=='title':
                 if 'url' not in d.data:raise ValueError('step')
                 d.step='title';reply('Напишите название встречи.',keyboard([[button('Отмена','v1:cancel')]]))
             elif op=='duration':
                 if 'url' not in d.data:raise ValueError('step')
-                d.step='duration';reply('Максимальная длительность записи:',keyboard([[button(f'{n} минут',f'v1:minutes:{d.revision}:{n}')] for n in (15,30,60,90,120)]+[[button('Отмена','v1:cancel')]]))
+                d.step='duration';reply('Ожидаемая длительность встречи. Это не время автоматического выхода:',keyboard([[button(f'{n} минут',f'v1:minutes:{d.revision}:{n}')] for n in (15,30,60,90,120)]+[[button('Отмена','v1:cancel')]]))
             elif op=='minutes':
                 n=int(parts[3])
                 if d.step!='duration' or n not in {15,30,60,90,120}:raise ValueError('minutes')
@@ -326,10 +387,17 @@ def status_view(s,user):
 
 def card_view(s,user,state):
     sid=state['id'];status=state['status'];rows=[]
-    lines=[state.get('title') or 'Встреча из Telegram',SESSION_LABELS.get(status,'Обработка')]
-    if status=='recording' and state.get('recording_started_at'):
-        lines.append(f"Длительность: {max(0,int((now().timestamp()-state['recording_started_at'])/60))} мин.")
+    lines=session_summary(state)
+    stale=state.get('_agent_issue') or state.get('_stop_uncertain')
+    if status=='recording' and state.get('recording_issue'):
+        lines.append('Последняя проверка выявила проблему с записью.' if stale else 'Ассистент во встрече. Есть проблема с записью.')
     if state.get('chunks'):lines.append(f"На диске: {state['chunks']} частей аудио")
+    if not stale and state.get('capture_health') == 'rotating':
+        lines.append('Сохраняем очередной файл. Запись звука продолжается.')
+    if not stale and state.get('capture_health') in {'native_stopped','rotation_failed','ui_unavailable'}:
+        lines.append('Ассистент остается во встрече. Запись требует проверки.')
+    if state.get('chat_control_available') is False:
+        lines.append('Чат Телемоста не подтвержден. Для остановки используйте кнопку ниже.')
     if state.get('recording_complete') is False:lines.append('Неполная запись: часть встречи отсутствует.')
     if state.get('capture_health') in {'failed','delayed','unavailable'}:
         lines.append('Аварийное сохранение недоступно или задерживается; состояние штатной записи показано выше.')
@@ -337,6 +405,8 @@ def card_view(s,user,state):
         errors={'agent_busy':'Ассистент занят другой встречей. Попробуйте позже.',
                 'waiting_room_timeout':'Не дождались допуска. Проверьте встречу и подключите ассистента заново.',
                 'import_key_conflict':'Параметры повторного импорта отличаются. Нужна проверка в приложении.',
+                'native_rotation_failed':'Не удалось продолжить запись. Проверьте сохраненную часть в приложении.',
+                'continuous_recording_invalid':'Не удалось проверить полную аудиозапись. Проверьте сохраненную часть в приложении.',
                 'start_result_unknown':'Результат запуска не подтверждён. Проверяем прежнюю сессию; не создавайте новый запуск до проверки.'}
         lines.append(errors.get(state.get('error_code'),'Подключение или запись прерваны. Проверьте встречу и попробуйте новый запуск.'))
     if status not in TERMINAL and status not in {'saved','uploading','finishing','stopping'}:
@@ -361,6 +431,9 @@ def command_one(client):
         if not cmd:return False
         user=s.get(TelegramUser,cmd.user_id)
         if not user or not user.active:cmd.status='cancelled';return True
+        if cmd.kind in {'repair_prepare','repair'}:
+            from app.recovery_control import dispatch as dispatch_repair
+            return dispatch_repair(s,cmd,client)
         sid=cmd.id if cmd.kind=='start' else cmd.body['session_id']
         if not owned(s,cmd.user_id,'session',sid):cmd.status='failed';return True
         cmd.attempts+=1
@@ -372,13 +445,19 @@ def command_one(client):
             else:
                 response=client.post(API+'/api/telemost/sessions/'+sid+('/stop' if cmd.kind=='stop' else '/import'),json={})
             if cmd.kind=='stop' and response.status_code==404:
-                state={'id':sid,'status':'cancelled'}
-            else:
-                response.raise_for_status();state=response.json()
-            if state.get('id')!=sid:raise ValueError('session_mismatch')
+                uncertain_stop(s,sid,'session_missing')
+                command_retry(s,cmd)
+                return True
+            response.raise_for_status();state=response.json()
+            if not isinstance(state,dict) or state.get('id')!=sid:raise ValueError('session_mismatch')
+            state=confirmed_snapshot(state)
+            if cmd.kind=='stop' and state['status'] not in STOP_CONFIRMED:
+                uncertain_stop(s,sid,'unexpected_response')
+                command_retry(s,cmd)
+                return True
             cmd.status='done'
             card=s.get(TelegramCard,sid)
-            if card:card.snapshot=state
+            if card:card.snapshot=state;card.settled=False
         except httpx.HTTPStatusError as error:
             if 400<=error.response.status_code<500 and error.response.status_code!=429:
                 cmd.status='failed'
@@ -386,8 +465,12 @@ def command_one(client):
                     card=s.get(TelegramCard,sid)
                     card.snapshot={'id':sid,'status':'failed','error_code':'agent_busy' if error.response.status_code==409 else 'start_rejected'}
                 emit(s,cmd.user_id,'command-error:'+cmd.id,'Команда не выполнена. Ассистент может быть занят или состояние записи уже изменилось.',menu())
-            else:command_retry(s,cmd)
-        except (httpx.RequestError,ValueError,KeyError):command_retry(s,cmd)
+            else:
+                if cmd.kind=='stop':uncertain_stop(s,sid,'unavailable')
+                command_retry(s,cmd)
+        except (httpx.RequestError,ValueError,KeyError) as error:
+            if cmd.kind=='stop':uncertain_stop(s,sid,'unavailable' if isinstance(error,httpx.RequestError) else 'unexpected_response')
+            command_retry(s,cmd)
         return True
 
 
@@ -395,32 +478,52 @@ def command_retry(s,cmd):
     # Continue reconciliation of an uncertain start; never issue a new UUID automatically.
     cmd.next_attempt=now()+timedelta(seconds=min(120,5*2**min(cmd.attempts,5)))
     if cmd.attempts==3:
-        emit(s,cmd.user_id,'command-delayed:'+cmd.id,'Ответ сервиса задерживается. Проверяем результат прежней команды; новая встреча не создаётся.',menu())
+        message=('Результат остановки пока неизвестен. Повторяем запрос для этой сессии.' if cmd.kind=='stop' else
+                 'Ответ сервиса задерживается. Проверяем результат прежней команды; новая встреча не создаётся.')
+        emit(s,cmd.user_id,'command-delayed:'+cmd.id,message,menu())
     if cmd.attempts>=10:
         cmd.status='failed'
         card=s.get(TelegramCard,cmd.id)
         if card and cmd.kind=='start':card.snapshot={'id':cmd.id,'status':'failed','error_code':'start_result_unknown'}
-        emit(s,cmd.user_id,'command-unknown:'+cmd.id,'Результат команды пока не подтверждён. Проверьте состояние сервиса в приложении.',menu())
+        message=('Не удалось подтвердить остановку выбранной записи. Ее состояние остается неизвестным.' if cmd.kind=='stop' else
+                 'Результат команды пока не подтверждён. Проверьте состояние сервиса в приложении.')
+        emit(s,cmd.user_id,'command-unknown:'+cmd.id,message,menu())
 
 
 def watch_cards(client):
     with Session() as s:
         ids=list(s.scalars(select(TelegramCard.session_id).join(TelegramUser).where(TelegramUser.active.is_(True),TelegramCard.settled.is_(False)).limit(500)))
     for sid in ids:
+        issue=None;fetched=False;requested_at=None
         with Session() as s:
             card=s.get(TelegramCard,sid);old=card.snapshot or {}
-            if old.get('status') in TERMINAL and old.get('error_code')!='start_result_unknown':state=old
+            if old.get('status') in TERMINAL and old.get('error_code')!='start_result_unknown' and not old.get('_agent_issue') and not old.get('_stop_uncertain'):state=old
             else:
+                fetched=True
+                requested_at=now().timestamp()
                 try:
                     response=client.get(API+'/api/telemost/sessions/'+sid)
-                    if response.status_code!=200:continue
-                    state=response.json()
-                    if state.get('id')!=sid:continue
-                except (httpx.RequestError,ValueError,KeyError):continue
+                    if response.status_code!=200:
+                        issue='session_missing' if response.status_code==404 else 'unavailable'
+                    else:
+                        state=response.json()
+                        if not isinstance(state,dict) or state.get('id')!=sid or state.get('status') not in SESSION_LABELS:
+                            issue='unexpected_response'
+                except (httpx.RequestError,ValueError,KeyError):issue='unavailable'
         with Session.begin() as s:
             card=s.scalar(select(TelegramCard).where(TelegramCard.session_id==sid).with_for_update())
             if not card or not owned(s,card.user_id,'session',sid):continue
+            if fetched and (card.snapshot or {}).get('_agent_confirmed_at',0)>requested_at:
+                state=card.snapshot  # A command received newer evidence while this GET was in flight.
+            elif issue:
+                state={'id':sid,'status':'starting',**(card.snapshot or {}),'_agent_issue':issue}
+            elif fetched:
+                state=confirmed_snapshot(state,card.snapshot)
+            else:
+                state=card.snapshot
             card.snapshot=state
+            from app.recovery_notifications import queue_recovery_notice
+            queue_recovery_notice(s, state.get("recovery_event"))
             mid=state.get('meeting_id')
             if mid and s.get(Meeting,mid):
                 resource=s.get(TelegramResource,('meeting',mid))
@@ -430,7 +533,7 @@ def watch_cards(client):
             fp=hashlib.sha256(json.dumps([text,markup],ensure_ascii=False).encode()).hexdigest()
             m=s.get(Meeting,mid) if mid else None
             analysis=reports.state(s,mid) if m else None
-            stage=json.dumps([state['status'],state.get('capture_health'),m.status if m else None,analysis['status'] if analysis else None])
+            stage=json.dumps([state['status'],state.get('capture_health'),m.status if m else None,analysis['status'] if analysis else None,state.get('_agent_issue'),state.get('_stop_uncertain')])
             pending=s.scalar(select(TelegramEvent.id).where(TelegramEvent.card_id==sid,TelegramEvent.status=='pending'))
             if not pending and fp!=card.fingerprint and (stage!=card.stage or (now()-card.updated_at).total_seconds()>=60):
                 key=f'card:{sid}:{int(card.updated_at.timestamp()*1000000)}:{fp[:16]}'
@@ -444,6 +547,6 @@ def watch_cards(client):
                     'Разборы вашей встречи готовы в локальном приложении.' if analysis['status']=='ready' else 'Часть разборов не завершилась. Проверьте статусы выбранных типов.',
                     keyboard([[button('Статус разборов',f'v1:m:{mid}')]]))
 
-            if not pending and fp==card.fingerprint and state['status'] in TERMINAL and state.get('error_code')!='start_result_unknown':
+            if not pending and fp==card.fingerprint and state['status'] in TERMINAL and state.get('error_code')!='start_result_unknown' and not state.get('_agent_issue') and not state.get('_stop_uncertain'):
                 if not mid or (m and (m.status=='failed' or (analysis and analysis['status'] in {'ready','failed'}))):
                     card.settled=True

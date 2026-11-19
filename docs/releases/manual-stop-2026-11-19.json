@@ -1,0 +1,63 @@
+{
+  "base": "397bcdb71732e9d845dd11e333f0042935933497",
+  "changed_full": {
+    "passed": 402,
+    "failed": 26
+  },
+  "base_full": {
+    "passed": 387,
+    "failed": 26
+  },
+  "same_failure_nodeids": true,
+  "failed_nodeids": [
+    "tests/test_llm_retry.py::test_generation_retries_are_bounded",
+    "tests/test_llm_retry.py::test_retry_after_honored_within_budget",
+    "tests/test_llm_retry.py::test_transient_generation_retried_before_success[429]",
+    "tests/test_llm_retry.py::test_transient_generation_retried_before_success[502]",
+    "tests/test_llm_retry.py::test_transient_generation_retried_before_success[503]",
+    "tests/test_llm_retry.py::test_transient_generation_retried_before_success[504]",
+    "tests/test_llm_retry.py::test_transient_generation_retried_before_success[failure4]",
+    "tests/test_llm_retry.py::test_transient_generation_retried_before_success[failure5]",
+    "tests/test_long_reports.py::test_every_record_reaches_bounded_render_once_for_each_template[action_items]",
+    "tests/test_long_reports.py::test_every_record_reaches_bounded_render_once_for_each_template[chapters]",
+    "tests/test_long_reports.py::test_every_record_reaches_bounded_render_once_for_each_template[key_meanings]",
+    "tests/test_long_reports.py::test_every_record_reaches_bounded_render_once_for_each_template[meeting_notes]",
+    "tests/test_long_reports.py::test_every_record_reaches_bounded_render_once_for_each_template[tldr]",
+    "tests/test_long_reports.py::test_extract_uses_cached_chunks_and_bounded_fallback",
+    "tests/test_long_reports.py::test_failed_late_render_does_not_publish_partial_report_and_retry_uses_facts",
+    "tests/test_long_reports.py::test_intermediate_merge_growth_falls_back_to_original_records",
+    "tests/test_long_reports.py::test_large_registry_preserves_all_categories_and_exact_quotes",
+    "tests/test_long_reports.py::test_long_summary_is_reduced_with_bounded_requests_but_sources_unchanged",
+    "tests/test_long_reports.py::test_non_contracting_overviews_stop_after_bounded_rounds",
+    "tests/test_long_reports.py::test_only_exact_duplicates_removed_and_conflicting_statuses_retained",
+    "tests/test_long_reports.py::test_oversized_model_overview_is_explicit_error",
+    "tests/test_long_reports.py::test_regular_merge_result_with_large_render_registry_is_also_partitioned",
+    "tests/test_long_reports.py::test_single_oversized_fact_fails_without_clipping_or_inference",
+    "tests/test_long_reports.py::test_summary_packing_accounts_for_json_escaping",
+    "tests/test_reports.py::test_failed_render_keeps_facts_and_manual_retry_reuses_them[error0-analysis_ollama_timeout]",
+    "tests/test_reports.py::test_failed_render_keeps_facts_and_manual_retry_reuses_them[error1-analysis_ollama_unavailable]"
+  ],
+  "new_test_cases_passed": 15,
+  "scope": "telegram_manual_stop_only",
+  "focused": {
+    "passed": 62,
+    "failed": 0,
+    "suites": [
+      "test_manual_stop_truth.py",
+      "test_telegram_ui.py",
+      "test_recovery_control_ui.py"
+    ]
+  },
+  "offline_adapter_e2e": {
+    "passed": 22,
+    "failed": 0,
+    "not_run": 4,
+    "real_telegram_or_production": false
+  },
+  "source_sha256": {
+    "app/telegram_ui.py": "a775feaa524af7b5fcd2e80042302973892000abff56365761fbebad646dc397",
+    "tests/test_telegram_ui.py": "d302164d0573bd02bcbf1ae17ebeb105fe76040f55ce501f3ec89330fb27a7ca",
+    "tests/test_manual_stop_truth.py": "7585f9141209fc0db535a196d954be87efc155418cce3f2ff1c78784efd0c50f"
+  },
+  "production_modified": false
+}

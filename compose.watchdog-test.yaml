@@ -1,0 +1,8 @@
+services:
+  tests:
+    image: minutes-unified-tests-tests:latest
+    volumes:
+      - .:/app:ro
+    cpus: 1
+    mem_limit: 2g
+    command: [python, -m, pytest, -q, -p, 'no:cacheprovider', tests/test_watchdog_recovery.py, tests/test_recovery_notifications.py, tests/test_telemost.py]

@@ -1,0 +1,3 @@
+services:
+  tests:
+    command: [python, -m, pytest, -q, -p, 'no:cacheprovider', tests/test_watchdog_recovery.py, tests/test_recovery_notifications.py, tests/test_recorder_control.py, tests/test_telemost.py]

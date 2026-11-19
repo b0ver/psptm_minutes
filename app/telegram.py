@@ -232,6 +232,8 @@ def background(bot,stopped):
             try:
                 command_one(client)
                 stage='cards';watch_cards(client)
+                from app.recovery_notifications import watch_recovery_notifications
+                stage='recovery';watch_recovery_notifications(client)
                 stage='interface'
                 for _ in range(5):
                     if not dispatch_interface(bot):break

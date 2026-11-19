@@ -1,0 +1,23 @@
+{
+  "base_candidate": "397bcdb71732e9d845dd11e333f0042935933497",
+  "manual_stop_commit": "274810f52cdd96ff6720aaeedfac8e8bae789479",
+  "restored_reports_source_commit": "90a0ba4307379de395ac8352be6c13b18914909b",
+  "regression_introduced_in": "9bcf8eb362a940b3f755affad53c910b955b7cd0",
+  "full_docker_suite": {
+    "passed": 428,
+    "failed": 0,
+    "warnings": 1,
+    "seconds": 17.7,
+    "exit_code": 0
+  },
+  "previous_failures_resolved": 26,
+  "tests_disabled_or_weakened": false,
+  "tested_source_sha256": {
+    "app/reports.py": "818eadbd81b22309a8583c66fdd08e14ffde4a4f6ee1bef60d0770e52efebdc4",
+    "app/telegram_ui.py": "a775feaa524af7b5fcd2e80042302973892000abff56365761fbebad646dc397",
+    "tests/test_manual_stop_truth.py": "7585f9141209fc0db535a196d954be87efc155418cce3f2ff1c78784efd0c50f"
+  },
+  "production_modified": false,
+  "auto_leave_modified": false,
+  "test_containers_removed": true
+}
