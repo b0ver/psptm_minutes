@@ -17,7 +17,7 @@ async def case(driver, mode):
         executable = os.getenv('CHROMIUM_EXECUTABLE_PATH', '/usr/bin/chromium')
         browser = await driver.chromium.launch(executable_path=executable, headless=True,
             env={**os.environ, 'XDG_CONFIG_HOME':'/tmp/probe-config', 'XDG_CACHE_HOME':'/tmp/probe-cache'},
-            args=['--autoplay-policy=no-user-gesture-required'])
+            args=['--autoplay-policy=no-user-gesture-required', '--enable-automation'])
         context = await browser.new_context()
         async def receive(source, packet):
             return await asyncio.to_thread(store.accept, packet)

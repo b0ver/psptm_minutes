@@ -83,6 +83,9 @@ jobs:
               docker build --platform linux/amd64 --label "org.opencontainers.image.revision=$GITHUB_SHA" --target "$kind" -t "$ref" .
             fi
             if [ "$kind" = telemost ]; then
+              docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges --cpus 2 --memory 2g \
+                -v "$PWD/release/main-20261119/surface_probe.py:/surface_probe.py:ro" \
+                --entrypoint python "$ref" /surface_probe.py "$kind"
               docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges "$ref" python recording_controls_probe.py
               docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges "$ref" python lifecycle_probe.py
               docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges "$ref" python rollover_probe.py
@@ -164,6 +167,9 @@ jobs:
               docker build --platform linux/amd64 --label "org.opencontainers.image.revision=$GITHUB_SHA" --target "$kind" -t "$ref" .
             fi
             if [ "$kind" = telemost ]; then
+              docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges --cpus 2 --memory 2g \
+                -v "$PWD/release/main-20261119/surface_probe.py:/surface_probe.py:ro" \
+                --entrypoint python "$ref" /surface_probe.py "$kind"
               docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges "$ref" python recording_controls_probe.py
               docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges "$ref" python lifecycle_probe.py
               docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges "$ref" python rollover_probe.py

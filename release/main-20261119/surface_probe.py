@@ -53,12 +53,16 @@ async def recorder():
  sys.path.insert(0,os.getcwd())
  from playwright.async_api import async_playwright
  from browser_session import launch_session
+ from probe_process import browser_roots
  with tempfile.TemporaryDirectory(prefix='minutes-surface-') as tmp:
   async with async_playwright() as p:
    context=await launch_session(p.chromium,Path(tmp)/'session')
    try:
     page=context.pages[0];cdp=await context.new_cdp_session(page)
-    command=(await cdp.send('Browser.getBrowserCommandLine'))['arguments']
+    profile='--user-data-dir='+str(Path(tmp)/'session/browser-profile')
+    roots=browser_roots(profile,os.environ.get('CHROMIUM_EXECUTABLE_PATH','/usr/bin/chromium'))
+    assert len(roots)==1,'surface_probe_browser_identity'
+    command=[value.decode() for value in Path('/proc',str(roots[0]),'cmdline').read_bytes().split(b'\0') if value]
     expected=['--disable-background-networking','--disable-breakpad','--disable-component-update','--disable-sync','--no-first-run']
     flags={flag:flag in command for flag in expected};assert all(flags.values()),'missing_browser_privacy_switch'
     mapped=set()
