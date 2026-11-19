@@ -1,0 +1,33 @@
+{
+  "source_commit": "c5d0059162ba2eae72c3c56dd378affb53a34aa8",
+  "build_run_id": "44608668533",
+  "platform": "linux/amd64",
+  "images": {
+    "runtime": {
+      "registry_ref": "ghcr.io/b0ver/psptm_minutes-rc-runtime@sha256:e8533fb8af514c6c92cffacce59005b60be26c5ec929e79c299c29a16d1c8286",
+      "ci_config_digest": "sha256:aa57c789701dbf58c07def666ef696a61b265895b6a788dd8d54b4e9415d19de",
+      "host_image_id": "sha256:83e272d13d8cbbed519a1824dd47c50ac34b32fd50b312bf9882db32f097585d",
+      "native_archive_sha256": "84fa4d547f5ad66188beb9ac8d353f2316714d2e3b3d429d79d73c80692e843f"
+    },
+    "gpu": {
+      "registry_ref": "ghcr.io/b0ver/psptm_minutes-rc-gpu@sha256:74d14d392d22d9d6ec96a2e693d1329978112481196fedbcb4f296a67f5cc4f5",
+      "ci_config_digest": "sha256:d96d673bdf5d4654919900b85b2ac65a544be297d4b295bb96f710f5aeee124b",
+      "host_image_id": "sha256:8c0ace0458bc487b0c57e3b64f78f82208d63fb293a1d76dcdf1306d19999ef9",
+      "native_archive_sha256": "c8a7601911a894f259cabede806a2d6ca26805d8b3b8ffb9afbc1db8cc3df589"
+    },
+    "telemost": {
+      "registry_ref": "ghcr.io/b0ver/psptm_minutes-rc-telemost@sha256:481d79580c53522621dbac8f9fc9f954f00cba18f64b2bbaae5f5e8066d83d85",
+      "ci_config_digest": "sha256:d04fcbd43c0cf02d3104c52db560da4c10f7ce6be14561455d5e76f85c888be0",
+      "host_image_id": "sha256:924f3e3406765f88f7137c3f32fb2c6e55d0dbc2343fd8edeb500aa0ff75dec4",
+      "native_archive_sha256": "7fc43944af0deb4970243c1da79126be1f59755333a7e327a54387143f8368f6"
+    }
+  },
+  "acceptance_complete": false,
+  "deploy_allowed": false,
+  "production_updated": false,
+  "auto_leave_changed": false,
+  "model_policy_changed": false,
+  "restore_attempt": "b4",
+  "current_restore_pending": true,
+  "current_clone_rollback_pending": true
+}
