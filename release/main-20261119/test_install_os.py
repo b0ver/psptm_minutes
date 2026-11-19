@@ -39,3 +39,16 @@ class ElfProbeTests(unittest.TestCase):
   with tempfile.TemporaryDirectory() as folder:
    path=Path(folder)/'elf';path.write_bytes(data)
    with self.assertRaisesRegex(RuntimeError,'invalid_elf_sections'):surface.undefined_symbols(path)
+
+from unittest.mock import patch
+import os
+spec=importlib.util.spec_from_file_location('export_native',BASE/'export_native.py');exporter=importlib.util.module_from_spec(spec);spec.loader.exec_module(exporter)
+class ExportSafetyTests(unittest.TestCase):
+ def rejected_before_export(self,change):
+  image={'Architecture':'amd64','Os':'linux','Config':{'Labels':{'org.opencontainers.image.revision':'a'*40}}};change(image)
+  with tempfile.TemporaryDirectory() as folder,patch.dict(os.environ,{'GITHUB_SHA':'a'*40,'GITHUB_RUN_ID':'123'}),patch.object(exporter.subprocess,'check_output',return_value=json.dumps([image]).encode()),patch.object(exporter.subprocess,'Popen') as launch:
+   with self.assertRaises(AssertionError):exporter.main(Path(folder))
+   launch.assert_not_called()
+ def test_wrong_platform_rejected(self):self.rejected_before_export(lambda x:x.update(Architecture='arm64'))
+ def test_wrong_source_rejected(self):self.rejected_before_export(lambda x:x['Config']['Labels'].update({'org.opencontainers.image.revision':'b'*40}))
+ def test_public_repository_autolink_rejected(self):self.rejected_before_export(lambda x:x['Config']['Labels'].update({'org.opencontainers.image.source':'https://github.com/public/repo'}))

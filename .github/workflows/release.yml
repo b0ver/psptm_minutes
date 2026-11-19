@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   build:
-    if: inputs.candidate_only || github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    if: ${{ !inputs.candidate_only && github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     permissions:
@@ -65,31 +65,18 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          base="ghcr.io/${REPOSITORY,,}-main-20261119"
+          base="ghcr.io/${REPOSITORY,,}-rc"
           owner="${REPOSITORY%%/*}"
-          package="${REPOSITORY##*/}-main-20261119"
+          package="${REPOSITORY##*/}"
           for kind in runtime gpu telemost; do
-            endpoint="/users/$owner/packages/container/$package-$kind"
-            if visibility=$(gh api "$endpoint" --jq .visibility 2> package-check.err); then
-              test "$visibility" = private
-            else
-              # First publication is private by GitHub's documented default.
-              # Seed contains only public labels, before any licensed binary is sent.
-              grep -Fq '(HTTP 404)' package-check.err
-              seed="$base-$kind:registry-admission-$GITHUB_RUN_ID"
-              printf 'FROM scratch\n' | docker build --platform linux/amd64 \
-                --label "org.opencontainers.image.source=https://github.com/$REPOSITORY" \
-                --label "org.opencontainers.image.revision=$GITHUB_SHA" -t "$seed" -
-              docker push "$seed"
-              test "$(gh api "$endpoint" --jq .visibility)" = private
-            fi
+            test "$(gh api "/users/$owner/packages/container/$package-rc-$kind" --jq .visibility)" = private
           done
           for kind in runtime gpu telemost; do
             ref="$base-$kind:$GITHUB_SHA"
             if [ "$kind" = telemost ]; then
-              docker build --platform linux/amd64 --label "org.opencontainers.image.revision=$GITHUB_SHA" --label "org.opencontainers.image.source=https://github.com/$REPOSITORY" -f integrations/telemost/Dockerfile -t "$ref" .
+              docker build --platform linux/amd64 --label "org.opencontainers.image.revision=$GITHUB_SHA" -f integrations/telemost/Dockerfile -t "$ref" .
             else
-              docker build --platform linux/amd64 --label "org.opencontainers.image.revision=$GITHUB_SHA" --label "org.opencontainers.image.source=https://github.com/$REPOSITORY" --target "$kind" -t "$ref" .
+              docker build --platform linux/amd64 --label "org.opencontainers.image.revision=$GITHUB_SHA" --target "$kind" -t "$ref" .
             fi
             if [ "$kind" = telemost ]; then
               docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges "$ref" python recording_controls_probe.py
@@ -105,7 +92,7 @@ jobs:
               -v "$PWD/release/main-20261119/surface_probe.py:/surface_probe.py:ro" \
               --entrypoint python "$ref" /surface_probe.py "$kind"
             docker push "$ref"
-            test "$(gh api "/users/$owner/packages/container/$package-$kind" --jq .visibility)" = private
+            test "$(gh api "/users/$owner/packages/container/$package-rc-$kind" --jq .visibility)" = private
             digest=$(docker image inspect --format '{{index .RepoDigests 0}}' "$ref")
             echo "$kind=$digest" >> "$GITHUB_OUTPUT"
           done
@@ -116,33 +103,87 @@ jobs:
           docker compose -f compose.test.yaml down --volumes
   candidate:
     if: inputs.candidate_only
-    needs: build
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 45
     permissions:
       contents: write
     steps:
-      - name: Save unaccepted immutable bundle in existing draft
+      - name: Verify closed native transport destination before building
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          RELEASE_RUNTIME: ${{ needs.build.outputs.runtime }}
-          RELEASE_GPU: ${{ needs.build.outputs.gpu }}
-          RELEASE_TELEMOST: ${{ needs.build.outputs.telemost }}
           CANDIDATE_TAG: ${{ inputs.candidate_tag }}
         run: |
           set -euo pipefail
-          tag="$CANDIDATE_TAG"
-          [[ "$tag" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,100}$ ]]
-          test "$(gh release view "$tag" --json isDraft --jq .isDraft)" = true
-          jq -n --arg sha "$GITHUB_SHA" --arg runtime "$RELEASE_RUNTIME" \
-            --arg gpu "$RELEASE_GPU" --arg telemost "$RELEASE_TELEMOST" \
-            --arg run "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
-            '{candidate_only:true,deploy_allowed:false,acceptance_complete:false,
-              source_commit:$sha,platform:"linux/amd64",build_run:$run,
-              registry_images:{runtime:$runtime,gpu:$gpu,telemost:$telemost}}' \
-            > main-rc-bundle.json
-          gh release upload "$tag" main-rc-bundle.json --clobber
+          test "$CANDIDATE_TAG" = main-2026.11.19-rc.1
+          test "$(gh release view "$CANDIDATE_TAG" --json isDraft --jq .isDraft)" = true
+          test "$(gh release view "$CANDIDATE_TAG" --json targetCommitish --jq .targetCommitish)" = "$GITHUB_SHA"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Test exact release source
+        run: |
+          docker compose -f compose.test.yaml up --build --abort-on-container-exit --exit-code-from tests
+          docker run --rm --network none --read-only --tmpfs /tmp:size=256m --cpus .5 --memory 512m --cap-drop ALL --security-opt no-new-privileges --entrypoint python \
+            -v "$PWD/release/main-20261119/restore-tools:/next:ro" \
+            -v "$PWD/release/main-20261119/restore-tools:/writer-code:ro" -w /next \
+            psptm-minutes-tests-tests -m unittest test_next test_restore_controller test_smoke test_restore_safety_new
+          docker run --rm --network none --read-only --tmpfs /tmp:size=64m,mode=1777 --cpus .5 --memory 128m --cap-drop ALL --security-opt no-new-privileges --entrypoint python \
+            -v "$PWD/release/main-20261119:/proof:ro" -w /proof \
+            psptm-minutes-tests-tests -m unittest test_install_os
+          python3 scripts/ops/capacity_inspect_probe.py psptm-minutes-tests-tests
+          python3 -m unittest discover -s benchmarks/tests -v
+          bash -n scripts/ops/deploy.sh
+          bash -n scripts/ops/restore-drill.sh
+          bash -n scripts/ops/staging-smoke-drill.sh
+          bash scripts/ops/staging-smoke-drill.sh
+          bash scripts/ops/restore-drill.sh
+          docker run --rm -v "$PWD:/repo:ro" -w /repo \
+            rhysd/actionlint@sha256:b1934ee5f1c509618f2508e6eb47ee0d3520686341fec936f3b79331f9315667
+      - name: Security gate
+        run: |
+          docker run --rm --user root --entrypoint sh psptm-minutes-tests-tests -c \
+            'pip install --quiet pip-audit==2.9.0 && pip-audit --no-deps --disable-pip -r /app/requirements.lock && pip-audit --no-deps --disable-pip -r /app/integrations/telemost/requirements.lock'
+      - name: Build and verify exact native images without registry publication
+        run: |
+          set -euo pipefail
+          mkdir exported
+          for kind in runtime gpu telemost; do
+            ref="minutes-main-$kind:$GITHUB_SHA"
+            if [ "$kind" = telemost ]; then
+              docker build --platform linux/amd64 --label "org.opencontainers.image.revision=$GITHUB_SHA" -f integrations/telemost/Dockerfile -t "$ref" .
+            else
+              docker build --platform linux/amd64 --label "org.opencontainers.image.revision=$GITHUB_SHA" --target "$kind" -t "$ref" .
+            fi
+            if [ "$kind" = telemost ]; then
+              docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges "$ref" python recording_controls_probe.py
+              docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges "$ref" python lifecycle_probe.py
+              docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges "$ref" python rollover_probe.py
+              docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges "$ref" python checkpoint_scope_probe.py
+              docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges "$ref" python browser_session_probe.py
+              docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges "$ref" python observer_probe.py
+              docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges --cpus 1 --memory 1500m "$ref" python watchdog_run_probe.py
+              docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges "$ref" python probe.py
+            fi
+            docker run --rm --network none --read-only --tmpfs /tmp:size=256m,mode=1777 --shm-size=512m --cap-drop=ALL --security-opt=no-new-privileges --cpus 2 --memory 2g \
+              -v "$PWD/release/main-20261119/surface_probe.py:/surface_probe.py:ro" \
+              --entrypoint python "$ref" /surface_probe.py "$kind" | tee "exported/$kind-surface.log"
+          done
+          python3 release/main-20261119/export_native.py exported
+      - name: Store native transport only in the existing private draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          CANDIDATE_TAG: ${{ inputs.candidate_tag }}
+        run: |
+          set -euo pipefail
+          test "$CANDIDATE_TAG" = main-2026.11.19-rc.1
+          test "$(gh release view "$CANDIDATE_TAG" --json isDraft --jq .isDraft)" = true
+          gh release upload "$CANDIDATE_TAG" exported/*
+          test "$(gh release view "$CANDIDATE_TAG" --json isDraft --jq .isDraft)" = true
+      - name: Cleanup
+        if: always()
+        run: docker compose -f compose.test.yaml down --volumes
   staging:
     if: ${{ !inputs.candidate_only }}
     needs: build
