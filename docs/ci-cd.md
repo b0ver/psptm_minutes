@@ -119,3 +119,14 @@ Release alpha принимает явный параметр candidate_only=true
 ## Основной кандидат 19 ноября 2026
 
 Текущая подготовка описана в [release/main-20261119](../release/main-20261119/README.md). Новый кандидат использует отдельный закрытый draft main-2026.11.19-rc.1 и параметр candidate_tag. Исторический recorder RC1 не перезаписывается. Сборка идет только для linux/amd64. candidate_only проверяет и экспортирует три образа одного commit в этот draft; он не выполняет staging или production jobs. Временные бинарные assets нельзя публиковать. Локальный публикатор с уже действующим доступом проверяет SHA256 и image ID, затем публикует те же образы в существующие private packages psptm_minutes-rc-{runtime,gpu,telemost}. Только после проверки трех registry digest удаляются временные native exports из draft. В manifest сохраняются source commit, build run и точные digest. Production delivery остается выключенной. Права существующих packages не меняются.
+
+
+## Фактическая ручная выкладка 20 ноября 2026
+
+Основной комплект main-2026.11.20 развернут по явному поручению владельца после настоящего восстановления актуальной копии и worker rollback. Три образа c5d0059 не пересобирались на production. Все шесть приложений используют их immutable registry refs. PostgreSQL и volumes сохранены. Автоматический workflow доставки не включался; его прежние незакрытые условия остаются отдельной задачей.
+
+Авторитетный private Compose на Bender: /home/epopov/projects/psptm_minutes-ops/main-release-20261119/current/compose.yaml. Previous в том же каталоге указывает на сохраненный комплект. Не запускайте общий up из прежнего unmanaged source checkout. Управляйте именованными сервисами с --no-deps --no-build --pull never после новых admission gates. БД не следует пересоздавать при смене приложений.
+
+Контроллер freeze-f1 был одноразовым. Он хранит исходные container IDs и не подходит для повторной выкладки. Перед следующим обновлением нужен новый baseline, проверка всех состояний и реальные queue locks. При новой здоровой записи или обработке откат откладывается. Старые worker/calendar rollback images являются проверенными rootfs snapshots с новыми image IDs. БД нельзя восстанавливать поверх production автоматически.
+
+Финальные БД, настройки и ключи прошли encrypted off-host roundtrip. Сам архив recordings восстановлен на отдельном диске Bender; это не заявление о полной off-host disaster recovery всех данных. [Итоговые доказательства](../release/main-20261119/acceptance-20261120.json) не подтверждают новый live meeting E2E, AI quality или мощность.

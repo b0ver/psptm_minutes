@@ -31,12 +31,17 @@
       "tested_config_and_layers_identical": true
     }
   },
-  "acceptance_complete": false,
-  "deploy_allowed": false,
-  "production_updated": false,
+  "acceptance_complete": true,
+  "deploy_allowed": true,
+  "production_updated": true,
   "auto_leave_changed": false,
   "model_policy_changed": false,
   "restore_attempt": "b4",
-  "current_restore_pending": true,
-  "current_clone_rollback_pending": true
+  "current_restore_pending": false,
+  "current_clone_rollback_pending": false,
+  "release": "main-2026.11.20",
+  "acceptance_tooling_commit": "215c72e0bb53224a045b3846b7d665d7cb498f3c",
+  "current_checkpoint": "c2",
+  "acceptance_evidence": "acceptance-20261120.json",
+  "automatic_delivery_enabled": false
 }

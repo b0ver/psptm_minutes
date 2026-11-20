@@ -1,5 +1,12 @@
 # Состояние проекта на 12 октября 2026
 
+## Актуально: основной релиз 20 ноября 2026
+
+main-2026.11.20 развернут в production. Все шесть приложений используют три immutable digest commit c5d0059. Проверены настоящие backup restore и worker rollback на актуальной копии: 85 архивов, 21 таблица, 66 встреч, 49 import hashes, ключ календаря и 88 сохраненных сессий. Production smoke подтвердил image refs, HTTP, session locks, новый calendar tick, Telegram getMe и digest модели. БД и записи сохранены. Автовыход и модельная политика не менялись. Автоматический CD выключен.
+
+[Manifest, доказательства и границы приемки](../release/main-20261119/README.md). Ниже сохранена история предыдущих этапов; ее pending-статусы не описывают текущую выкладку.
+
+
 После восстановления Tailscale 21 октября выполнена [read-only сверка Bender](reports/bender-followup-2026-10-21.md): сервисы доступны, активных записей нет; [capacity-run завершился с ошибкой](benchmarks/capacity-run-2026-10-14.md) на 85-минутной записи. Два меньших примера дали 5/5 отчётов за 6:17 и 11:40. Найдено ретроспективное подтверждение 10 автоматических календарных цепочек с готовыми отчётами, включая пять complete=true. Новые зависимости из PR на Bender ещё не развёрнуты; качество и суточная мощность не подтверждены.
 
 21 октября начат [спринт релизного кандидата](sprints/2026-10-21-alpha-rc.md) в ветке `codex/alpha-readiness-sprint-20261021` и включён pursuit goal. Продуктовые изменения сохранены, PR #1 объединён с календарными deadlines. На финальных зависимостях — **180 passed**; 6 benchmark contracts, actionlint, 4 Chromium recorder controls и checkpoint normal/SIGKILL прошли. Synthetic dump/restore БД, записи и ключа повторён с проверкой под UID 10001. Зависимости runtime и агента обновлены: финальный pip-audit обоих lockfile — 0 advisory. Внешняя E2E/production restore и результат capacity-run остаются непроверенными до доступа к Bender; production delivery не активировалась.
