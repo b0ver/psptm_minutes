@@ -31,4 +31,4 @@ with restore.connect() as c:
   if digest:assert files[relative][0]==digest;checked+=1
  encrypted=c.execute(text('SELECT credential FROM calendar_subscriptions')).scalars().all()
  for credential in encrypted:assert key.decrypt(credential.encode())
-print(json.dumps({'status':'CURRENT_DATA_DB_KEY_RESTORE_VERIFIED','database_tables_matched':len(expected),'restored_meetings':len(rows),'recording_import_hashes_matched':checked,'calendar_credentials_decrypted':len(encrypted),'uid':os.getuid(),'data_readonly':True,'independent_full_source_reread':False,'models_used':False}))
+print(json.dumps({'status':'CURRENT_DATA_DB_KEY_RESTORE_VERIFIED','target_manifest_sha256':proof['target_manifest_sha256'],'database_tables_matched':len(expected),'restored_meetings':len(rows),'recording_import_hashes_matched':checked,'calendar_credentials_decrypted':len(encrypted),'uid':os.getuid(),'data_readonly':True,'independent_full_source_reread':False,'models_used':False}))

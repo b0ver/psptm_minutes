@@ -91,7 +91,7 @@ def main(attempt,online='c1',frozen='c2'):
     assert small['database_label']==frozen and small['database_included'] and off['decryption_hash_verified'] and off['sha256']==small['sha256'] and off['plaintext_bytes']==small['bytes']
     assert hashlib.sha256((B/'candidate-c5/compose.yaml').read_bytes()).hexdigest()==small['candidate_compose_sha256'],'candidate_changed_after_final_backup'
     binding=load(B/('source-binding-'+frozen+'.json'));assert binding['status']=='CURRENT_SOURCE_METADATA_BOUND' and binding['metadata_stable'] and binding['attempt']==frozen and 0<=time.time()-binding['time']<=60
-    assert binding['target_manifest_sha256']==load(B/('catchup-20261120-'+frozen)/'writer/current-file-proof.json')['target_manifest_sha256']
+    assert binding['target_manifest_sha256']==proof['target_manifest_sha256']
     final=inventory(attempt+'handoff');assert final['all_state_hashes_sha256']==after['all_state_hashes_sha256']
     assert final['table_counts']==load(B/('database-snapshot-'+frozen)/'source-counts.private.json')['counts'],'database_changed_after_frozen_snapshot'
     validate_frozen(baseline,inspect());handoff=True;event('frozen_handoff_accepted',auto_resume_disabled=True);return
