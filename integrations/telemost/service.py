@@ -405,8 +405,18 @@ async def run(sid):
             persist(sid, capture_health='healthy', **summary)
             return {'accepted': True}
         await context.expose_binding('agentCheckpoint', checkpoint_binding)
+        lifecycle_sources = set()
+        async def arm_lifecycle(scope):
+            # Chat may live in another frame. Only the admitted meeting and the
+            # top-level terminal card can report the end of this session.
+            authority = ('meeting' if scope == frame or '/private-join/' in scope.url
+                         else 'shell' if scope == page.main_frame else 'chat')
+            lifecycle_sources.add(scope)
+            # Keep a previously armed observer authorized across a timed-out
+            # probe. Its short end notification must still reach the binding.
+            return await scope.evaluate('authority => {window.__agentArmCommands?.();window.__agentArmLifecycle?.(authority);return window.__agentSampleLifecycle?.() || {}}', authority)
         async def lifecycle_binding(source, reason):
-            if isinstance(reason, str) and reason in {'meeting_ended', 'removed', 'chat_stop'} and not sessions[sid].get('observed_end_reason'):
+            if source.get('frame') in lifecycle_sources and isinstance(reason, str) and reason in {'meeting_ended', 'removed', 'chat_stop'} and not sessions[sid].get('observed_end_reason'):
                 persist(sid, observed_end_reason=reason)
         await context.expose_binding('agentLifecycle', lifecycle_binding)
         await context.add_init_script(path=str(Path(__file__).with_name('checkpoint.js')))
@@ -549,7 +559,7 @@ async def run(sid):
             pass
         for scope in page.frames:
             try:
-                await scope.evaluate('() => window.__agentArmCommands?.()')
+                await arm_lifecycle(scope)
             except Exception:
                 pass
         recording_issue = None
@@ -589,6 +599,10 @@ async def run(sid):
                 break
             try:
                 await asyncio.wait_for(stop.wait(), timeout=3)
+                # An explicit end event can arrive while this wait is pending.
+                # Do not relabel a witnessed organizer end as a manual stop.
+                if state.get('observed_end_reason') in {'meeting_ended', 'removed', 'chat_stop'}:
+                    end_reason = state['observed_end_reason']
                 break
             except asyncio.TimeoutError:
                 pass
@@ -596,12 +610,16 @@ async def run(sid):
                 persist(sid, repair_requested=False)
                 raise AgentError('owner_requested_recovery')
             if capture_watchdog.expired(time.monotonic()):
-                raise AgentError('capture_ui_stalled')  # Recovery only, never automatic import.
+                # A broken recorder/UI is not permission to leave a live call.
+                # Preserve the browser and the explicit stop/recovery controls.
+                recording_issue = recording_issue or 'capture_ui_stalled'
+                persist(sid, capture_health='ui_unavailable',
+                        recording_issue=recording_issue, recording_complete=False)
             if not browser.is_connected() or page.is_closed():
                 raise AgentError('browser_crash')  # The browser has actually gone away.
             try:
                 async with asyncio.timeout(UI_PROBE_TIMEOUT_SECONDS):
-                    lifecycle = [await scope.evaluate('() => {window.__agentArmCommands?.();return window.__agentSampleLifecycle?.() || {}}')
+                    lifecycle = [await arm_lifecycle(scope)
                                  for scope in page.frames]
                     reason = next((item.get('reason') for item in lifecycle
                                    if item.get('reason') in {'meeting_ended', 'removed', 'chat_stop'}), None)
