@@ -32,11 +32,13 @@
     "synthetic_browser_document_and_transport_cases": 38,
     "synthetic_agent_orchestration_cases": 17,
     "web_javascript_syntax": "passed",
-    "ci": "https://github.com/b0ver/psptm_minutes/actions/runs/44672875057"
+    "ci": "https://github.com/b0ver/psptm_minutes/actions/runs/44672875057",
+    "additional_window_transport_cases_passed": 6
   },
   "latest_code_live_end_acceptance": "See current evidence in https://github.com/b0ver/psptm_minutes/pull/6",
   "not_accepted": [
     "authenticated_telemost_chat_stop",
+    "live_organizer_end_latest_code",
     "live_kick_latest_code",
     "complete_immutable_release_bundle"
   ],
@@ -44,5 +46,18 @@
     "speech_semantic_quality",
     "full_api_worker_ai_chain"
   ],
-  "production_deployed": false
+  "production_deployed": false,
+  "latest_code_short_live_run": {
+    "source_commit": "7d6f84c80d1e7af378507bc5bb28b64fc53100d9",
+    "controller_recording_target_seconds": 900,
+    "elapsed_including_finalization_seconds": 905,
+    "status": "saved",
+    "end_reason": "user_stop",
+    "explicit_harness_stop": true,
+    "presence_after_close": "disconnected",
+    "recording_complete_flag": true,
+    "audio_decode_passed": true,
+    "decoded_pcm_seconds": 895.74,
+    "organizer_end_accepted": false
+  }
 }

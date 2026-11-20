@@ -117,6 +117,32 @@ async def transport_case(browser, mode):
     return {'case':mode,'reason':expected,'delivery_preserved':mode!='port_untracked'}
 
 
+async def window_transport_case(browser, mode):
+    context=await browser.new_context()
+    calls=[]
+    await context.expose_binding('agentLifecycle',lambda source, reason:calls.append(reason))
+    await context.add_init_script(path=str(Path(__file__).with_name('lifecycle.js')))
+    parent='https://telemost.yandex.ru/probe-root'
+    host='untrusted.invalid' if mode=='window_bad_origin' else 'telemost.360.yandex.ru'
+    async def route(request):
+        body=(f'<iframe src="https://{host}/private-join/probe"></iframe>'
+              '<iframe src="https://telemost.360.yandex.ru/unrelated"></iframe>') if request.request.url==parent else '<h1>Fixture</h1>'
+        await request.fulfill(status=200,content_type='text/html',body=body)
+    await context.route('**/*',route)
+    page=await context.new_page();await page.goto(parent)
+    await page.evaluate('window.__agentArmLifecycle("shell")')
+    child=next(frame for frame in page.frames if ('/unrelated' if mode=='window_wrong_sender' else '/private-join/') in frame.url)
+    packet={'event':'DISCONNECTED','payload':{'id':'other' if mode=='window_other_peer' else 'self',
+            'source':'kick' if mode=='window_kick' else 'close-room'}}
+    if mode=='window_json':packet=json.dumps(packet)
+    await child.evaluate('packet=>parent.postMessage(packet,"https://telemost.yandex.ru")',packet)
+    await page.wait_for_timeout(100)
+    expected='removed' if mode=='window_kick' else 'meeting_ended' if mode in {'window_end','window_json'} else None
+    assert calls==([expected] if expected else []),(mode,calls)
+    await context.close()
+    return {'case':mode,'reason':expected}
+
+
 async def main():
     async with async_playwright() as p:
         browser=await p.chromium.launch(executable_path='/usr/bin/chromium',
@@ -125,6 +151,7 @@ async def main():
         try:
             cases=[await case(browser,mode) for mode in ('history','old_time','unknown_time','quote','heading_in_chat','ordinary','transient','command','ended','removed','current_ended','current_removed','current_gone','call_title','brief_ended','unarmed_end','shell_heading','shell_alert','shell_toast','shell_card','unrelated_card','plain_heading','active_card','shell_live_card','shell_generic_toast')]
             cases.extend([await transport_case(browser,mode) for mode in ('port_end','port_kick','port_unknown','port_sleep','port_other_peer','port_unarmed','port_wrong_parent','port_untracked','port_bad_source','port_json','port_bad_json','port_connected','port_brief_end')])
+            cases.extend([await window_transport_case(browser,mode) for mode in ('window_end','window_kick','window_json','window_bad_origin','window_wrong_sender','window_other_peer')])
         finally:
             await browser.close()
     print(json.dumps({'status':'passed','scope':'synthetic_dom_only','cases':cases}))
