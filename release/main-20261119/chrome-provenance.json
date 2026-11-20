@@ -1,0 +1,11 @@
+{
+  "version": "158.0.8127.36-1",
+  "deb_sha256": "4696bce00b128f385a870ba2eb6eede61698f22374ea0d8e09af8a1c6543d397",
+  "signed_current_metadata_verified": true,
+  "primary_fingerprint": "EB4C1BFD4F042F6DDDCCEC917721F63BD38B4796",
+  "inrelease_sha256": "f9401ece6432ebe71b595db1835fae0ea6e23a7975b48be288774e6904769e98",
+  "packages_sha256": "937e0eef94e32abf2708e56c2fa09d5ff64312f48d65511492a983e9887f83aa",
+  "cached_deb_matches": true,
+  "official_metadata_url": "https://dl.google.com/linux/chrome/deb/dists/stable/InRelease",
+  "browser_executed": false
+}

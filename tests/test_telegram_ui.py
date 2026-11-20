@@ -197,7 +197,11 @@ def test_stop_before_start_cancels_pending_launch(client):
     assert requests==[f'/api/telemost/sessions/{cid}/stop']
     with Session() as s:
         assert s.get(TelegramCommand,cid).status=='cancelled'
-        assert s.get(TelegramCard,cid).snapshot['status']=='cancelled'
+        # Only the local, not-yet-dispatched launch is known to be cancelled.
+        # A remote 404 does not prove the recording's final outcome.
+        state=s.get(TelegramCard,cid).snapshot
+        assert state['status']=='starting' and state['_stop_uncertain']
+        assert state['_agent_issue']=='session_missing'
 
 
 def test_overdue_uses_task_timezone(client,monkeypatch):

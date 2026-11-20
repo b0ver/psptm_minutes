@@ -1,0 +1,118 @@
+{
+  "status": "ACCEPTED_AND_DEPLOYED",
+  "release": "main-2026.11.20",
+  "image_source_commit": "c5d0059162ba2eae72c3c56dd378affb53a34aa8",
+  "acceptance_tooling_commit": "215c72e0bb53224a045b3846b7d665d7cb498f3c",
+  "image_build_run": "44608668533",
+  "latest_behavior_ci_run": "44647898864",
+  "archive_restore": {
+    "archives": 85,
+    "spec_sha256": "bff7daa445d0911e1167d5c8b5ce9021ce0602369715e38dbbbd083f8993ad99",
+    "all_archives_verified": true
+  },
+  "current_data_database_key": {
+    "status": "CURRENT_DATA_DB_KEY_RESTORE_VERIFIED",
+    "target_manifest_sha256": "98a3db9a5ff0bfb2815528165d22d970765fbbded70cd7d18e93649566c13973",
+    "database_tables_matched": 21,
+    "restored_meetings": 66,
+    "recording_import_hashes_matched": 49,
+    "calendar_credentials_decrypted": 1,
+    "uid": 10001,
+    "data_readonly": true,
+    "independent_full_source_reread": false,
+    "models_used": false,
+    "source_dump_sha256": "f70a0ce5b960b78a84cb966c15ef9201a7d9d4a04e24c151d0d4c2cd745d0639",
+    "backup_key_from_verified_settings_archive": true,
+    "production_database_modified": false,
+    "source_data_attempt": "c2"
+  },
+  "restored_agent": {
+    "restored_terminal_sessions_loaded": 88,
+    "recovery_tasks_created": 0,
+    "state_files_changed": 0,
+    "automatic_imports_attempted": 0
+  },
+  "worker_rollback": {
+    "status": "PASSED",
+    "scope": "current-clone",
+    "cycles": [
+      {
+        "index": 0,
+        "image_id": "sha256:3923acf6675761d8353fa63861751bfe50f0d288aeeb887972de79da7022d0b5",
+        "native_boot_and_session_lock": true,
+        "synthetic_job_ready": true,
+        "previous_jobs_preserved": true
+      },
+      {
+        "index": 1,
+        "image_id": "sha256:74d14d392d22d9d6ec96a2e693d1329978112481196fedbcb4f296a67f5cc4f5",
+        "native_boot_and_session_lock": true,
+        "synthetic_job_ready": true,
+        "previous_jobs_preserved": true
+      },
+      {
+        "index": 2,
+        "image_id": "sha256:3923acf6675761d8353fa63861751bfe50f0d288aeeb887972de79da7022d0b5",
+        "native_boot_and_session_lock": true,
+        "synthetic_job_ready": true,
+        "previous_jobs_preserved": true
+      }
+    ],
+    "source_dump_sha256": "caadfbf7fcd0c8d69702d541cd70063ce72a3259f46d41343df22a45d71ea959",
+    "existing_meetings_preserved": 66,
+    "network_internal": true,
+    "production_services_modified": false,
+    "models_or_gpu_used": false,
+    "extractor": "explicit_synthetic_fixture_not_real_AI_quality",
+    "native_platform": "linux/amd64",
+    "isolation_runtime": "runc",
+    "gpu_devices_exposed": false
+  },
+  "encrypted_offhost_metadata": {
+    "status": "ENCRYPTED_OFFHOST_ROUNDTRIP_VERIFIED",
+    "sha256": "ebacf1f204b2ec5c30541502ad4c09e09978d803705a442ccd5d69f1a0ecd3c2",
+    "plaintext_bytes": 2519040,
+    "encrypted_bytes": 2520227,
+    "decryption_hash_verified": true,
+    "plaintext_saved_offhost": false,
+    "source_label": "c2",
+    "time": 1795138110.1949508
+  },
+  "production": {
+    "status": "DEPLOYED_MAIN_VERIFIED",
+    "source_commit": "c5d0059162ba2eae72c3c56dd378affb53a34aa8",
+    "verified_application_services": 6,
+    "database_container_and_mounts_preserved": true,
+    "existing_mounts_networks_ports_preserved": true,
+    "uid": 10001,
+    "immutable_registry_refs": true,
+    "http": {
+      "api_recorder_proxy": true,
+      "unknown_stop_http": 404,
+      "unknown_status_http": 404,
+      "sessions_listed": 30
+    },
+    "all_terminal_sessions": 88,
+    "state_sha256": "bab4755c515f241ce6a3c32dff64ce81f2603ecbec96772f343c5e274973df6e",
+    "real_service_session_locks": {
+      "worker": true,
+      "analysis-worker": true,
+      "telegram": true
+    },
+    "calendar_tick_after_start": true,
+    "telegram_readonly_getme": true,
+    "approved_model_digest_verified_without_inference": true,
+    "auto_leave_changed": false,
+    "model_policy_changed": false,
+    "real_meeting_started": false,
+    "test_messages_sent": false,
+    "models_invoked_by_probe": false,
+    "time": 1795139758.758093
+  },
+  "limitations": {
+    "independent_full_source_byte_reread": false,
+    "new_real_meeting_test": false,
+    "AI_quality_benchmark": false,
+    "automatic_delivery_enabled": false
+  }
+}

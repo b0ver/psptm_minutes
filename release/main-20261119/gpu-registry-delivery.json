@@ -1,0 +1,16 @@
+{
+  "kind": "gpu",
+  "registry_ref": "ghcr.io/b0ver/psptm_minutes-rc-gpu@sha256:74d14d392d22d9d6ec96a2e693d1329978112481196fedbcb4f296a67f5cc4f5",
+  "registry_manifest_digest": "sha256:74d14d392d22d9d6ec96a2e693d1329978112481196fedbcb4f296a67f5cc4f5",
+  "ci_config_digest": "sha256:d96d673bdf5d4654919900b85b2ac65a544be297d4b295bb96f710f5aeee124b",
+  "source_commit": "c5d0059162ba2eae72c3c56dd378affb53a34aa8",
+  "transport_sha256": "656df0f987902f398b4b2113af7decdf461d0c4685a1bde6723d343a0b7e1431",
+  "transport_bytes": 1387909120,
+  "registry_credentials_forwarded": false,
+  "exact_registry_blobs_verified": true,
+  "host_image_id": "sha256:74d14d392d22d9d6ec96a2e693d1329978112481196fedbcb4f296a67f5cc4f5",
+  "exact_registry_ref_resolves_locally": true,
+  "tested_native_manifest": "sha256:8c0ace0458bc487b0c57e3b64f78f82208d63fb293a1d76dcdf1306d19999ef9",
+  "tested_config_and_layers_identical": true,
+  "production_services_modified": false
+}

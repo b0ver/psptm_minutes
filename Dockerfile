@@ -2,9 +2,15 @@ FROM python:3.12.12-slim-bookworm@sha256:593bd06efe90efa80dc4eee3948be7c0fde4134
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1
 WORKDIR /app
 COPY requirements.lock ./
-RUN pip install --no-cache-dir -r requirements.lock
+RUN --mount=type=cache,target=/root/.cache/pip pip install --require-hashes -r requirements.lock
 RUN useradd --uid 10001 --create-home minutes && mkdir /data && chown minutes:minutes /data
-FROM dependencies AS runtime
+FROM dependencies AS hardened
+ARG TARGETARCH
+COPY release/main-20261119 /tmp/minutes-release
+# The release platform is amd64. arm64 remains a local test-only platform.
+RUN if [ "$TARGETARCH" = amd64 ]; then python /tmp/minutes-release/install_os.py runtime; fi \
+    && rm -rf /tmp/minutes-release /var/lib/apt/lists/*
+FROM hardened AS runtime
 COPY app ./app
 COPY config ./config
 USER minutes
@@ -20,7 +26,7 @@ COPY integrations/telemost ./integrations/telemost
 USER minutes
 CMD ["python", "-m", "pytest", "-q", "-p", "no:cacheprovider"]
 
-FROM dependencies AS gpu
+FROM hardened AS gpu
 USER root
 COPY requirements-gpu.txt ./
 RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements-gpu.txt

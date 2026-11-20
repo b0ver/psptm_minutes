@@ -1,0 +1,16 @@
+{
+  "kind": "runtime",
+  "registry_ref": "ghcr.io/b0ver/psptm_minutes-rc-runtime@sha256:e8533fb8af514c6c92cffacce59005b60be26c5ec929e79c299c29a16d1c8286",
+  "registry_manifest_digest": "sha256:e8533fb8af514c6c92cffacce59005b60be26c5ec929e79c299c29a16d1c8286",
+  "ci_config_digest": "sha256:aa57c789701dbf58c07def666ef696a61b265895b6a788dd8d54b4e9415d19de",
+  "source_commit": "c5d0059162ba2eae72c3c56dd378affb53a34aa8",
+  "transport_sha256": "a45c83d950cbaea3501966977ecfa1b5e748b75ce51298dff0e9c6988ccb5b09",
+  "transport_bytes": 255774720,
+  "registry_credentials_forwarded": false,
+  "exact_registry_blobs_verified": true,
+  "host_image_id": "sha256:e8533fb8af514c6c92cffacce59005b60be26c5ec929e79c299c29a16d1c8286",
+  "exact_registry_ref_resolves_locally": true,
+  "tested_native_manifest": "sha256:83e272d13d8cbbed519a1824dd47c50ac34b32fd50b312bf9882db32f097585d",
+  "tested_config_and_layers_identical": true,
+  "production_services_modified": false
+}
