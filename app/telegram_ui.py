@@ -33,6 +33,8 @@ STOP_CONFIRMED = TERMINAL | {'stopping', 'finishing', 'saved', 'uploading'}
 def session_summary(state):
     """Metadata only. Never present a cached status as a live observation."""
     status = SESSION_LABELS.get(state.get('status'), 'Состояние неизвестно')
+    if state.get('status') == 'recording' and (state.get('presence') == 'unconfirmed' or state.get('capture_health') == 'ui_unavailable'):
+        status = 'Связь со встречей не подтверждена'
     issue = state.get('_agent_issue')
     uncertain = state.get('_stop_uncertain')
     lines = [state.get('title') or 'Название встречи неизвестно']
@@ -389,16 +391,17 @@ def card_view(s,user,state):
     sid=state['id'];status=state['status'];rows=[]
     lines=session_summary(state)
     stale=state.get('_agent_issue') or state.get('_stop_uncertain')
+    presence_unknown=state.get('presence')=='unconfirmed' or state.get('capture_health')=='ui_unavailable'
     if status=='recording' and state.get('recording_issue'):
-        lines.append('Последняя проверка выявила проблему с записью.' if stale else 'Ассистент во встрече. Есть проблема с записью.')
+        lines.append('Последняя проверка выявила проблему с записью.' if stale or presence_unknown else 'Ассистент во встрече. Есть проблема с записью.')
     if state.get('chunks'):lines.append(f"На диске: {state['chunks']} частей аудио")
     if not stale and state.get('capture_health') == 'rotating':
         lines.append('Сохраняем очередной файл. Запись звука продолжается.')
-    if not stale and state.get('capture_health') in {'native_stopped','rotation_failed','ui_unavailable'}:
+    if not stale and not presence_unknown and state.get('capture_health') in {'native_stopped','rotation_failed'}:
         lines.append('Ассистент остается во встрече. Запись требует проверки.')
     if state.get('chat_control_available') is False:
         lines.append('Чат Телемоста не подтвержден. Для остановки используйте кнопку ниже.')
-    if state.get('recording_complete') is False:lines.append('Неполная запись: часть встречи отсутствует.')
+    if state.get('recording_complete') is False:lines.append('Полнота записи не подтверждена: возможны пропуски.' if presence_unknown else 'Неполная запись: часть встречи отсутствует.')
     if state.get('capture_health') in {'failed','delayed','unavailable'}:
         lines.append('Аварийное сохранение недоступно или задерживается; состояние штатной записи показано выше.')
     if status=='failed':
@@ -533,7 +536,7 @@ def watch_cards(client):
             fp=hashlib.sha256(json.dumps([text,markup],ensure_ascii=False).encode()).hexdigest()
             m=s.get(Meeting,mid) if mid else None
             analysis=reports.state(s,mid) if m else None
-            stage=json.dumps([state['status'],state.get('capture_health'),m.status if m else None,analysis['status'] if analysis else None,state.get('_agent_issue'),state.get('_stop_uncertain')])
+            stage=json.dumps([state['status'],state.get('capture_health'),m.status if m else None,analysis['status'] if analysis else None,state.get('_agent_issue'),state.get('_stop_uncertain'),state.get('presence')])
             pending=s.scalar(select(TelegramEvent.id).where(TelegramEvent.card_id==sid,TelegramEvent.status=='pending'))
             if not pending and fp!=card.fingerprint and (stage!=card.stage or (now()-card.updated_at).total_seconds()>=60):
                 key=f'card:{sid}:{int(card.updated_at.timestamp()*1000000)}:{fp[:16]}'

@@ -1,8 +1,9 @@
 // Read only explicit end screens and addressed stop commands. Never persist chat.
 (() => {
   if (window.__agentLifecycle) return;
-  const result = window.__agentLifecycle = {reason: null, chat_available: false};
+  const result = window.__agentLifecycle = {reason: null, chat_available: false, presence: null};
   let armedAt = null;
+  let authority = null;
   const seen = new Set();
   const messages = () => Array.from(document.querySelectorAll(
     '[role="log"] [data-message-id], [role="log"] [data-messageid], ' +
@@ -23,14 +24,68 @@
     if (typeof window.agentLifecycle === 'function') Promise.resolve(window.agentLifecycle(reason)).catch(() => {});
     return result;
   }
+  // The embedded Telemost call reports an explicit SDK reason before its
+  // parent removes the iframe. Observe only this admitted call's transport.
+  const trustedOrigins = new Set(['https://telemost.yandex.ru', 'https://telemost.yandex.com',
+    'https://telemost.360.yandex.ru', 'https://telemost.360.yandex.com']);
+  const callPorts = new WeakSet();
+  function observeCallMessage(packet, presenceEvidence = true) {
+    try {
+      if (typeof packet === 'string') {
+        if (packet.length > 4096) return;
+        packet = JSON.parse(packet);
+      }
+      if (!packet || !['CONNECTED', 'DISCONNECTED'].includes(packet.event) || packet.payload?.id !== 'self') return;
+      const connected = packet.event === 'CONNECTED';
+      if (presenceEvidence) {
+        result.presence = connected ? 'connected' : 'unconfirmed';
+        if (typeof window.agentPresence === 'function') Promise.resolve(window.agentPresence(result.presence)).catch(() => {});
+      }
+      if (!connected && !result.reason) {
+        const reason = new Map([['close-room','meeting_ended'], ['kick','removed']]).get(packet.payload.source);
+        if (reason) signal(reason);
+      }
+    } catch (_) { /* A diagnostic observer must never affect message delivery. */ }
+  }
+  window.addEventListener('message', event => {
+    if (!trustedOrigins.has(event.origin)) return;
+    if (window !== window.parent && event.source === window.parent &&
+        event.data?.type === 'init-connection' && event.data.name === 'messenger' && event.ports?.[0]) {
+      callPorts.add(event.ports[0]);
+    }
+    if (authority !== 'shell') return;
+    const call = Array.from(document.querySelectorAll('iframe[src]')).find(frame => {
+      try {
+        const url = new URL(frame.src);
+        return url.pathname.startsWith('/private-join/') && url.origin === event.origin && frame.contentWindow === event.source;
+      } catch (_) { return false; }
+    });
+    if (call) observeCallMessage(event.data, false);
+  }, true);
+  if (typeof MessagePort === 'function') {
+    const send = MessagePort.prototype.postMessage;
+    MessagePort.prototype.postMessage = function(...args) {
+      if (authority === 'meeting' && callPorts.has(this)) observeCallMessage(args[0]);
+      return Reflect.apply(send, this, args);
+    };
+  }
   function sample() {
     if (result.reason) return result;
     // Chat text or a temporary missing toolbar is never proof of removal.
     const inMeeting = Array.from(document.querySelectorAll('button[aria-label="Выйти из встречи"]')).some(n => n.getBoundingClientRect().width);
-    for (const node of document.querySelectorAll('[role="alert"], [role="heading"], h1, h2, [data-testid="call-ended"], .container_XvwZc .title_dsYpg, .Orb-Snackbar-Body')) {
+    const terminalCards = '[data-testid="call-ended"], .container_XvwZc .title_dsYpg';
+    const activeMeetingFrame = document.querySelector('iframe[src*="/private-join/"]');
+    const endSelector = authority === 'meeting' ? terminalCards + ', .Orb-Snackbar-Body'
+      : authority === 'shell' ? (activeMeetingFrame ? '.Orb-Snackbar-Body' : terminalCards + ', .Orb-Snackbar-Body') : null;
+    for (const node of endSelector ? document.querySelectorAll(endSelector) : []) {
       if (node.closest('[role="log"], [data-testid="chat-messages"], [class*="messagesList"], [class*="MessageList"], .yamb-chat') || !node.getBoundingClientRect().width) continue;
-      if (inMeeting && node.matches('h1, h2, [role="heading"]') && !node.closest('.container_XvwZc')) continue;
-      const reason = endScreens.get(normalize(node.textContent).replace(/[.!]$/, ''));
+      // An end card underneath an active toolbar can be a stale overlay.
+      // An explicit organizer-end notification is valid even before teardown.
+      if (inMeeting && !node.matches('.Orb-Snackbar-Body')) continue;
+      const text = normalize(node.textContent).replace(/[.!]$/, '');
+      if (authority === 'shell' && node.matches('.Orb-Snackbar-Body') &&
+          !['организатор завершил встречу', 'организатор завершил встречу для всех'].includes(text)) continue;
+      const reason = endScreens.get(text);
       if (reason) return signal(reason);
     }
     const nodes = messages();
@@ -57,6 +112,10 @@
       const id = node.getAttribute('data-message-id') || node.getAttribute('data-messageid') || node.id;
       if (id) seen.add(id);
     }
+  };
+  window.__agentArmLifecycle = value => {
+    if (['meeting', 'shell', 'chat'].includes(value)) authority = value;
+    return sample();
   };
   window.__agentSampleLifecycle = sample;
   // Remember a short end notification even while Python awaits a download or

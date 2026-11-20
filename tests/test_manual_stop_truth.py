@@ -200,3 +200,20 @@ def test_partial_unknown_queued_and_ready_remain_distinct():
     with Session.begin() as s: s.get(Meeting,mid).status='ready'
     with Session() as s: ready,_=ui.card_view(s,'101',{'id':sid,'status':'uploaded','meeting_id':mid})
     assert 'Транскрипт готов' in ready
+
+
+@pytest.mark.parametrize('fields', [
+    {'presence':'unconfirmed', 'capture_health':'healthy'},
+    {'capture_health':'ui_unavailable'},
+])
+def test_alive_agent_without_call_presence_does_not_claim_recording_or_attendance(fields):
+    sid,state=seed(recording_issue='connection_unconfirmed', recording_complete=False, **fields)
+    with Session() as session:
+        text,markup=ui.card_view(session,'101',state)
+    assert 'Связь со встречей не подтверждена' in text
+    assert 'Идёт запись' not in text
+    assert 'Ассистент во встрече' not in text
+    assert 'Ассистент остается во встрече' not in text
+    assert 'Полнота записи не подтверждена' in text
+    assert any(button['callback_data']=='v1:stop:'+sid
+               for row in markup['inline_keyboard'] for button in row)
