@@ -66,6 +66,57 @@ async def case(browser, mode):
     return {'case':mode,'reason':result['reason']}
 
 
+async def transport_case(browser, mode):
+    """Real MessageChannel, cross-origin frames, preserved message delivery."""
+    context=await browser.new_context()
+    calls=[]
+    await context.expose_binding('agentLifecycle',lambda source, reason:calls.append(reason))
+    await context.add_init_script(path=str(Path(__file__).with_name('lifecycle.js')))
+    async def route(request):
+        body='<iframe src="https://telemost.360.yandex.ru/private-join/probe"></iframe>' if '/private-join/' not in request.request.url else '<h1>Fixture call</h1>'
+        await request.fulfill(status=200,content_type='text/html',body=body)
+    await context.route('**/*',route)
+    page=await context.new_page()
+    parent='https://other.invalid/probe' if mode=='port_wrong_parent' else 'https://telemost.yandex.ru/probe'
+    await page.goto(parent)
+    child=next(frame for frame in page.frames if '/private-join/' in frame.url)
+    if mode!='port_unarmed':await child.evaluate('window.__agentArmLifecycle("meeting")')
+    await child.evaluate("""() => {
+      addEventListener('message',e=>{if(e.data?.type==='init-connection')window.__probePort=e.ports[0]});
+    }""")
+    packet={'event':'DISCONNECTED','payload':{'id':'self','source':{
+        'port_kick':'kick','port_unknown':'unknown','port_sleep':'sleep','port_bad_source':'__proto__'
+    }.get(mode,'close-room')}}
+    if mode=='port_other_peer':packet['payload']['id']='other'
+    if mode=='port_connected':packet['event']='CONNECTED'
+    if mode=='port_json':packet=json.dumps(packet)
+    if mode=='port_bad_json':packet='{'
+    if mode=='port_brief_end':await page.evaluate('window.__probeClose=true')
+    await page.evaluate("""packet => {
+      const channel=new MessageChannel();window.__probeDelivered=false;
+      channel.port1.onmessage=e=>{window.__probeDelivered=JSON.stringify(e.data)===JSON.stringify(packet);if(window.__probeClose)document.querySelector('iframe').remove()};
+      document.querySelector('iframe').contentWindow.postMessage({type:'init-connection',name:'messenger'},
+        'https://telemost.360.yandex.ru',[channel.port2]);
+    }""",packet)
+    await child.wait_for_function('window.__probePort')
+    if mode=='port_untracked':
+        await child.evaluate('window.__probePort=new MessageChannel().port1')
+    try:
+        await child.evaluate('packet=>window.__probePort.postMessage(packet)',packet)
+    except Exception:
+        if mode!='port_brief_end' or not child.is_detached():raise
+    if mode!='port_untracked':await page.wait_for_function('window.__probeDelivered===true')
+    await page.wait_for_timeout(100)
+    expected='removed' if mode=='port_kick' else 'meeting_ended' if mode in {'port_end','port_json','port_brief_end'} else None
+    assert calls==([expected] if expected else []),(mode,calls)
+    if mode=='port_unknown':
+        assert (await child.evaluate('window.__agentLifecycle.presence'))=='unconfirmed'
+    if mode=='port_connected':
+        assert (await child.evaluate('window.__agentLifecycle.presence'))=='connected'
+    await context.close()
+    return {'case':mode,'reason':expected,'delivery_preserved':mode!='port_untracked'}
+
+
 async def main():
     async with async_playwright() as p:
         browser=await p.chromium.launch(executable_path='/usr/bin/chromium',
@@ -73,6 +124,7 @@ async def main():
                  'XDG_CACHE_HOME':'/tmp/lifecycle-probe-cache'})
         try:
             cases=[await case(browser,mode) for mode in ('history','old_time','unknown_time','quote','heading_in_chat','ordinary','transient','command','ended','removed','current_ended','current_removed','current_gone','call_title','brief_ended','unarmed_end','shell_heading','shell_alert','shell_toast','shell_card','unrelated_card','plain_heading','active_card','shell_live_card','shell_generic_toast')]
+            cases.extend([await transport_case(browser,mode) for mode in ('port_end','port_kick','port_unknown','port_sleep','port_other_peer','port_unarmed','port_wrong_parent','port_untracked','port_bad_source','port_json','port_bad_json','port_connected','port_brief_end')])
         finally:
             await browser.close()
     print(json.dumps({'status':'passed','scope':'synthetic_dom_only','cases':cases}))

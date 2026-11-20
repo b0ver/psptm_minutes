@@ -98,7 +98,7 @@ def persist(sid, **updates):
 
 def public(sid):
     s = sessions[sid]
-    return {k: s.get(k) for k in ['id', 'title','title_source','camera_off', 'status', 'error_code', 'created_at', 'updated_at', 'recording_started_at', 'duration_minutes', 'meeting_id', 'bytes', 'has_preview', 'end_reason', 'recording_complete', 'chunks', 'checkpoint_bytes', 'last_checkpoint_at', 'capture_health', 'recovered_audio_seconds', 'retryable', 'native_rotations', 'capture_discontinuities', 'recording_issue', 'chat_control_available', 'native_export_warning', 'native_files_expected', 'native_files_saved', 'rotation_error_code', 'rotation_elapsed_seconds', 'recovery_pending', 'recovery_event']}
+    return {k: s.get(k) for k in ['id', 'title','title_source','camera_off', 'status', 'error_code', 'created_at', 'updated_at', 'recording_started_at', 'duration_minutes', 'meeting_id', 'bytes', 'has_preview', 'end_reason', 'recording_complete', 'chunks', 'checkpoint_bytes', 'last_checkpoint_at', 'capture_health', 'presence', 'recovered_audio_seconds', 'retryable', 'native_rotations', 'capture_discontinuities', 'recording_issue', 'chat_control_available', 'native_export_warning', 'native_files_expected', 'native_files_saved', 'rotation_error_code', 'rotation_elapsed_seconds', 'recovery_pending', 'recovery_event']}
 
 
 @asynccontextmanager
@@ -300,6 +300,7 @@ async def cleanup_and_import(sid, file, complete, browser):
     try:
         await browser.close()
         closed = True
+        persist(sid, presence='disconnected')
     except Exception:
         persist(sid, cleanup_error_code='browser_close_after_save_failed')
     await import_recording(sid, file, complete=complete)
@@ -418,6 +419,10 @@ async def run(sid):
         async def lifecycle_binding(source, reason):
             if source.get('frame') in lifecycle_sources and isinstance(reason, str) and reason in {'meeting_ended', 'removed', 'chat_stop'} and not sessions[sid].get('observed_end_reason'):
                 persist(sid, observed_end_reason=reason)
+        async def presence_binding(source, presence):
+            if source.get('frame') in lifecycle_sources and isinstance(presence, str) and presence in {'connected', 'unconfirmed'}:
+                persist(sid, presence=presence)
+        await context.expose_binding('agentPresence', presence_binding)
         await context.expose_binding('agentLifecycle', lifecycle_binding)
         await context.add_init_script(path=str(Path(__file__).with_name('checkpoint.js')))
         await context.add_init_script(path=str(Path(__file__).with_name('meeting_observer.js')))
@@ -524,7 +529,7 @@ async def run(sid):
             await mute_devices([frame],require_camera=False)
         except Exception:
             pass  # Synthetic tracks are already disabled by the init script.
-        persist(sid, status='joined')
+        persist(sid, status='joined', presence='connected')
         # Meeting name is exposed by Telemost's call-information popup.
         share=frame.locator('[data-testid="share-button"]')
         try:
@@ -595,6 +600,13 @@ async def run(sid):
         capture_watchdog.reset(time.monotonic())
         end_reason = 'user_stop'
         rotation_failed = False
+        def mark_presence_unknown():
+            nonlocal recording_issue
+            updates = {'presence':'unconfirmed', 'capture_health':'ui_unavailable'}
+            if time.monotonic() - capture_watchdog.last_capture >= 45:
+                recording_issue = recording_issue or 'connection_unconfirmed'
+                updates.update(recording_issue=recording_issue, recording_complete=False)
+            persist(sid, **updates)
         while True:
             if state.get('observed_end_reason') in {'meeting_ended', 'removed', 'chat_stop'}:
                 end_reason = state['observed_end_reason']
@@ -629,6 +641,9 @@ async def run(sid):
                         end_reason = reason
                         break
                     persist(sid, chat_control_available=any(item.get('chat_available') for item in lifecycle))
+                    if any(item.get('presence') == 'unconfirmed' for item in lifecycle):
+                        mark_presence_unknown()
+                        continue
                     # A missing toolbar can be a reconnect or a new frame. It is not
                     # a reason to disconnect our guest or infer the end of a call.
                     if not await leave.is_visible():
@@ -636,9 +651,10 @@ async def run(sid):
                         if current:
                             frame = current
                             leave = frame.get_by_role('button', name=CONTROLS['leave'], exact=True)
-                        persist(sid, capture_health='ui_unavailable')
+                        mark_presence_unknown()
                         continue
                     capture_watchdog.ui_seen(time.monotonic())
+                    persist(sid, presence='connected')
                     await mute_devices([frame], require_camera=False)
                     try:
                         observed = await frame.evaluate('()=>{window.__agentSampleMeeting?.();return window.__agentMeetingObserver || {}}')
@@ -708,8 +724,8 @@ async def run(sid):
                             native_started = time.time()
                             persist(sid, native_rotations=rotations, capture_health='healthy')
             except Exception:
-                # Temporary UI/metadata errors must not close a live browser.
-                persist(sid, capture_health='ui_unavailable')
+                # An alive process does not prove presence in the call.
+                mark_presence_unknown()
         phase = 'finalization'
         try:
             observed=await frame.evaluate('()=>{window.__agentStopMeetingObserver?.();return window.__agentMeetingObserver || {}}')
@@ -775,7 +791,8 @@ async def run(sid):
         if not file.is_file() or not file.stat().st_size:
             raise AgentError('empty_recording_file')
         complete = not discontinuities and not recording_issue and end_reason != 'removed'
-        persist(sid, status='saved', recording_file=file.name, recording_complete=complete, bytes=file.stat().st_size)
+        persist(sid, status='saved', recording_file=file.name, recording_complete=complete,
+                recording_issue=recording_issue, bytes=file.stat().st_size)
         await cleanup_and_import(sid, file, complete, browser)
         browser = None
     except AgentError as e:
@@ -807,6 +824,7 @@ async def run(sid):
                     pass
             try:
                 await asyncio.wait_for(browser.close(), timeout=10)
+                persist(sid, presence='disconnected')
             except Exception:
                 pass
         if driver:

@@ -285,6 +285,21 @@ async def case(mode):
                     return
                 page=live_pages[0]
                 frame=next(child for child in page.frames if '/private-join/' in child.url)
+                if mode in {'sdk_end','sdk_kick'}:
+                    await frame.evaluate('''() => {
+                      addEventListener('message',e=>{if(e.data?.type==='init-connection')window.__probePort=e.ports[0]});
+                    }''')
+                    await page.evaluate('''() => {
+                      const channel=new MessageChannel();channel.port1.onmessage=()=>{};
+                      document.querySelector('iframe').contentWindow.postMessage({type:'init-connection',name:'messenger'},
+                        'https://telemost.yandex.ru',[channel.port2]);
+                    }''')
+                    await frame.wait_for_function('window.__probePort')
+                    await frame.evaluate('''mode => {
+                      if(recorder?.state==='recording')endRecording();
+                      window.__probePort.postMessage({event:'DISCONNECTED',payload:{id:'self',source:mode==='sdk_end'?'close-room':'kick'}});
+                    }''',mode)
+                    return
                 if mode in {'meeting_end','removed'}:
                     await frame.evaluate('''mode => {
                       // Provider teardown finishes the native file in this fixture.
@@ -327,8 +342,13 @@ async def case(mode):
                     return
                 if mode in {'native_stop','missing_native_download_with_stop'}:
                     await frame.evaluate('endRecording()')
-                elif mode == 'transient_ui':
+                elif mode in {'transient_ui','presence_lost'}:
                     await frame.evaluate('document.querySelector("#leave").hidden=true')
+                    if mode=='presence_lost':
+                        watch=service.capture_watchdogs[sid]
+                        watch.capture_seen=lambda *a:None
+                        watch.last_capture=time.monotonic()-50
+                        await frame.evaluate('endRecording()')
                 elif mode == 'advisory_expired':
                     clock_offset[0]=7205
                 elif mode == 'chat':
@@ -341,9 +361,17 @@ async def case(mode):
                 await asyncio.sleep(3)
                 assert state['status']=='recording', ('Premature departure', mode, state.get('end_reason'))
                 assert not page.is_closed(), ('Browser closed during call', mode)
-                if mode == 'transient_ui':
-                    await frame.evaluate('document.querySelector("#leave").hidden=false')
+                if mode in {'transient_ui','presence_lost'}:
+                    assert state.get('presence')=='unconfirmed', 'Missing UI still claimed attendance'
+                    if mode=='transient_ui':
+                        assert not state.get('recording_issue'), 'Healthy capture was declared broken'
+                        await frame.evaluate('document.querySelector("#leave").hidden=false')
+                    else:
+                        assert state.get('recording_issue')=='connection_unconfirmed'
+                        assert state['recording_complete'] is False
                 await asyncio.sleep(6)
+                if mode == 'transient_ui':
+                    assert state.get('presence')=='connected', 'Presence did not recover with toolbar'
                 if mode == 'other_output_disconnect':
                     other_levels.extend(await frame.evaluate('window.__probeOtherLevels || []'))
                 if mode == 'unrequested_stop_before_rotation':
@@ -396,8 +424,8 @@ async def case(mode):
             assert close_clicks == [0], ('Unrequested generic close', close_clicks)
         if mode == 'other_output_disconnect':
             assert other_levels and max(other_levels)<0.01, ('Unrelated output remained connected',other_levels)
-        assert state['native_rotations'] >= (0 if mode in {'cancel_during_retry','ended_during_retry','cancel_mix_during_retry','ended_mix_during_retry','unrequested_stop_before_rotation','meeting_end','removed','chat','hung_ui_recovery','hung_ui_end'} else 1), state['native_rotations']
-        assert state['recording_complete'] == (mode not in {'native_stop','unrequested_stop_before_rotation','missing_native_download_with_stop','stale_recovery','hung_ui_recovery','hung_ui_end','removed'}), mode
+        assert state['native_rotations'] >= (0 if mode in {'cancel_during_retry','ended_during_retry','cancel_mix_during_retry','ended_mix_during_retry','unrequested_stop_before_rotation','meeting_end','removed','chat','hung_ui_recovery','hung_ui_end','sdk_end','sdk_kick'} else 1), state['native_rotations']
+        assert state['recording_complete'] == (mode not in {'native_stop','unrequested_stop_before_rotation','missing_native_download_with_stop','stale_recovery','hung_ui_recovery','hung_ui_end','removed','presence_lost','sdk_kick'}), mode
         assert state['capture_discontinuities'] == 0
         if mode == 'unrequested_stop_before_rotation':
             assert seen_starts==[1],('Restarted a participant stop',seen_starts)
@@ -416,7 +444,7 @@ async def case(mode):
         if mode == 'muted_mix_input':
             assert_extra_tone_absent(folder / 'continuous.webm')
         audio = check_audio(folder / 'continuous.webm', 3 if mode in {'cancel_during_retry','ended_during_retry','cancel_mix_during_retry','ended_mix_during_retry'} else 2 if mode=='unrequested_stop_before_rotation' else 4, allow_silence=mode=='alone')
-        assert state['end_reason']==('chat_stop' if mode=='chat' else 'meeting_ended' if mode in {'meeting_end','hung_ui_end','ended_during_retry','ended_mix_during_retry'} else 'removed' if mode=='removed' else 'user_stop')
+        assert state['end_reason']==('chat_stop' if mode=='chat' else 'meeting_ended' if mode in {'meeting_end','sdk_end','hung_ui_end','ended_during_retry','ended_mix_during_retry'} else 'removed' if mode in {'removed','sdk_kick'} else 'user_stop')
         if mode == 'missing_native_download':
             snapshot=state.copy()
             with patch.object(service, 'DATA', Path(temp)):
@@ -430,7 +458,7 @@ async def case(mode):
 
 async def main():
     results=[]
-    for mode in ('transient_ui','owner_recovery','stale_recovery','hung_ui_recovery','advisory_expired','native_stop','chat','meeting_end','removed','outer_heading','prejoin_end','alone','hung_ui_end','chat_alt_button'):
+    for mode in ('transient_ui','owner_recovery','stale_recovery','hung_ui_recovery','advisory_expired','native_stop','chat','meeting_end','removed','outer_heading','prejoin_end','alone','hung_ui_end','chat_alt_button','presence_lost','sdk_end','sdk_kick'):
         print(json.dumps({'event':'offline_case_started','mode':mode}),flush=True)
         results.append(await case(mode))
     print(json.dumps({'status': 'passed', 'scope': 'offline_synthetic_only', 'cases': results}))

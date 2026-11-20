@@ -1,7 +1,7 @@
 // Read only explicit end screens and addressed stop commands. Never persist chat.
 (() => {
   if (window.__agentLifecycle) return;
-  const result = window.__agentLifecycle = {reason: null, chat_available: false};
+  const result = window.__agentLifecycle = {reason: null, chat_available: false, presence: null};
   let armedAt = null;
   let authority = null;
   const seen = new Set();
@@ -23,6 +23,51 @@
     result.reason = reason;
     if (typeof window.agentLifecycle === 'function') Promise.resolve(window.agentLifecycle(reason)).catch(() => {});
     return result;
+  }
+  // The embedded Telemost call reports an explicit SDK reason before its
+  // parent removes the iframe. Observe only this admitted call's transport.
+  const trustedOrigins = new Set(['https://telemost.yandex.ru', 'https://telemost.yandex.com',
+    'https://telemost.360.yandex.ru', 'https://telemost.360.yandex.com']);
+  const callPorts = new WeakSet();
+  function observeCallMessage(packet, presenceEvidence = true) {
+    try {
+      if (typeof packet === 'string') {
+        if (packet.length > 4096) return;
+        packet = JSON.parse(packet);
+      }
+      if (!packet || !['CONNECTED', 'DISCONNECTED'].includes(packet.event) || packet.payload?.id !== 'self') return;
+      const connected = packet.event === 'CONNECTED';
+      if (presenceEvidence) {
+        result.presence = connected ? 'connected' : 'unconfirmed';
+        if (typeof window.agentPresence === 'function') Promise.resolve(window.agentPresence(result.presence)).catch(() => {});
+      }
+      if (!connected && !result.reason) {
+        const reason = new Map([['close-room','meeting_ended'], ['kick','removed']]).get(packet.payload.source);
+        if (reason) signal(reason);
+      }
+    } catch (_) { /* A diagnostic observer must never affect message delivery. */ }
+  }
+  window.addEventListener('message', event => {
+    if (!trustedOrigins.has(event.origin)) return;
+    if (window !== window.parent && event.source === window.parent &&
+        event.data?.type === 'init-connection' && event.data.name === 'messenger' && event.ports?.[0]) {
+      callPorts.add(event.ports[0]);
+    }
+    if (authority !== 'shell') return;
+    const call = Array.from(document.querySelectorAll('iframe[src]')).find(frame => {
+      try {
+        const url = new URL(frame.src);
+        return url.pathname.startsWith('/private-join/') && url.origin === event.origin && frame.contentWindow === event.source;
+      } catch (_) { return false; }
+    });
+    if (call) observeCallMessage(event.data, false);
+  }, true);
+  if (typeof MessagePort === 'function') {
+    const send = MessagePort.prototype.postMessage;
+    MessagePort.prototype.postMessage = function(...args) {
+      if (authority === 'meeting' && callPorts.has(this)) observeCallMessage(args[0]);
+      return Reflect.apply(send, this, args);
+    };
   }
   function sample() {
     if (result.reason) return result;
