@@ -551,9 +551,11 @@ async def run(sid):
             return
         # Keep the room open even when recorder controls fail after admission.
         try:
-            chat = frame.get_by_role('button', name='Чат', exact=True).or_(
-                frame.get_by_role('button', name='Чат встречи', exact=True)).first
-            if await chat.is_visible():
+            chat = frame.get_by_test_id('chat-alt-button')
+            if not await chat.count():
+                chat = frame.get_by_role('button', name='Чат', exact=True).or_(
+                    frame.get_by_role('button', name='Чат встречи', exact=True)).first
+            if await chat.is_visible() and await chat.get_attribute('aria-expanded') != 'true':
                 await chat.evaluate('(button) => button.click()')
         except Exception:
             pass

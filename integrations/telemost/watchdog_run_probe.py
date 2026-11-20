@@ -32,6 +32,16 @@ document.querySelector('#begin').onclick=()=>beginRecording();
 document.querySelector('#end').onclick=()=>endRecording();
 let audio, dest, wave, otherWave, recorder, chunks;
 window.starts=0;
+if(window.__probeChatAlt){
+  window.__probeChatAltClicks=0;
+  const chat=document.createElement('button');chat.setAttribute('data-testid','chat-alt-button');
+  chat.setAttribute('aria-label','Открыть чат');chat.setAttribute('aria-expanded','false');
+  chat.onclick=()=>{
+    window.__probeChatAltClicks++;chat.setAttribute('aria-expanded','true');
+    const messages=document.createElement('div');messages.setAttribute('role','log');document.body.append(messages);
+  };
+  document.body.append(chat);
+}
 async function beginRecording(){
   menu.hidden=true;
   if(Date.now()<(window.__probeIgnoreRestartUntil||0))return;
@@ -185,6 +195,8 @@ async def case(mode):
                 await context.add_init_script('window.__agentCheckpointTimeslice = 250')
                 if mode in {'native_mix_disconnect','muted_mix_input','other_output_disconnect','cancel_mix_during_retry','ended_mix_during_retry','failure_after_native_stop','unrequested_stop_before_rotation','audio_diagnostic','slow_saving_menu'}:
                     await context.add_init_script('window.__probeDisconnectNativeMix = true')
+                if mode == 'chat_alt_button':
+                    await context.add_init_script('window.__probeChatAlt = true')
                 if mode == 'slow_saving_menu':
                     await context.add_init_script('window.__probeSlowNativeSave = true')
                 if mode in {'missing_native_download','missing_native_download_with_stop'}:
@@ -288,6 +300,9 @@ async def case(mode):
                       }
                     }''',mode)
                     return
+                if mode == 'chat_alt_button':
+                    assert await frame.evaluate('window.__probeChatAltClicks')==1, 'Meeting chat was not opened exactly once'
+                    assert state.get('chat_control_available') is True, 'Opened chat was not observed'
                 if mode == 'outer_heading':
                     await page.evaluate('''() => {
                       const h=document.createElement('h1');h.textContent='Встреча завершена';document.body.append(h);
@@ -415,7 +430,7 @@ async def case(mode):
 
 async def main():
     results=[]
-    for mode in ('transient_ui','owner_recovery','stale_recovery','hung_ui_recovery','advisory_expired','native_stop','chat','meeting_end','removed','outer_heading','prejoin_end','alone','hung_ui_end'):
+    for mode in ('transient_ui','owner_recovery','stale_recovery','hung_ui_recovery','advisory_expired','native_stop','chat','meeting_end','removed','outer_heading','prejoin_end','alone','hung_ui_end','chat_alt_button'):
         print(json.dumps({'event':'offline_case_started','mode':mode}),flush=True)
         results.append(await case(mode))
     print(json.dumps({'status': 'passed', 'scope': 'offline_synthetic_only', 'cases': results}))
