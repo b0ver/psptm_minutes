@@ -52,7 +52,7 @@ with engine.connect() as c:
  assert c.scalar(text("SELECT count(*) FROM calendar_occurrences WHERE status IN ('dispatching','uncertain','started')"))==0,'calendar_intent_unsettled'
  assert c.scalar(text("SELECT count(*) FROM telegram_commands WHERE status NOT IN ('done','failed')"))==0,'telegram_command_pending'
  assert c.scalar(text("SELECT count(*) FROM telegram_events WHERE status NOT IN ('sent','failed')"))==0,'telegram_delivery_pending'
- imminent=c.scalar(text("SELECT count(*) FROM calendar_occurrences o JOIN calendar_subscriptions s ON s.id=o.subscription_id WHERE s.enabled AND s.connected AND s.recording_authorized AND o.status IN ('scheduled','dispatching','uncertain','started') AND NOT o.skipped AND o.starts_at BETWEEN now()-interval '5 minutes' AND now()+interval '15 minutes'"))
+ imminent=c.scalar(text("SELECT count(*) FROM calendar_occurrences o JOIN calendar_subscriptions s ON s.id=o.subscription_id WHERE s.enabled AND s.connected AND s.recording_authorized AND o.status IN ('scheduled','dispatching','uncertain','started') AND NOT o.skipped AND o.starts_at BETWEEN now()-interval '5 minutes' AND now()+interval '30 minutes'"))
  assert imminent==0,'scheduled_recording_near_cutover'
  counts={}
  for name in sorted(Base.metadata.tables):

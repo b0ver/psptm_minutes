@@ -82,3 +82,5 @@ Readonly сверка источника подтвердила 88 terminal sess
 Отдельный rollback_roundtrip_v3.py прошел native synthetic previous/candidate/previous с exact registry GPU digest. Все probe-процессы используют runc; NVIDIA devices отсутствуют. Реальные worker session locks, synthetic jobs и сохранение предыдущих jobs подтверждены. Этот повтор еще не заменяет откат на восстановленной актуальной БД.
 
 Readonly baseline Telegram getMe и Ollama model digest прошли без сообщений и inference. Подтверждение: readonly-external-baseline.json. Post-deploy проверка повторит оба запроса в новых контейнерах и дождется calendar heartbeat после фактического старта, а не примет прежний tick.
+
+Финальный admission откладывает переключение при авторизованной встрече в ближайшие 30 минут. Это покрывает предел 22 минуты для остановки приема и раннюю подготовку календаря. Здоровая запись и активная обработка по-прежнему блокируют выкладку.
